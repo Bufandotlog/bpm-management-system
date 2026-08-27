@@ -394,7 +394,7 @@ function format_paragraphs($text) {
                         <i class="fab fa-whatsapp"></i> <span>083865855545</span>
                     </div>
                     <div class="contact-item email">
-                        <i class="fas fa-envelope"></i> <span>beminstbunasmajalengka@gmail.com</span>
+                        <i class="fas fa-envelope"></i> <span>bpm.instbunas@gmail.com</span>
                     </div>
                 </div>
             </div>
@@ -472,14 +472,14 @@ function format_paragraphs($text) {
                                             <div class="sig-image-wrap">
                                                 <img src="<?php echo uploadUrl($pengaturan['ttd_presma_image']); ?>" alt="TTD Ketua BPM">
                                             </div>
-                                        <?php elseif (!empty($konten['ketua_bem_ttd'])): ?>
+                                        <?php elseif (!empty($konten['ketua_bpm_ttd'])): ?>
                                             <div class="sig-image-wrap">
-                                                <img src="<?php echo uploadUrl($konten['ketua_bem_ttd']); ?>" alt="TTD Ketua BPM">
+                                                <img src="<?php echo uploadUrl($konten['ketua_bpm_ttd']); ?>" alt="TTD Ketua BPM">
                                             </div>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                     
-                                    <div class="sig-name"><?php echo htmlspecialchars($konten['ketua_bem_nama'] ?: ($pengaturan['ttd_presma_name'] ?? 'Dede Anggi Muhyidin')); ?></div>
+                                    <div class="sig-name"><?php echo htmlspecialchars($konten['ketua_bpm_nama'] ?: ($pengaturan['ttd_presma_name'] ?? 'Dede Anggi Muhyidin')); ?></div>
                                 </td>
                                 <td>
                                     <div class="sig-title">
@@ -492,14 +492,14 @@ function format_paragraphs($text) {
                                             <div class="sig-image-wrap">
                                                 <img src="<?php echo uploadUrl($pengaturan['ttd_sekretaris_image']); ?>" alt="TTD Sekretaris BPM">
                                             </div>
-                                        <?php elseif (!empty($konten['sekretaris_bem_ttd'])): ?>
+                                        <?php elseif (!empty($konten['sekretaris_bpm_ttd'])): ?>
                                             <div class="sig-image-wrap">
-                                                <img src="<?php echo uploadUrl($konten['sekretaris_bem_ttd']); ?>" alt="TTD Sekretaris BPM">
+                                                <img src="<?php echo uploadUrl($konten['sekretaris_bpm_ttd']); ?>" alt="TTD Sekretaris BPM">
                                             </div>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                     
-                                    <div class="sig-name"><?php echo htmlspecialchars($konten['sekretaris_bem_nama'] ?: ($pengaturan['ttd_sekretaris_name'] ?? 'Mela Agustin')); ?></div>
+                                    <div class="sig-name"><?php echo htmlspecialchars($konten['sekretaris_bpm_nama'] ?: ($pengaturan['ttd_sekretaris_name'] ?? 'Mela Agustin')); ?></div>
                                 </td>
                             </tr>
                             <tr>

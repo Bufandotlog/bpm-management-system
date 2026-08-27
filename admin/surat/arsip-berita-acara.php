@@ -70,8 +70,8 @@ if (isset($_GET['hapus']) && is_numeric($_GET['hapus'])) {
             $konten = json_decode((string)$target['konten_json'], true) ?: [];
             
             // Delete signature files if any
-            if (!empty($konten['ketua_bem_ttd'])) deleteFile($konten['ketua_bem_ttd']);
-            if (!empty($konten['sekretaris_bem_ttd'])) deleteFile($konten['sekretaris_bem_ttd']);
+            if (!empty($konten['ketua_bpm_ttd'])) deleteFile($konten['ketua_bpm_ttd']);
+            if (!empty($konten['sekretaris_bpm_ttd'])) deleteFile($konten['sekretaris_bpm_ttd']);
             if (!empty($konten['warek_ttd'])) deleteFile($konten['warek_ttd']);
             
             // Delete documentation images

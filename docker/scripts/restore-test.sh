@@ -1,13 +1,13 @@
 #!/bin/bash
 # ============================================================
-# restore-test.sh - BEM ASTAWIDYA Automated Backup Restore Test
+# restore-test.sh - BPM ASTAWIDYA Automated Backup Restore Test
 # Menguji integritas dekripsi dan validitas struktur SQL backup
 # Usage: bash restore-test.sh [path_to_backup.sql.gz.enc]
 # ============================================================
 
 set -euo pipefail
 
-COMPOSE_DIR="/var/www/html/bem"
+COMPOSE_DIR="/var/www/html/bpm"
 BACKUP_DIR="${COMPOSE_DIR}/backups"
 LOG_FILE="${COMPOSE_DIR}/logs/restore-test.log"
 

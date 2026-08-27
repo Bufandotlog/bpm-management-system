@@ -1,26 +1,26 @@
 #!/bin/bash
 # ============================================================
-# backup.sh - BEM ASTAWIDYA Secure Encrypted Backup
+# backup.sh - BPM ASTAWIDYA Secure Encrypted Backup
 # Feature: OpenSSL AES-256 Encryption + S3 Offsite + Automated Restore Test
-# Cron: 0 2 * * * /var/www/html/bem/docker/scripts/backup.sh
+# Cron: 0 2 * * * /var/www/html/bpm/docker/scripts/backup.sh
 # ============================================================
 
 set -euo pipefail
 
 # ── Config ────────────────────────────────────────────────────
-BACKUP_DIR="/var/www/html/bem/backups"
-COMPOSE_DIR="/var/www/html/bem"
+BACKUP_DIR="/var/www/html/bpm/backups"
+COMPOSE_DIR="/var/www/html/bpm"
 KEEP_DAYS=14       # Simpan backup 14 hari terakhir
 DATE=$(date +%Y%m%d_%H%M%S)
-LOG_FILE="/var/www/html/bem/logs/backup.log"
+LOG_FILE="/var/www/html/bpm/logs/backup.log"
 
 # Ambil credentials dari .env
 if [ -f "${COMPOSE_DIR}/.env" ]; then
     source "${COMPOSE_DIR}/.env"
 fi
 
-DB_NAME="${DB_NAME:-bem_astawidya}"
-DB_USER="${DB_USER:-bem_user}"
+DB_NAME="${DB_NAME:-bpm_astawidya}"
+DB_USER="${DB_USER:-bpm_user}"
 DB_PASS="${DB_PASS:-}"
 DB_ROOT_PASS="${DB_ROOT_PASS:-${DB_PASS:-root}}"
 PASSPHRASE="${BACKUP_PASSPHRASE:-${DB_PASS:-astawidya_secret}}"
@@ -31,7 +31,7 @@ log() {
 }
 
 # ── Mulai Backup ──────────────────────────────────────────────
-log "=== Mulai backup terenkripsi BEM ==="
+log "=== Mulai backup terenkripsi BPM ==="
 
 mkdir -p "$BACKUP_DIR"
 
@@ -40,8 +40,8 @@ RAW_DB_FILE="${BACKUP_DIR}/db_${DATE}.sql.gz"
 ENC_DB_FILE="${BACKUP_DIR}/db_${DATE}.sql.gz.enc"
 
 log "Dumping database '${DB_NAME}'..."
-if command -v docker &>/dev/null && docker ps | grep -q bem_db; then
-    docker exec bem_db mysqldump \
+if command -v docker &>/dev/null && docker ps | grep -q bpm_db; then
+    docker exec bpm_db mysqldump \
         -u root \
         -p"${DB_ROOT_PASS}" \
         --single-transaction \
@@ -60,7 +60,7 @@ elif command -v mysqldump &>/dev/null; then
         | gzip > "$RAW_DB_FILE"
 else
     log "⚠️ Warning: Server environment tidak memiliki docker/mysqldump aktif. Membuat dump sementara..."
-    echo -e "-- BEM ASTAWIDYA BACKUP\nCREATE TABLE IF NOT EXISTS test_backup (id INT);" | gzip > "$RAW_DB_FILE"
+    echo -e "-- BPM ASTAWIDYA BACKUP\nCREATE TABLE IF NOT EXISTS test_backup (id INT);" | gzip > "$RAW_DB_FILE"
 fi
 
 log "Menenkripsi backup database dengan OpenSSL AES-256..."

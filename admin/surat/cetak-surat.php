@@ -61,11 +61,11 @@ $tujuan_html = nl2br(htmlspecialchars($surat['tujuan']));
 
 // Mengambil Ketua BPM yg aktif untuk fallback TTD bawah
 if (isset($BULK_KETUA)) {
-    $ketua_bem = $BULK_KETUA;
+    $ketua_bpm = $BULK_KETUA;
 } else {
-    $ketua_bem = getKetua($periode_id);
+    $ketua_bpm = getKetua($periode_id);
 }
-$nama_ketua_bem = $ketua_bem['nama_lengkap'] ?? 'DEDE ANGGI MUHYIDIN';
+$nama_ketua_bpm = $ketua_bpm['nama_lengkap'] ?? 'DEDE ANGGI MUHYIDIN';
 
 // Ambil Pengaturan Tabel Tanda Tangan Tetap
 if (isset($BULK_PENGATURAN)) {
@@ -330,7 +330,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                         <i class="fab fa-whatsapp"></i> <span>083869304199</span>
                     </div>
                     <div class="contact-item email">
-                        <i class="fas fa-envelope"></i> <span>beminstbunas@gmail.com</span>
+                        <i class="fas fa-envelope"></i> <span>bpm.instbunas@gmail.com</span>
                     </div>
                 </div>
             </div>
@@ -609,7 +609,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                         <?php if(!empty($pengaturan['ttd_presma_image']) && ($konten['use_ttd_presma'] ?? '1') === '1'): ?>
                             <img src="<?php echo uploadUrl($pengaturan['ttd_presma_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
                         <?php endif; ?>
-                        <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_presma_name'] ?? $nama_ketua_bem); ?></div>
+                        <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_presma_name'] ?? $nama_ketua_bpm); ?></div>
                     </td>
                 </tr>
             </table>

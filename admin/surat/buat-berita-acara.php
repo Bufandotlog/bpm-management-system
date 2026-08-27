@@ -142,8 +142,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $manfaat = array_filter(array_map('sanitizeText', $manfaat));
         
         // Signatures name and NUPTK
-        $ketua_bem_nama = sanitizeText($_POST['ketua_bem_nama'] ?? '', 100);
-        $sekretaris_bem_nama = sanitizeText($_POST['sekretaris_bem_nama'] ?? '', 100);
+        $ketua_bpm_nama = sanitizeText($_POST['ketua_bpm_nama'] ?? '', 100);
+        $sekretaris_bpm_nama = sanitizeText($_POST['sekretaris_bpm_nama'] ?? '', 100);
         $warek_nama = sanitizeText($_POST['warek_nama'] ?? '', 100);
         $warek_nuptk = sanitizeText($_POST['warek_nuptk'] ?? '', 50);
         
@@ -264,10 +264,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'rincian_kegiatan' => array_values($rincian_kegiatan),
                 'tempat_pembuatan' => $tempat_pembuatan,
                 'tanggal_pembuatan' => $tanggal_pembuatan,
-                'ketua_bem_nama' => $ketua_bem_nama,
+                'ketua_bpm_nama' => $ketua_bpm_nama,
                 'use_ttd_presma' => $use_ttd_presma,
                 'use_cap_presma' => $use_cap_presma,
-                'sekretaris_bem_nama' => $sekretaris_bem_nama,
+                'sekretaris_bpm_nama' => $sekretaris_bpm_nama,
                 'use_ttd_sekretaris' => $use_ttd_sekretaris,
                 'warek_nama' => $warek_nama,
                 'warek_nuptk' => $warek_nuptk,
@@ -467,10 +467,10 @@ $def = [
     'rincian_kegiatan' => [],
     'tempat_pembuatan' => 'Majalengka',
     'tanggal_pembuatan' => tanggalIndonesia(),
-    'ketua_bem_nama' => $def_presma_name,
+    'ketua_bpm_nama' => $def_presma_name,
     'use_ttd_presma' => '1',
     'use_cap_presma' => '1',
-    'sekretaris_bem_nama' => $def_sekretaris_name,
+    'sekretaris_bpm_nama' => $def_sekretaris_name,
     'use_ttd_sekretaris' => '1',
     'warek_nama' => $def_warek_name,
     'warek_nuptk' => '7756762662200002',
@@ -1269,7 +1269,7 @@ if (!empty($tanggal_kegiatan_val)) {
                         <div class="signature-title" style="font-weight: bold; font-size: 1.1rem; color: #8BB9F0; margin-bottom: 15px;"><i class="fas fa-user-graduate"></i> Ketua BPM</div>
                         <div class="form-group">
                             <label>Nama Lengkap</label>
-                            <input type="text" name="ketua_bem_nama" value="<?php echo htmlspecialchars($edit_data['ketua_bem_nama']); ?>" required>
+                            <input type="text" name="ketua_bpm_nama" value="<?php echo htmlspecialchars($edit_data['ketua_bpm_nama']); ?>" required>
                         </div>
                         <div class="form-group" style="margin-top: 15px;">
                             <div class="switch-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -1294,7 +1294,7 @@ if (!empty($tanggal_kegiatan_val)) {
                         <div class="signature-title" style="font-weight: bold; font-size: 1.1rem; color: #8BB9F0; margin-bottom: 15px;"><i class="fas fa-file-signature"></i> Sekretaris BPM</div>
                         <div class="form-group">
                             <label>Nama Lengkap</label>
-                            <input type="text" name="sekretaris_bem_nama" value="<?php echo htmlspecialchars($edit_data['sekretaris_bem_nama']); ?>" required>
+                            <input type="text" name="sekretaris_bpm_nama" value="<?php echo htmlspecialchars($edit_data['sekretaris_bpm_nama']); ?>" required>
                         </div>
                         <div class="form-group" style="margin-top: 15px;">
                             <div class="switch-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
