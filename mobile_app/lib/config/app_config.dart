@@ -16,4 +16,9 @@ class AppConfig {
   // Custom User-Agent agar Google OAuth & BPM Server mengenali perangkat mobile
   static const String customUserAgent = 
       'Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile BPMApp/1.0 Safari/537.36';
+
+  // --- FIREBASE (project: bpm-astawidya) ---
+  static const String firebaseProjectId = 'bpm-astawidya';
+  static const String firebaseDatabaseUrl = 'https://bpm-astawidya-default-rtdb.asia-southeast2.firebasedatabase.app';
+  static const String firebaseStorageBucket = 'bpm-astawidya.appspot.com';
 }

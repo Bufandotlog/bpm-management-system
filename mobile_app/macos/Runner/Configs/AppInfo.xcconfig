@@ -8,7 +8,7 @@
 PRODUCT_NAME = bem_mobile_app
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.bem.astawidya.bemMobileApp
+PRODUCT_BUNDLE_IDENTIFIER = com.bpm.astawidya.bemMobileApp
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.bem.astawidya. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.bpm.astawidya. All rights reserved.

@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.bem.astawidya" "\0"
+            VALUE "CompanyName", "com.bpm.astawidya" "\0"
             VALUE "FileDescription", "bem_mobile_app" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "bem_mobile_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.bem.astawidya. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.bpm.astawidya. All rights reserved." "\0"
             VALUE "OriginalFilename", "bem_mobile_app.exe" "\0"
             VALUE "ProductName", "bem_mobile_app" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
