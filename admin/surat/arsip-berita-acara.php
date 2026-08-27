@@ -39,7 +39,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
     header("Pragma: public");
     
     echo "<table border='1'>";
-    echo "<tr><th colspan='6' style='font-size:16px; font-weight:bold; text-align:center;'>Arsip Berita Acara Kegiatan BEM</th></tr>";
+    echo "<tr><th colspan='6' style='font-size:16px; font-weight:bold; text-align:center;'>Arsip Berita Acara Kegiatan BPM</th></tr>";
     echo "<tr><th>No</th><th>Nomor Berita Acara</th><th>Nama Kegiatan</th><th>Tanggal Kegiatan</th><th>Tempat</th><th>Waktu</th></tr>";
     if (empty($list_berita_acara)) {
         echo "<tr><td colspan='6' style='text-align:center;'>Belum ada data berita acara</td></tr>";

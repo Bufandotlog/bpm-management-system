@@ -1,4 +1,4 @@
-# bem_mobile_app
+# bpm_mobile_app
 
 A new Flutter project.
 

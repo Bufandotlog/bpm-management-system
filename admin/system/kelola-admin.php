@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'tamba
                     if ($enable_2fa) {
                         $newAdminSecret   = $secret;
                         $newAdminUsername = $username;
-                        $newAdminQrUrl    = totpGetUri($secret, $username, 'BEM Admin');
+                        $newAdminQrUrl    = totpGetUri($secret, $username, 'BPM Admin');
                         $success = "Admin '{$username}' berhasil dibuat! Bagikan QR/secret di bawah ke admin tersebut.";
                     } else {
                         $success = "Admin '{$username}' berhasil dibuat TANPA 2FA aktif.";

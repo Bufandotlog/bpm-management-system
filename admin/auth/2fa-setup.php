@@ -102,7 +102,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 // Dapatkan URI untuk dibangkitkan oleh QR JS Client-side
-$totpUri = totpGetUri($secret, $admin_username, 'BEM Admin');
+$totpUri = totpGetUri($secret, $admin_username, 'BPM Admin');
 ?>
 <div class="top-bar">
     <div class="page-title">
@@ -208,7 +208,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 var url = canvas.toDataURL("image/png");
                 var a = document.createElement("a");
                 a.href = url;
-                a.download = "BEM_Astawidya_2FA_<?php echo htmlspecialchars($admin_username, ENT_QUOTES, 'UTF-8'); ?>.png";
+                a.download = "BPM_Astawidya_2FA_<?php echo htmlspecialchars($admin_username, ENT_QUOTES, 'UTF-8'); ?>.png";
                 a.click();
             } else {
                 alert("Proses QR Code belum selesai. Coba lagi sepersekian detik.");

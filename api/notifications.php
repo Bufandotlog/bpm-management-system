@@ -43,7 +43,7 @@ if ($action === 'fetch') {
             }
         }
         $item['time_ago'] = $timeAgo;
-        $item['judul'] = !empty($item['judul']) ? $item['judul'] : 'Notifikasi BEM';
+        $item['judul'] = !empty($item['judul']) ? $item['judul'] : 'Notifikasi BPM';
     }
 
     echo json_encode([

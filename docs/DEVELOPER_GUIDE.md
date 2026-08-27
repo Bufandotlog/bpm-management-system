@@ -1,7 +1,7 @@
-# 🛠️ Panduan Developer BEM (Developer Guide)
+# 🛠️ Panduan Developer BPM (Developer Guide)
 *Dokumen Onboarding & Analisis Keterhubungan Sistem*
 
-Selamat datang di *codebase* Sistem Manajemen BEM! Sistem ini dibangun dengan fokus pada efisiensi, keamanan, dan otomatisasi tingkat tinggi. Sebagai *developer* baru, Anda **wajib** memahami filosofi arsitektur di bawah ini sebelum melakukan perubahan pada basis kode.
+Selamat datang di *codebase* Sistem Manajemen BPM! Sistem ini dibangun dengan fokus pada efisiensi, keamanan, dan otomatisasi tingkat tinggi. Sebagai *developer* baru, Anda **wajib** memahami filosofi arsitektur di bawah ini sebelum melakukan perubahan pada basis kode.
 
 ---
 
@@ -80,7 +80,7 @@ graph TD
 ## 4. "What NOT To Do" (Pantangan Developer)
 1. ❌ **Membuat Input Teks Bebas untuk Nama Pengguna.** Selalu gunakan elemen `<select>` yang ditarik dari *database* (`users`).
 2. ❌ **Meminta File/Data yang Sama Dua Kali.** Jika data sudah pernah diinput divisi lain (contoh: *Rundown*), buatlah API *fetcher* (`api-get-kegiatan-data.php`) untuk menariknya secara otomatis, jangan menyuruh *user* mengunggah/mengetik ulang.
-3. ❌ **Mengabaikan Sinkronisasi LPJ.** Modul-modul di BEM (BEM & BPM) dirancang untuk berujung pada kemudahan pembuatan LPJ. Jika Anda membuat fitur operasional baru, pikirkan *"Bagaimana data ini bisa otomatis masuk ke laporan akhir?"*.
+3. ❌ **Mengabaikan Sinkronisasi LPJ.** Modul-modul di BPM (BPM & BPM) dirancang untuk berujung pada kemudahan pembuatan LPJ. Jika Anda membuat fitur operasional baru, pikirkan *"Bagaimana data ini bisa otomatis masuk ke laporan akhir?"*.
 
 ---
-*Dokumen ini dibuat dan dijaga untuk kelancaran regenerasi tim IT BEM. "Code with logic, design with empathy."*
+*Dokumen ini dibuat dan dijaga untuk kelancaran regenerasi tim IT BPM. "Code with logic, design with empathy."*

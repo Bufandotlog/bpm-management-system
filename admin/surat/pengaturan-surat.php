@@ -236,7 +236,7 @@ $def_warek_img  = $pengaturan['ttd_warek_image'] ?? '';
 $ketua = getKetua($periode_id);
 $fallback_presma = $ketua ? ($ketua['nama'] ?? $ketua['nama_lengkap'] ?? '') : '';
 $def_presma_name = $pengaturan['ttd_presma_name'] ?? $fallback_presma;
-$def_presma_jab  = $pengaturan['ttd_presma_jabatan'] ?? 'Ketua BEM INSTBUNAS Majalengka';
+$def_presma_jab  = $pengaturan['ttd_presma_jabatan'] ?? 'Ketua BPM INSTBUNAS Majalengka';
 $def_presma_img  = $pengaturan['ttd_presma_image'] ?? '';
 
 $sekretaris = getSekretarisUmum($periode_id);
@@ -248,7 +248,7 @@ if ($sekretaris) {
     }
 }
 $def_sekretaris_name = $pengaturan['ttd_sekretaris_name'] ?? $fallback_sekretaris;
-$def_sekretaris_jab  = $pengaturan['ttd_sekretaris_jabatan'] ?? 'Sekretaris BEM INSTBUNAS Majalengka';
+$def_sekretaris_jab  = $pengaturan['ttd_sekretaris_jabatan'] ?? 'Sekretaris BPM INSTBUNAS Majalengka';
 $def_sekretaris_img  = $pengaturan['ttd_sekretaris_image'] ?? '';
 
 $def_cap_panitia = $pengaturan['cap_panitia_image'] ?? '';
@@ -560,7 +560,7 @@ $def_cap_presma  = $pengaturan['cap_presma_image'] ?? '';
                     </div>
                 </div>
                 <div class="upload-card">
-                    <div class="upload-card-header"><i class="fas fa-user-graduate"></i> Presiden Mahasiswa (BEM)</div>
+                    <div class="upload-card-header"><i class="fas fa-user-graduate"></i> Presiden Mahasiswa (BPM)</div>
                     <div class="upload-card-body">
                         <div class="form-group"><label>Nama Presma</label><input type="text" name="ttd_presma_name" class="form-control" value="<?php echo htmlspecialchars($def_presma_name); ?>" required></div>
                         <div class="form-group"><label>Jabatan</label><input type="text" name="ttd_presma_jabatan" class="form-control" value="<?php echo htmlspecialchars($def_presma_jab); ?>" required></div>
@@ -580,7 +580,7 @@ $def_cap_presma  = $pengaturan['cap_presma_image'] ?? '';
                     </div>
                 </div>
                 <div class="upload-card">
-                    <div class="upload-card-header"><i class="fas fa-file-signature"></i> Sekretaris BEM / Sekretaris Umum</div>
+                    <div class="upload-card-header"><i class="fas fa-file-signature"></i> Sekretaris BPM / Sekretaris Umum</div>
                     <div class="upload-card-body">
                         <div class="form-group"><label>Nama Sekretaris</label><input type="text" name="ttd_sekretaris_name" class="form-control" value="<?php echo htmlspecialchars($def_sekretaris_name); ?>" required></div>
                         <div class="form-group"><label>Jabatan</label><input type="text" name="ttd_sekretaris_jabatan" class="form-control" value="<?php echo htmlspecialchars($def_sekretaris_jab); ?>" required></div>
@@ -639,7 +639,7 @@ $def_cap_presma  = $pengaturan['cap_presma_image'] ?? '';
                     </div>
                 </div>
                 <div class="upload-card">
-                    <div class="upload-card-header"><i class="fas fa-gavel"></i> Cap BEM / BEMCUP</div>
+                    <div class="upload-card-header"><i class="fas fa-gavel"></i> Cap BPM / BPMCUP</div>
                     <div class="upload-card-body">
                         <div class="upload-area" data-target="cap_presma">
                             <div class="drop-zone" id="dropzone_cap_presma">

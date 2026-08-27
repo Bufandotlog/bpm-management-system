@@ -25,7 +25,7 @@ class GoogleAuthService {
         return null;
       }
 
-      // Kirim ID token ke backend BEM PHP untuk verifikasi & set session
+      // Kirim ID token ke backend BPM PHP untuk verifikasi & set session
       final response = await http.post(
         Uri.parse(AppConfig.googleNativeLoginUrl),
         headers: {'Content-Type': 'application/json'},

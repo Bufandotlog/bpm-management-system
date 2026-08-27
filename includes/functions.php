@@ -1257,7 +1257,7 @@ function requireLogin() {
         }
 
         if (!headers_sent()) {
-            redirect('astawidya/bem.php', 'Silakan login terlebih dahulu', 'error');
+            redirect('astawidya/bpm.php', 'Silakan login terlebih dahulu', 'error');
         }
         exit();
     }
@@ -1378,7 +1378,7 @@ function logout() {
         );
     }
     session_destroy();
-    redirect('astawidya/bem.php', 'Anda telah logout', 'info');
+    redirect('astawidya/bpm.php', 'Anda telah logout', 'info');
     exit();
 }
 
@@ -1658,7 +1658,7 @@ if (!function_exists('getDefaultPassword')) {
             return $global_row['nilai'];
         }
 
-        return 'Bem2026!';
+        return 'Bpm2026!';
     }
 }
 
@@ -1988,7 +1988,7 @@ function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
                 $romawi = ['1'=>'I', '2'=>'II', '3'=>'III', '4'=>'IV', '5'=>'V', '6'=>'VI', '7'=>'VII', '8'=>'VIII', '9'=>'IX', '10'=>'X', '11'=>'XI', '12'=>'XII'];
                 $b_rom = $romawi[(int)date('n')] ?? 'I';
                 $thn_now = date('Y');
-                $nomor_surat_cur = "{$next_num}/{$g_kat}/{$kode_kegiatan}/BEM/{$b_rom}/{$thn_now}";
+                $nomor_surat_cur = "{$next_num}/{$g_kat}/{$kode_kegiatan}/BPM/{$b_rom}/{$thn_now}";
             }
 
             dbQuery(
@@ -2002,7 +2002,7 @@ function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
             $romawi = ['1'=>'I', '2'=>'II', '3'=>'III', '4'=>'IV', '5'=>'V', '6'=>'VI', '7'=>'VII', '8'=>'VIII', '9'=>'IX', '10'=>'X', '11'=>'XI', '12'=>'XII'];
             $b_rom = $romawi[(int)date('n')] ?? 'I';
             $thn_now = date('Y');
-            $nomor_surat_draft = "{$next_num}/{$g_kat}/{$kode_kegiatan}/BEM/{$b_rom}/{$thn_now}";
+            $nomor_surat_draft = "{$next_num}/{$g_kat}/{$kode_kegiatan}/BPM/{$b_rom}/{$thn_now}";
             $created_by = !empty($_SESSION['admin_id']) ? (int)$_SESSION['admin_id'] : NULL;
 
             dbQuery(
@@ -2207,7 +2207,7 @@ function saveLogistikPeminjamanAndDraftLetter($kegiatan_id, $periode_id, $acara,
                     $romawi = ['1'=>'I', '2'=>'II', '3'=>'III', '4'=>'IV', '5'=>'V', '6'=>'VI', '7'=>'VII', '8'=>'VIII', '9'=>'IX', '10'=>'X', '11'=>'XI', '12'=>'XII'];
                     $b_rom = $romawi[(int)date('n')] ?? 'I';
                     $thn_now = date('Y');
-                    $nomor_surat_cur = "{$next_num}/D/{$kode_keg_surat}/BEM/{$b_rom}/{$thn_now}";
+                    $nomor_surat_cur = "{$next_num}/D/{$kode_keg_surat}/BPM/{$b_rom}/{$thn_now}";
                 }
 
                 dbQuery("UPDATE arsip_surat SET nomor_surat = ?, konten_surat = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [$nomor_surat_cur, json_encode($konten_data), $existing_surat['id']]);
@@ -2217,7 +2217,7 @@ function saveLogistikPeminjamanAndDraftLetter($kegiatan_id, $periode_id, $acara,
                 $romawi = ['1'=>'I', '2'=>'II', '3'=>'III', '4'=>'IV', '5'=>'V', '6'=>'VI', '7'=>'VII', '8'=>'VIII', '9'=>'IX', '10'=>'X', '11'=>'XI', '12'=>'XII'];
                 $b_rom = $romawi[(int)date('n')] ?? 'I';
                 $thn_now = date('Y');
-                $nomor_surat_draft = "{$next_num}/D/{$kode_keg_surat}/BEM/{$b_rom}/{$thn_now}";
+                $nomor_surat_draft = "{$next_num}/D/{$kode_keg_surat}/BPM/{$b_rom}/{$thn_now}";
 
                 dbQuery(
                     "INSERT INTO arsip_surat (periode_id, kegiatan_id, status_arsip, jenis_surat, nomor_surat, perihal, tujuan, tempat_tanggal, konten_surat, created_by) VALUES (?, ?, 'staging', 'D', ?, 'Permohonan Peminjaman Barang & Tempat', ?, ?, ?, ?)",

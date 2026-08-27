@@ -1,11 +1,11 @@
-# 🏛️ Sistem Manajemen BEM (Astawidya)
+# 🏛️ Sistem Manajemen BPM (Astawidya)
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue.svg)](https://www.php.net/)
 [![Database](https://img.shields.io/badge/Database-MariaDB%20%2F%20MySQL-orange.svg)](#)
 [![Secondary DB](https://img.shields.io/badge/Secondary-PostgreSQL%2012%2B-blue.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Sistem informasi manajemen organisasi Badan Eksekutif Mahasiswa (BEM) yang dirancang untuk mengotomatisasi administrasi surat-menyurat, pengarsipan rundown acara, serta sinkronisasi logistik inventaris secara cerdas dan responsif.
+Sistem informasi manajemen organisasi Badan Eksekutif Mahasiswa (BPM) yang dirancang untuk mengotomatisasi administrasi surat-menyurat, pengarsipan rundown acara, serta sinkronisasi logistik inventaris secara cerdas dan responsif.
 
 ---
 
@@ -48,7 +48,7 @@ docs/
 Berikut adalah tautan cepat ke masing-masing domain dokumentasi:
 
 1. 🛠️ [**Domain Setup & Instalasi**](docs/setup/INSTALL.md) — Langkah setup lokal (Laragon/XAMPP/Built-in) & Database (PostgreSQL/MySQL).
-2. 💻 [**Domain Arsitektur & Pengelolaan**](docs/architecture/PANDUAN_LOKAL_DAN_ARSITEKTUR.md) — Panduan data master BEM, 2FA security, serta pemetaan file-by-file.
+2. 💻 [**Domain Arsitektur & Pengelolaan**](docs/architecture/PANDUAN_LOKAL_DAN_ARSITEKTUR.md) — Panduan data master BPM, 2FA security, serta pemetaan file-by-file.
 3. ✉️ [**Domain Modul Persuratan**](docs/persuratan/SISTEM_PERSURATAN.md) — Cara kerja data persistence, skema JSON kolom `konten_surat`, PDF.js merger, dan pembersihan HTML WA.
 
 ---

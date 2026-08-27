@@ -1,5 +1,5 @@
 # 🛠️ Panduan Instalasi & Setup Teknis
-## Sistem Manajemen BEM (Astawidya)
+## Sistem Manajemen BPM (Astawidya)
 
 Panduan ini berisi langkah demi langkah instruksi teknis untuk menjalankan sistem di lingkungan **Lokal (PostgreSQL)** maupun **Hosting/Production (MySQL/MariaDB)**.
 
@@ -18,15 +18,15 @@ Sebelum memulai, pastikan perangkat Anda memenuhi spesifikasi berikut:
 ## 📥 Langkah 1: Persiapan Source Code
 1. **Clone Repository** atau download file ZIP:
    ```bash
-   git clone https://github.com/Bufandotlog/bem-management-system.git
-   cd bem-management-system
+   git clone https://github.com/Bufandotlog/bpm-management-system.git
+   cd bpm-management-system
    ```
 2. **Izin Folder (PENTING)**:
    Pastikan folder root dapat ditulis oleh web server agar sistem bisa membuat folder `uploads/` secara otomatis.
    ```bash
    # Contoh di Linux/Ubuntu
-   sudo chown -R www-data:www-data /var/www/html/bem
-   chmod -R 755 /var/www/html/bem
+   sudo chown -R www-data:www-data /var/www/html/bpm
+   chmod -R 755 /var/www/html/bpm
    ```
 
 ---
@@ -35,7 +35,7 @@ Sebelum memulai, pastikan perangkat Anda memenuhi spesifikasi berikut:
 Pilih salah satu sesuai kebutuhan Anda:
 
 ### A. Menggunakan MySQL/MariaDB (Produksi/Hosting — utama)
-1. Buat database baru melalui Control Panel hosting atau `CREATE DATABASE bem_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`.
+1. Buat database baru melalui Control Panel hosting atau `CREATE DATABASE bpm_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`.
 2. Buka menu **phpMyAdmin** > Pilih database tersebut.
 3. Klik tab **Import** > Pilih file: `databases/schema_mysql.sql` (struktur lengkap: 36 tabel aktif + 3 tabel deprecated + 3 views, tanpa data seed).
 4. Klik **Go** dan tunggu hingga selesai.

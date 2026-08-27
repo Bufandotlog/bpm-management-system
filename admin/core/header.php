@@ -170,7 +170,7 @@ if (isset($_SESSION['admin_id']) && !$is_full_sidebar_role && $current_page !== 
         
         $is_sheet_active = in_array($current_page, ['kepengurusan.php', 'kepengurusan-edit.php', 'kabinet.php', 'visi-misi.php']);
         $bottom_nav_tabs[] = [
-            'label'  => 'Konten BEM',
+            'label'  => 'Konten BPM',
             'icon'   => 'fas fa-university',
             'url'    => 'javascript:void(0)',
             'onclick'=> 'toggleMobileBottomSheet()',
@@ -305,7 +305,7 @@ if (isset($page_css)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - BEM Kabinet Astawidya</title>
+    <title>Admin - BPM Kabinet Astawidya</title>
 
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -619,7 +619,7 @@ if (isset($page_css)) {
             <i class="fas fa-bars"></i>
         </button>
         <div class="mobile-brand">
-            <span>BEM Admin</span>
+            <span>BPM Admin</span>
             <?php if (isset($periode_data)): ?>
             <small><?php echo htmlspecialchars($periode_data['nama'] ?? 'Astawidya', ENT_QUOTES, 'UTF-8'); ?></small>
             <?php endif; ?>
@@ -642,7 +642,7 @@ if (isset($page_css)) {
         </button>
 
         <div class="sidebar-header">
-            <h2>BEM Admin</h2>
+            <h2>BPM Admin</h2>
             <p>Kabinet Astawidya</p>
         </div>
 
@@ -664,14 +664,14 @@ if (isset($page_css)) {
 
         <?php
         // Map halaman ke status aktif untuk menu sidebar
-        $info_bem_pages = [
+        $info_bpm_pages = [
             'berita.php', 'berita-edit.php', 'berita-hapus.php',
             'kepengurusan.php', 'kepengurusan-edit.php', 'kepengurusan-hapus.php',
             'kabinet.php', 'visi-misi.php', 'kontak.php',
             'upload-struktur.php', 'upload-struktur-hapus.php',
             'kementerian-anggota.php', 'kementerian-edit.php', 'kementerian-hapus.php', 'pendaftaran.php'
         ];
-        $is_info_bem_active = in_array($current_page, $info_bem_pages);
+        $is_info_bpm_active = in_array($current_page, $info_bpm_pages);
         
         $surat_pages = [
             'arsip-surat.php', 'staging-surat.php', 'buat-surat.php', 'pengaturan-surat.php', 'cetak-surat.php', 'arsip-manual.php', 'catat-surat-masuk.php',
@@ -820,12 +820,12 @@ if (isset($page_css)) {
             </a>
             <?php endif; ?>
 
-            <!-- Informasi BEM (Dropdown) -->
+            <!-- Informasi BPM (Dropdown) -->
             <?php if (in_array($admin_role, ['superadmin', 'admin', 'kominfo'])): ?>
-            <div class="sidebar-dropdown <?php echo $is_info_bem_active ? 'active open' : ''; ?> <?php echo $admin_role === 'kominfo' ? 'mobile-nav-redundant' : ''; ?>">
+            <div class="sidebar-dropdown <?php echo $is_info_bpm_active ? 'active open' : ''; ?> <?php echo $admin_role === 'kominfo' ? 'mobile-nav-redundant' : ''; ?>">
                 <button type="button" class="sidebar-dropdown-toggle" onclick="toggleSidebarDropdown(this)">
                     <i class="fas fa-university"></i>
-                    <span>Informasi BEM</span>
+                    <span>Informasi BPM</span>
                     <i class="fas fa-chevron-right chevron-icon"></i>
                 </button>
                 <div class="sidebar-dropdown-menu">

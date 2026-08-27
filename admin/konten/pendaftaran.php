@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $bph_id = 2; // Sekretariat
                             if (strtolower(trim($row['jabatan'])) === 'sekretaris umum i' && !empty($row['file_ttd'])) {
                                 dbUpsertPengaturan('ttd_sekretaris_name', strtoupper($row['nama_lengkap']));
-                                dbUpsertPengaturan('ttd_sekretaris_jabatan', 'Sekretaris BEM INSTBUNAS Majalengka');
+                                dbUpsertPengaturan('ttd_sekretaris_jabatan', 'Sekretaris BPM INSTBUNAS Majalengka');
                                 dbUpsertPengaturan('ttd_sekretaris_image', $row['file_ttd']);
                             }
                         }
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // FCM & Web Notification ke pendaftar yang disetujui
                     createNotificationAndPush(
                         $user_id,
-                        "🎉 Selamat! Akun BEM Anda Aktif",
+                        "🎉 Selamat! Akun BPM Anda Aktif",
                         "Selamat " . $row['nama_lengkap'] . ", pendaftaran Anda disetujui. Akun Anda (" . $row['username'] . ") kini telah aktif.",
                         baseUrl('admin/auth/login.php'),
                         "success"

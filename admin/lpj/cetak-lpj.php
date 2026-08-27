@@ -367,7 +367,7 @@ if (!function_exists('cleanPointPrefix')) {
                     INSTITUT BUDI UTOMO NASIONAL
                 </div>
                 <div class="cover-logo">
-                    <img src="<?php echo baseUrl('assets/images/favicon/apple-touch-icon.png'); ?>" alt="Logo BEM">
+                    <img src="<?php echo baseUrl('assets/images/favicon/apple-touch-icon.png'); ?>" alt="Logo BPM">
                 </div>
                 <div class="cover-footer">
                     BADAN EKSEKUTIF MAHASISWA<br>
@@ -385,7 +385,7 @@ if (!function_exists('cleanPointPrefix')) {
                 <div style="text-align: center; margin-bottom: 25px;">
                     <h2 style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">LAPORAN PERTANGGUNG JAWABAN TRIWULAN <?php echo htmlspecialchars($triwulan); ?></h2>
                     <h2 style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">MENTERI <?php echo htmlspecialchars($k_name); ?></h2>
-                    <h2 style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">BEM INSTBUNAS MAJALENGKA <?php echo htmlspecialchars($years_str); ?></h2>
+                    <h2 style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">BPM INSTBUNAS MAJALENGKA <?php echo htmlspecialchars($years_str); ?></h2>
                 </div>
             <?php endif; ?>
 

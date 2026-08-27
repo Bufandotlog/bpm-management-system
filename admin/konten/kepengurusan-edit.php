@@ -256,7 +256,7 @@ if (in_array($posisi, ['sekretaris_umum', 'bendahara_umum']) && $data) {
 $list_akun = dbFetchAll("SELECT id, nama, username FROM users WHERE is_active = 1 AND (periode_id = ? OR periode_id IS NULL) AND role != 'superadmin' ORDER BY nama ASC", [$active_periode]);
 
 $icon_map = ['ketua'=>'crown','wakil_ketua'=>'user-tie','sekretaris_umum'=>'file-alt','bendahara_umum'=>'coins'];
-$judul    = ['ketua'=>'Ketua BEM','wakil_ketua'=>'Wakil Ketua BEM','sekretaris_umum'=>'Sekretaris Umum','bendahara_umum'=>'Bendahara Umum'];
+$judul    = ['ketua'=>'Ketua BPM','wakil_ketua'=>'Wakil Ketua BPM','sekretaris_umum'=>'Sekretaris Umum','bendahara_umum'=>'Bendahara Umum'];
 $icon         = $icon_map[$posisi];
 $periode_info = ($periode_data['nama'] ?? 'Astawidya')
               . ' (' . ($periode_data['tahun_mulai'] ?? '2025')
@@ -425,7 +425,7 @@ $posisiEncoded = urlencode($posisi);
             </div>
             <div class="form-group">
                 <label>Paragraf 1</label>
-                <textarea name="sambutan_paragraf1" rows="4"><?php echo htmlspecialchars($sambutan_paragraf1 ?: 'Selamat datang di website resmi BEM Kabinet Astawidya.'); ?></textarea>
+                <textarea name="sambutan_paragraf1" rows="4"><?php echo htmlspecialchars($sambutan_paragraf1 ?: 'Selamat datang di website resmi BPM Kabinet Astawidya.'); ?></textarea>
             </div>
             <div class="form-group">
                 <label>Paragraf 2</label>

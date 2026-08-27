@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $__env->yieldContent('title', 'BEM Kabinet Astawidya'); ?></title>
+    <title><?php echo $__env->yieldContent('title', 'BPM Kabinet Astawidya'); ?></title>
     
     <!-- ===== FAVICON ===== -->
     <link rel="icon" type="image/svg+xml" href="<?php echo e(asset('assets/images/favicon/favicon.svg')); ?>">
@@ -24,8 +24,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Meta tags untuk SEO -->
-    <meta name="description" content="Website resmi BEM Kabinet Astawidya - Delapan Arah Kejayaan">
-    <meta property="og:title" content="BEM Kabinet Astawidya">
+    <meta name="description" content="Website resmi BPM Kabinet Astawidya - Delapan Arah Kejayaan">
+    <meta property="og:title" content="BPM Kabinet Astawidya">
     <meta property="og:image" content="<?php echo e(asset('assets/images/og-default.jpg')); ?>">
 </head>
 <body class="<?php echo $__env->yieldContent('page_class', ''); ?>">
@@ -35,7 +35,7 @@
         <div class="hero-background">
             <?php $kabinet = \App\Models\Kabinet::find(1); ?>
             <?php if($kabinet && $kabinet->foto_bersama): ?>
-                <img src="<?php echo e(asset('uploads/' . $kabinet->foto_bersama)); ?>" alt="Foto Bersama BEM Kabinet <?php echo e($kabinet->nama ?? 'ASTAWIDYA'); ?>" loading="lazy">
+                <img src="<?php echo e(asset('uploads/' . $kabinet->foto_bersama)); ?>" alt="Foto Bersama BPM Kabinet <?php echo e($kabinet->nama ?? 'ASTAWIDYA'); ?>" loading="lazy">
             <?php else: ?>
                 <img src="<?php echo e(asset('assets/images/default-hero.jpg')); ?>" alt="Default Hero" loading="lazy">
             <?php endif; ?>
@@ -49,7 +49,7 @@
                 KABINET <span class="biru"><?php echo e($kabinet->nama ?? 'ASTAWIDYA'); ?></span>
             </h1>
             <p class="hero-sub">
-                BEM BUDI UTOMO NASIONAL 
+                BPM BUDI UTOMO NASIONAL 
                 <?php
                     $periode = '';
                     if ($kabinet && $kabinet->tahun_mulai && $kabinet->tahun_selesai) {
@@ -74,11 +74,11 @@
             <div class="logo">
                 <a href="<?php echo e(route('home')); ?>">
                     <?php if($kabinet && $kabinet->logo): ?>
-                        <img src="<?php echo e(asset('uploads/' . $kabinet->logo)); ?>" alt="Logo BEM" class="logo-img" loading="lazy">
+                        <img src="<?php echo e(asset('uploads/' . $kabinet->logo)); ?>" alt="Logo BPM" class="logo-img" loading="lazy">
                     <?php else: ?>
                         <i class="fas fa-university"></i>
                     <?php endif; ?>
-                    <span>BEM <span class="text-biru">INST</span>BUNAS</span>
+                    <span>BPM <span class="text-biru">INST</span>BUNAS</span>
                 </a>
             </div>
             
@@ -115,8 +115,8 @@
     <footer>
         <div class="footer-content">
             <div class="footer-section">
-                <h3>BEM Kabinet Astawidya</h3>
-                <p>Mewujudkan BEM yang responsif, aspiratif, dan inovatif dalam membangun mahasiswa yang berkarakter, berkualitas, dan bermanfaat bagi masyarakat.</p>
+                <h3>BPM Kabinet Astawidya</h3>
+                <p>Mewujudkan BPM yang responsif, aspiratif, dan inovatif dalam membangun mahasiswa yang berkarakter, berkualitas, dan bermanfaat bagi masyarakat.</p>
                 <div class="social-links">
                     <a href="https://www.instagram.com/beminstbunas"><i class="fab fa-instagram"></i></a>
                     <a href="https://www.tiktok.com/@bem.instbunas"><i class="fab fa-tiktok"></i></a>
@@ -137,7 +137,7 @@
             </div>
         </div>
         <div class="copyright">
-            <p>&copy; <?php echo e(date('Y')); ?> BEM Kabinet Astawidya.BFN.v1.2.27. Hak Cipta Dilindungi.</p>
+            <p>&copy; <?php echo e(date('Y')); ?> BPM Kabinet Astawidya.BFN.v1.2.27. Hak Cipta Dilindungi.</p>
         </div>
     </footer>
 

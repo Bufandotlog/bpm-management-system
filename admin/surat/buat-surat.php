@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jenis_surat   = $_POST['jenis_surat'] === 'D' ? 'D' : 'L';
         $nomor_urut    = sanitizeText($_POST['nomor_urut'], 10);
         $kode_keg      = strtoupper(str_replace(' ', '', sanitizeText($_POST['kode_kegiatan'], 50)));
-        $nomor_surat   = "{$nomor_urut}/{$jenis_surat}/{$kode_keg}/BEM/{$bulan_romawi}/{$tahun}";
+        $nomor_surat   = "{$nomor_urut}/{$jenis_surat}/{$kode_keg}/BPM/{$bulan_romawi}/{$tahun}";
         $tanggal_dikirim_raw = sanitizeText($_POST['tanggal_dikirim'] ?? '', 50);
         $tanggal_dikirim = null;
         if (!empty($tanggal_dikirim_raw) && $tanggal_dikirim_raw !== 'Belum Di kirim') {
@@ -1213,10 +1213,10 @@ if ($is_edit || $is_clone) {
             <div class="card-body">
                 <div class="grid-2">
                     <div class="switch-container"><span class="switch-label"><i class="fas fa-user-tie"></i> Sertakan TTD WAREK III</span><label class="switch"><input type="checkbox" name="use_ttd_warek" value="1" <?php echo ($edit_data['use_ttd_warek'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
-                    <div class="switch-container"><span class="switch-label"><i class="fas fa-user-graduate"></i> Sertakan TTD PRESMA BEM</span><label class="switch"><input type="checkbox" name="use_ttd_presma" value="1" <?php echo ($edit_data['use_ttd_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
+                    <div class="switch-container"><span class="switch-label"><i class="fas fa-user-graduate"></i> Sertakan TTD PRESMA BPM</span><label class="switch"><input type="checkbox" name="use_ttd_presma" value="1" <?php echo ($edit_data['use_ttd_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
                     <div class="switch-container"><span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap PANITIA</span><label class="switch"><input type="checkbox" name="use_cap_panitia" value="1" <?php echo ($edit_data['use_cap_panitia'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
                     <div class="switch-container"><span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap WAREK</span><label class="switch"><input type="checkbox" name="use_cap_warek" value="1" <?php echo ($edit_data['use_cap_warek'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
-                    <div class="switch-container"><span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap BEM</span><label class="switch"><input type="checkbox" name="use_cap_presma" value="1" <?php echo ($edit_data['use_cap_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
+                    <div class="switch-container"><span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap BPM</span><label class="switch"><input type="checkbox" name="use_cap_presma" value="1" <?php echo ($edit_data['use_cap_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
                 </div>
             </div>
         </div>

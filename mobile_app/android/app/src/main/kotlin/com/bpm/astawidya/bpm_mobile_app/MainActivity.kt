@@ -1,4 +1,4 @@
-package com.bem.astawidya.bem_mobile_app
+package com.bpm.astawidya.bpm_mobile_app
 
 import io.flutter.embedding.android.FlutterActivity
 

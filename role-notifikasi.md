@@ -1,6 +1,6 @@
 # Catatan Implementasi: Pembagian Notifikasi Berdasarkan Role (Role-Based Notification Dispatch)
 
-Dokumen ini berisi hasil analisis mendalam dan panduan langkah demi langkah untuk merestrukturisasi sistem notifikasi di **BEM Management System** agar notifikasi dikirim secara terarah (*segmented & role-targeted*) dan tidak lagi ter-broadcast ke seluruh user.
+Dokumen ini berisi hasil analisis mendalam dan panduan langkah demi langkah untuk merestrukturisasi sistem notifikasi di **BPM Management System** agar notifikasi dikirim secara terarah (*segmented & role-targeted*) dan tidak lagi ter-broadcast ke seluruh user.
 
 ---
 
@@ -36,7 +36,7 @@ Sistem membagi notifikasi ke dalam **7 Kategori Utama** dengan penyesuaian hak a
 | :--- | :--- | :--- | :--- | :--- |
 | **Keamanan & Keanggotaan** | Login OAuth/Normal, Reset Password, Aktivasi/Nonaktifkan 2FA, Tambah/Hapus Admin, Putus Sesi, Backup DB, Lockout IP | `danger` / `keamanan` | `superadmin` | - |
 | **Persuratan & Dokumen** | Staging surat baru, Verifikasi/ACC Surat Sekretaris, Auto-commit Surat 30 Menit, Arsip Berita Acara | `info` / `surat` | `superadmin`, `admin`, `sekretaris` | `sekretaris_panitia`, `ketuplat` |
-| **Kegiatan & Proker** | Tambah/Edit Kegiatan, Status Kegiatan, Pendaftaran Anggota BEM Baru (Pending/Approval) | `success` / `kegiatan` | `superadmin`, `admin`, `sekretaris` | `ketuplat`, `anggota_panitia` |
+| **Kegiatan & Proker** | Tambah/Edit Kegiatan, Status Kegiatan, Pendaftaran Anggota BPM Baru (Pending/Approval) | `success` / `kegiatan` | `superadmin`, `admin`, `sekretaris` | `ketuplat`, `anggota_panitia` |
 | **Rundown & Acara** | Update Rundown Event, Perubahan Jam Acara, Penunjukan PJ Agenda | `warning` / `rundown` | `superadmin`, `admin`, `sekretaris` | `ketuplat`, `sie_acara` |
 | **Logistik & Sarpras** | Pengajuan Peminjaman Barang/Tempat, Update Inventaris Barang Master, Surat Peminjaman | `info` / `logistik` | `superadmin`, `admin`, `sekretaris` | `ketuplat`, `sie_logistik` |
 | **Publikasi & CMS** | Drafter/Publish Berita Web, Update Banner Kabinet, Update Struktur Organisasi | `success` / `berita` | `superadmin`, `admin`, `kominfo` | - |
@@ -144,7 +144,7 @@ foreach ($targetUserIds as $targetId) {
 - **File**: `admin/konten/berita-edit.php`, `admin/konten/pendaftaran.php`
 - **Tindakan**:
   - Publish Berita -> target `['superadmin', 'admin', 'kominfo']`.
-  - Pendaftar Anggota BEM Baru (`daftar.php`) -> target `['superadmin', 'admin', 'sekretaris']`.
+  - Pendaftar Anggota BPM Baru (`daftar.php`) -> target `['superadmin', 'admin', 'sekretaris']`.
 
 ---
 

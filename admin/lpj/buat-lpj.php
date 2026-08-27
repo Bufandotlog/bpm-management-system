@@ -889,7 +889,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 mkdir($lpj_dir, 0777, true);
             }
             
-            $manager_script = escapeshellarg(__DIR__ . '/../../scratch/bem_lpj_manager.py');
+            $manager_script = escapeshellarg(__DIR__ . '/../../scratch/bpm_lpj_manager.py');
             $command = "python3 {$manager_script} generate " . escapeshellarg($output_filepath) . " " . escapeshellarg($tmp_json_path) . " 2>&1";
             $output = shell_exec($command);
             file_put_contents(UPLOAD_PATH . '/python_debug.log', date('Y-m-d H:i:s') . "\nCommand: $command\nOutput:\n$output\n---\n", FILE_APPEND);
@@ -2222,7 +2222,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                             </div>
                             <div class="form-group">
                                 <label>Nama Kegiatan</label>
-                                <input type="text" name="pbt_name[]" class="form-control" value="<?php echo htmlspecialchars($pbt['Nama Kegiatan'] ?? ''); ?>" required placeholder="Cth: Menghadiri Undangan Bemnus">
+                                <input type="text" name="pbt_name[]" class="form-control" value="<?php echo htmlspecialchars($pbt['Nama Kegiatan'] ?? ''); ?>" required placeholder="Cth: Menghadiri Undangan Bpmnus">
                             </div>
                             <div class="form-group">
                                 <label>Tempat Kegiatan</label>
@@ -3458,7 +3458,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                 </div>
                 <div class="form-group">
                     <label>Nama Kegiatan</label>
-                    <input type="text" name="pbt_name[]" class="form-control" required placeholder="Cth: Menghadiri Undangan Bemnus">
+                    <input type="text" name="pbt_name[]" class="form-control" required placeholder="Cth: Menghadiri Undangan Bpmnus">
                 </div>
                 <div class="form-group">
                     <label>Tempat Kegiatan</label>
@@ -4518,7 +4518,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                         alertDiv.className = 'alert alert-info';
                         alertDiv.style.padding = '10px 15px';
                         alertDiv.style.fontSize = '0.85rem';
-                        alertDiv.innerHTML = '<i class="fas fa-info-circle"></i> Data kepengurusan kementerian ini belum tersedia. Silakan isi secara manual atau hubungi BPH BEM.';
+                        alertDiv.innerHTML = '<i class="fas fa-info-circle"></i> Data kepengurusan kementerian ini belum tersedia. Silakan isi secara manual atau hubungi BPH BPM.';
                         alertDiv.style.display = 'block';
                     }
                     const container = document.getElementById('anggotaListContainer');

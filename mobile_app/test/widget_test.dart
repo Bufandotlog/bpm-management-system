@@ -7,11 +7,11 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:bem_mobile_app/main.dart';
+import 'package:bpm_mobile_app/main.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const BemMobileApp());
-    expect(find.byType(BemMobileApp), findsOneWidget);
+    await tester.pumpWidget(const BpmMobileApp());
+    expect(find.byType(BpmMobileApp), findsOneWidget);
   });
 }

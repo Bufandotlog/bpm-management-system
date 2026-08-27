@@ -14,7 +14,7 @@ if (!empty($error)) {
     if (isLoggedIn()) {
         redirect('admin/system/pengaturan.php', 'Proses otorisasi Google dibatalkan.', 'error');
     } else {
-        redirect('astawidya/bem.php', 'Proses otorisasi Google dibatalkan.', 'error');
+        redirect('astawidya/bpm.php', 'Proses otorisasi Google dibatalkan.', 'error');
     }
     exit();
 }
@@ -27,7 +27,7 @@ if (empty($state) || empty($expectedState) || !hash_equals($expectedState, $stat
     if (isLoggedIn()) {
         redirect('admin/system/pengaturan.php', 'Sesi otorisasi Google tidak valid (State mismatch).', 'error');
     } else {
-        redirect('astawidya/bem.php', 'Sesi otorisasi Google tidak valid (State mismatch).', 'error');
+        redirect('astawidya/bpm.php', 'Sesi otorisasi Google tidak valid (State mismatch).', 'error');
     }
     exit();
 }
@@ -39,7 +39,7 @@ unset($_SESSION['google_auth_action']);
 // Tukar authorization code dengan access token
 $tokenData = exchangeGoogleCodeForToken($code);
 if (!$tokenData || empty($tokenData['access_token'])) {
-    $targetUrl = ($action === 'link') ? 'admin/pengaturan.php' : 'astawidya/bem.php';
+    $targetUrl = ($action === 'link') ? 'admin/pengaturan.php' : 'astawidya/bpm.php';
     redirect($targetUrl, 'Gagal mendapatkan akses token dari Google.', 'error');
     exit();
 }
@@ -47,7 +47,7 @@ if (!$tokenData || empty($tokenData['access_token'])) {
 // Ambil info pengguna Google
 $googleUser = getGoogleUserInfo($tokenData['access_token']);
 if (!$googleUser || empty($googleUser['sub'])) {
-    $targetUrl = ($action === 'link') ? 'admin/pengaturan.php' : 'astawidya/bem.php';
+    $targetUrl = ($action === 'link') ? 'admin/pengaturan.php' : 'astawidya/bpm.php';
     redirect($targetUrl, 'Gagal mengambil data profil Google.', 'error');
     exit();
 }
@@ -60,7 +60,7 @@ $googleEmail = $googleUser['email'] ?? '';
 // ============================================
 if ($action === 'link') {
     if (!isLoggedIn()) {
-        redirect('astawidya/bem.php', 'Sesi login telah habis. Silakan login kembali.', 'error');
+        redirect('astawidya/bpm.php', 'Sesi login telah habis. Silakan login kembali.', 'error');
         exit();
     }
 
@@ -69,7 +69,7 @@ if ($action === 'link') {
     // Cek apakah google_id ini sudah dipakai oleh akun lain
     $existing = dbFetchOne("SELECT id, username FROM users WHERE google_id = ? AND id != ? LIMIT 1", [$googleId, $adminId], "si");
     if ($existing) {
-        redirect('admin/system/pengaturan.php', 'Akun Google ini (' . htmlspecialchars($googleEmail) . ') sudah ditautkan ke akun BEM pengurus lain.', 'error');
+        redirect('admin/system/pengaturan.php', 'Akun Google ini (' . htmlspecialchars($googleEmail) . ') sudah ditautkan ke akun BPM pengurus lain.', 'error');
         exit();
     }
 
@@ -96,13 +96,13 @@ if ($action === 'login') {
     );
 
     if (!$user) {
-        redirect('astawidya/bem.php', 'Akun Google ini (' . htmlspecialchars($googleEmail) . ') belum ditautkan ke akun BEM manapun. Silakan login dengan username & password terlebih dahulu lalu tautkan di menu Pengaturan.', 'error');
+        redirect('astawidya/bpm.php', 'Akun Google ini (' . htmlspecialchars($googleEmail) . ') belum ditautkan ke akun BPM manapun. Silakan login dengan username & password terlebih dahulu lalu tautkan di menu Pengaturan.', 'error');
         exit();
     }
 
     if (!$user['is_active']) {
         recordFailedAttempt('login_failed', $user['username']);
-        redirect('astawidya/bem.php', 'Akun BEM Anda tidak aktif. Silakan hubungi Administrator.', 'error');
+        redirect('astawidya/bpm.php', 'Akun BPM Anda tidak aktif. Silakan hubungi Administrator.', 'error');
         exit();
     }
 

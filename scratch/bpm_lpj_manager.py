@@ -191,7 +191,7 @@ def int_to_roman(num):
         i += 1
     return roman_num
 
-def get_bem_logo_path():
+def get_bpm_logo_path():
     # Try different possible paths relative to the script location
     script_dir = os.path.dirname(os.path.abspath(__file__))
     candidates = [
@@ -227,7 +227,7 @@ def add_minister_cover(doc, kementerian_name, periode_years):
     format_run(run_t4, font_name="Times New Roman", size_pt=14, bold=True)
     
     # Logo
-    logo_path = get_bem_logo_path()
+    logo_path = get_bpm_logo_path()
     p_logo = doc.add_paragraph()
     p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_logo.paragraph_format.space_before = Pt(64)
@@ -236,7 +236,7 @@ def add_minister_cover(doc, kementerian_name, periode_years):
     if logo_path:
         p_logo.add_run().add_picture(logo_path, width=Cm(6.5))
     else:
-        run_fallback = p_logo.add_run("[LOGO BEM]")
+        run_fallback = p_logo.add_run("[LOGO BPM]")
         format_run(run_fallback, font_name="Times New Roman", size_pt=14, bold=True)
         
     # Bottom Subtitle
@@ -768,7 +768,7 @@ def parse_docx(doc_path):
     if eval_anggota_list:
         data["evaluasi_anggota_internal"] = eval_anggota_list
 
-    # For global backward compatibility, let's aggregate anggaran summary from all prokers if not already set by BEM summary table
+    # For global backward compatibility, let's aggregate anggaran summary from all prokers if not already set by BPM summary table
     if data["anggaran"] and data["anggaran_summary"]["debet"] == 0:
         total_deb = 0
         total_kred = 0
@@ -804,7 +804,7 @@ def run_validation(doc_path):
     errors = []
     
     if not checklist["cover"]:
-        errors.append("Cover tidak lengkap (pastikan mencakup Triwulan, Kementerian, dan Periode BEM).")
+        errors.append("Cover tidak lengkap (pastikan mencakup Triwulan, Kementerian, dan Periode BPM).")
     if not checklist["keanggotaan"]:
         errors.append("Keanggotaan tidak lengkap (Ketua, Sekretaris, Bendahara wajib diisi).")
     if not checklist["proker_terlaksana"]:
@@ -915,7 +915,7 @@ def generate_lpj(output_path, config_data):
         run2 = cover_title.add_run(f"{kementrian_formatted}\n")
         format_run(run2, size_pt=12, bold=True)
         
-        run3 = cover_title.add_run(f"BEM INSTBUNAS MAJALENGKA {years_extracted}")
+        run3 = cover_title.add_run(f"BPM INSTBUNAS MAJALENGKA {years_extracted}")
         format_run(run3, size_pt=12, bold=True)
     
     # A. KEADAAN OBJEKTIF MENTERI / PENDAHULUAN
@@ -1520,7 +1520,7 @@ def generate_lpj(output_path, config_data):
     clean_k_name = re.sub(r'^(Kementerian|Menteri|Departemen)\s+', '', kementrian_str, flags=re.IGNORECASE)
     if not clean_k_name or clean_k_name.lower() == 'kementerian':
         clean_k_name = 'Luar Kampus'
-    org_prefix = "Menteri" if "bem" in output_path.lower() else "Menteri"
+    org_prefix = "Menteri" if "bpm" in output_path.lower() else "Menteri"
     
     import datetime
     months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
@@ -1588,7 +1588,7 @@ def consolidate_lpj(output_path, file_list):
         run_mc1 = p_cover.add_run(f"LAPORAN PERTANGGUNGJAWABAN TRIWULAN {triwulan_val.upper()}\n\n")
     format_run(run_mc1, size_pt=14, bold=True)
     
-    run_mc2 = p_cover.add_run("BADAN EKSEKUTIF MAHASISWA (BEM)\n")
+    run_mc2 = p_cover.add_run("BADAN EKSEKUTIF MAHASISWA (BPM)\n")
     format_run(run_mc2, size_pt=14, bold=True)
     
     run_mc3 = p_cover.add_run(f"INSTBUNAS MAJALENGKA\nPERIODE {periode_val}\n\n\n\n\n\n\n\n")
@@ -1613,7 +1613,7 @@ def consolidate_lpj(output_path, file_list):
         p_toc.add_run("." * 60 + "\n").font.name = "Times New Roman"
         
     final_letter = int_to_roman(len(parsed_docs_data) + 1) if is_mubesma else chr(65 + len(parsed_docs_data))
-    p_toc.add_run(f"{final_letter}. RINGKASAN ANGGARAN TERPADU BEM ").font.name = "Times New Roman"
+    p_toc.add_run(f"{final_letter}. RINGKASAN ANGGARAN TERPADU BPM ").font.name = "Times New Roman"
     p_toc.add_run("." * 60 + "\n").font.name = "Times New Roman"
     
     master_doc.add_page_break()
@@ -2238,14 +2238,14 @@ def consolidate_lpj(output_path, file_list):
             
         master_doc.add_page_break()
         
-    # 4. Ringkasan Anggaran Terpadu BEM
+    # 4. Ringkasan Anggaran Terpadu BPM
     letter_akhir = int_to_roman(len(parsed_docs_data) + 1) if is_mubesma else chr(65 + len(parsed_docs_data))
     p_final_ch = master_doc.add_paragraph()
     p_final_ch.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_final_ch.paragraph_format.space_before = Pt(12)
     p_final_ch.paragraph_format.space_after = Pt(12)
     p_final_ch.paragraph_format.keep_with_next = True
-    format_run(p_final_ch.add_run(f"{letter_akhir}. RINGKASAN ANGGARAN TERPADU BEM INSTBUNAS"), size_pt=12, bold=True)
+    format_run(p_final_ch.add_run(f"{letter_akhir}. RINGKASAN ANGGARAN TERPADU BPM INSTBUNAS"), size_pt=12, bold=True)
     
     table_summary = master_doc.add_table(rows=1, cols=4)
     table_summary.style = 'Table Grid'
@@ -2320,9 +2320,9 @@ def consolidate_lpj(output_path, file_list):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage:")
-        print("  python3 scratch/bem_lpj_manager.py validate <file_path>")
-        print("  python3 scratch/bem_lpj_manager.py generate <output_path> <input_json_path>")
-        print("  python3 scratch/bem_lpj_manager.py consolidate <output_path> <file1> <file2> ...")
+        print("  python3 scratch/bpm_lpj_manager.py validate <file_path>")
+        print("  python3 scratch/bpm_lpj_manager.py generate <output_path> <input_json_path>")
+        print("  python3 scratch/bpm_lpj_manager.py consolidate <output_path> <file1> <file2> ...")
         sys.exit(1)
         
     action = sys.argv[1].lower()

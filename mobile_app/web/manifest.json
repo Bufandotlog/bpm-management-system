@@ -1,6 +1,6 @@
 {
-    "name": "bem_mobile_app",
-    "short_name": "bem_mobile_app",
+    "name": "bpm_mobile_app",
+    "short_name": "bpm_mobile_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

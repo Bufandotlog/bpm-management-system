@@ -3,11 +3,11 @@ const { test, expect } = require('@playwright/test');
 // Base URL sistem Anda, sesuaikan dengan port atau domain yang digunakan
 const BASE_URL = 'http://localhost:8000';
 
-test.describe('BEM Lockan System E2E Tests', () => {
+test.describe('BPM Lockan System E2E Tests', () => {
 
     test('1. User Login & Akses Dashboard', async ({ page }) => {
         // Navigasi ke halaman login dengan key untuk bypass Cookie Gate
-        await page.goto(`${BASE_URL}/astawidya/bem.php?key=astawidya-bem`);
+        await page.goto(`${BASE_URL}/astawidya/bpm.php?key=astawidya-bpm`);
 
         // Asumsi form login memiliki name='username' dan name='password'
         await page.fill('input[name="username"]', 'testadmin');
@@ -23,7 +23,7 @@ test.describe('BEM Lockan System E2E Tests', () => {
 
     test('2. Navigasi Master Kegiatan', async ({ page }) => {
         // Setup Login terlebih dahulu
-        await page.goto(`${BASE_URL}/astawidya/bem.php?key=astawidya-bem`);
+        await page.goto(`${BASE_URL}/astawidya/bpm.php?key=astawidya-bpm`);
         await page.fill('input[name="username"]', 'testadmin');
         await page.fill('input[name="password"]', 'password');
         await page.click('button[type="submit"]');
@@ -40,7 +40,7 @@ test.describe('BEM Lockan System E2E Tests', () => {
 
     test('3. Verifikasi Fitur Tarik Data (Buat Berita Acara)', async ({ page }) => {
         // Setup Login
-        await page.goto(`${BASE_URL}/astawidya/bem.php?key=astawidya-bem`);
+        await page.goto(`${BASE_URL}/astawidya/bpm.php?key=astawidya-bpm`);
         await page.fill('input[name="username"]', 'testadmin');
         await page.fill('input[name="password"]', 'password');
         await page.click('button[type="submit"]');
@@ -68,7 +68,7 @@ test.describe('BEM Lockan System E2E Tests', () => {
 
     test('4. Skenario Membuat Kegiatan (Acara) Baru', async ({ page }) => {
         // Setup Login
-        await page.goto(`${BASE_URL}/astawidya/bem.php?key=astawidya-bem`);
+        await page.goto(`${BASE_URL}/astawidya/bpm.php?key=astawidya-bpm`);
         await page.fill('input[name="username"]', 'testadmin');
         await page.fill('input[name="password"]', 'password');
         await page.click('button[type="submit"]');
@@ -85,7 +85,7 @@ test.describe('BEM Lockan System E2E Tests', () => {
         await page.fill('input[name="tanggal_selesai"]', '2026-08-16');
 
         // Opsional: Jika Anda ingin memilih opsi Select/Dropdown untuk Ketuplat
-        await page.selectOption('select[name="ketuplat_id"]', { label: 'Anggota BEM E2E (@testanggota)' });
+        await page.selectOption('select[name="ketuplat_id"]', { label: 'Anggota BPM E2E (@testanggota)' });
 
         // Klik tombol "Buat Kegiatan"
         await page.click('button:has-text("Buat Kegiatan")');
@@ -100,7 +100,7 @@ test.describe('BEM Lockan System E2E Tests', () => {
 
     test('5. Skenario Ketuplat Mengakses Workspace', async ({ page }) => {
         // Setup Login sebagai Anggota (yang ditunjuk jadi Ketuplat)
-        await page.goto(`${BASE_URL}/astawidya/bem.php?key=astawidya-bem`);
+        await page.goto(`${BASE_URL}/astawidya/bpm.php?key=astawidya-bpm`);
         await page.fill('input[name="username"]', 'testanggota');
         await page.fill('input[name="password"]', 'password');
         await page.click('button[type="submit"]');

@@ -16,7 +16,7 @@ $tahun_periode_str = $tahun_mulai . '/' . $tahun_selesai;
 $warek_name_row = dbFetchOne("SELECT nilai FROM pengaturan WHERE kunci = 'ttd_warek_name'");
 $default_warek = $warek_name_row['nilai'] ?? 'Ii Muhamad Misbah, S.Pd.I., SE., MM.';
 
-// Ambil Ketua & Wakil Ketua BEM (BPH Inti) untuk Steering Committee (SC)
+// Ambil Ketua & Wakil Ketua BPM (BPH Inti) untuk Steering Committee (SC)
 $presma_row = dbFetchOne("SELECT nama FROM struktur_bph WHERE posisi = 'ketua' AND periode_id = ?", [$periode_id], "i");
 $wapresma_row = dbFetchOne("SELECT nama FROM struktur_bph WHERE posisi = 'wakil_ketua' AND periode_id = ?", [$periode_id], "i");
 $presma_name = $presma_row['nama'] ?? 'Dede Anggi Muhyidin';
@@ -895,7 +895,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="form-row-three">
                         <div class="form-group">
-                            <label>Sekretaris 1 (Sekum BEM 1)</label>
+                            <label>Sekretaris 1 (Sekum BPM 1)</label>
                             <select name="sekretaris_1" id="sekretaris_1" required onchange="updateLivePreview()">
                                 <option value="">-- Pilih Sekum 1 --</option>
                                 <?php foreach ($sekre_umum_candidates as $name): ?>
@@ -913,7 +913,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Sekretaris 2 (Sekum BEM 2)</label>
+                            <label>Sekretaris 2 (Sekum BPM 2)</label>
                             <select name="sekretaris_2" id="sekretaris_2" required onchange="updateLivePreview()">
                                 <option value="">-- Pilih Sekum 2 --</option>
                                 <?php foreach ($sekre_umum_candidates as $name): ?>
@@ -949,7 +949,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="form-row-three">
                         <div class="form-group">
-                            <label>Bendahara 1 (Bendum BEM 1)</label>
+                            <label>Bendahara 1 (Bendum BPM 1)</label>
                             <select name="bendahara_1" id="bendahara_1" required onchange="updateLivePreview()">
                                 <option value="">-- Pilih Bendum 1 --</option>
                                 <?php foreach ($bendum_candidates as $name): ?>
@@ -966,7 +966,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Bendahara 2 (Bendum BEM 2)</label>
+                            <label>Bendahara 2 (Bendum BPM 2)</label>
                             <select name="bendahara_2" id="bendahara_2" required onchange="updateLivePreview()">
                                 <option value="">-- Pilih Bendum 2 --</option>
                                 <?php foreach ($bendum_candidates as $name): ?>
@@ -1126,7 +1126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
 // Data Anggota dari PHP ke JS
-const listAnggotaBEM = <?php echo json_encode($all_members); ?>;
+const listAnggotaBPM = <?php echo json_encode($all_members); ?>;
 const listAnggotaSeksi = <?php echo json_encode($seksi_only_members); ?>;
 const defaultKominfoMembers = <?php echo json_encode($kominfo_member_names); ?>;
 const defaultSeksiData = <?php echo $edit_id > 0 ? json_encode($panitia_json['seksi_seksi'] ?? []) : '[]'; ?>;
@@ -1513,7 +1513,7 @@ function updateLivePreview() {
     const poolGrid = document.getElementById('poolGrid');
     poolGrid.innerHTML = '';
     
-    listAnggotaBEM.forEach(m => {
+    listAnggotaBPM.forEach(m => {
         const role = assignedMembers[m.nama];
         const isAssigned = !!role;
         

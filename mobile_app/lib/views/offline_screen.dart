@@ -39,7 +39,7 @@ class OfflineScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                "Pastikan perangkat Anda terhubung ke Wi-Fi atau jaringan data seluler untuk mengakses Sistem BEM.",
+                "Pastikan perangkat Anda terhubung ke Wi-Fi atau jaringan data seluler untuk mengakses Sistem BPM.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white70,

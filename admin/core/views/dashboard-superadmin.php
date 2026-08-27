@@ -32,7 +32,7 @@ $recent_logs = dbFetchAll("SELECT username, action, deskripsi, created_at FROM a
 
         <div class="stat-card" style="border-left: 4px solid #2ecc71;">
             <div class="stat-icon" style="background: rgba(46, 204, 113, 0.1); color: #2ecc71;"><i class="fas fa-calendar-check"></i></div>
-            <div class="stat-value" style="font-size: 1.1rem; margin-top: 6px; color: #2ecc71; font-weight: bold;"><?php echo htmlspecialchars($active_periode['nama'] ?? 'BEM', ENT_QUOTES, 'UTF-8'); ?></div>
+            <div class="stat-value" style="font-size: 1.1rem; margin-top: 6px; color: #2ecc71; font-weight: bold;"><?php echo htmlspecialchars($active_periode['nama'] ?? 'BPM', ENT_QUOTES, 'UTF-8'); ?></div>
             <div class="stat-label">Periode Aktif (<?php echo htmlspecialchars(($active_periode['tahun_mulai'] ?? '') . '-' . ($active_periode['tahun_selesai'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>)</div>
         </div>
 

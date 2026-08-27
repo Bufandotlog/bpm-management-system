@@ -40,7 +40,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'csv') {
     // Bersihkan buffer sebelum mengirim header
     if (ob_get_level()) ob_end_clean();
 
-    $filename = 'audit-log-bem-' . date('Y-m-d') . '.csv';
+    $filename = 'audit-log-bpm-' . date('Y-m-d') . '.csv';
     header('Content-Type: text/csv; charset=UTF-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     header('Pragma: no-cache');

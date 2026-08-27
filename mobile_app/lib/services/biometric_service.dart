@@ -21,7 +21,7 @@ class BiometricService {
       if (!await isBiometricAvailable()) return true;
 
       return await _auth.authenticate(
-        localizedReason: 'Pindai sidik jari / Face ID untuk mengakses Admin BEM Astawidya',
+        localizedReason: 'Pindai sidik jari / Face ID untuk mengakses Admin BPM Astawidya',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: false,

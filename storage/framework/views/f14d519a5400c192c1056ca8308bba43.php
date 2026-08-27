@@ -1,4 +1,4 @@
-<?php $__env->startSection('title', 'Beranda - BEM Kabinet ' . ($kabinet->nama ?? 'ASTAWIDYA')); ?>
+<?php $__env->startSection('title', 'Beranda - BPM Kabinet ' . ($kabinet->nama ?? 'ASTAWIDYA')); ?>
 <?php $__env->startSection('page_class', 'page-index'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -20,7 +20,7 @@
             <h2>Sambutan<br><span class="text-merah">Presiden Mahasiswa</span></h2>
             <div class="jabatan">
                 <?php echo e($ketuaAnggota->nama ?? 'Dede Anggi Muhyidin'); ?> • 
-                Ketua BEM 
+                Ketua BPM 
                 <?php if($periodeAktif): ?>
                     <?php echo e($periodeAktif->nama . ' ' . $periodeAktif->tahun_mulai); ?>
 

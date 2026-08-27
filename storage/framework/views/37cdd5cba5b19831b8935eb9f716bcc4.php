@@ -1,4 +1,4 @@
-<?php $__env->startSection('title', 'Kepengurusan - BEM Kabinet Astawidya'); ?>
+<?php $__env->startSection('title', 'Kepengurusan - BPM Kabinet Astawidya'); ?>
 <?php $__env->startSection('page_class', 'page-kepengurusan'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -59,7 +59,7 @@
         <div class="caption-image-container">
             <?php if($struktur && !empty($struktur->gambar)): ?>
                 <img src="<?php echo e(asset('uploads/' . $struktur->gambar)); ?>"
-                     alt="<?php echo e($struktur->judul ?? 'Struktur Organisasi BEM'); ?>"
+                     alt="<?php echo e($struktur->judul ?? 'Struktur Organisasi BPM'); ?>"
                      class="caption-image"
                      loading="lazy">
                 <?php if(!empty($struktur->deskripsi)): ?>
@@ -81,7 +81,7 @@
         </div>
 
         <p class="caption-narasi">
-            Struktur organisasi BEM Institut Teknologi dan Bisnis Universitas Nasional
+            Struktur organisasi BPM Institut Teknologi dan Bisnis Universitas Nasional
             <?php if($periodeTerpilih): ?>
                 Kabinet <?php echo e($periodeTerpilih->nama); ?> periode <?php echo e($periodeTerpilih->tahun_mulai); ?>/<?php echo e($periodeTerpilih->tahun_selesai); ?>
 

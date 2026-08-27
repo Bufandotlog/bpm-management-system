@@ -161,7 +161,7 @@ $dbName = $getEnv('DB_DATABASE');
 
 // Fallback konfigurasi lama
 if ($dbName === null || $dbName === '') {
-    $dbName = $getEnv('DB_NAME', 'bem_astawidya');
+    $dbName = $getEnv('DB_NAME', 'bpm_astawidya');
 }
 
 // Username modern

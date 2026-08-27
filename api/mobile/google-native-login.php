@@ -63,7 +63,7 @@ if (!$user && !empty($email)) {
 
 if (!$user) {
     http_response_code(403);
-    echo json_encode(['status' => 'error', 'message' => 'Akun Google Anda belum terdaftar/ditautkan di sistem BEM']);
+    echo json_encode(['status' => 'error', 'message' => 'Akun Google Anda belum terdaftar/ditautkan di sistem BPM']);
     exit;
 }
 

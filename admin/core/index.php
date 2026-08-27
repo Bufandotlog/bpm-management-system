@@ -1,4 +1,4 @@
 <?php
-// admin/index.php - Redirect ke halaman login utama BEM
-header("Location: ../astawidya/bem.php");
+// admin/index.php - Redirect ke halaman login utama BPM
+header("Location: ../astawidya/bpm.php");
 exit();

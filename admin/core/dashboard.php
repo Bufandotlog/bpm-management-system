@@ -1,6 +1,6 @@
 <?php
 // admin/core/dashboard.php
-// Main Controller & View Router for BEM Administrative Dashboard
+// Main Controller & View Router for BPM Administrative Dashboard
 
 require_once __DIR__ . '/header.php';
 
@@ -23,9 +23,9 @@ $active_panitia = dbFetchOne(
 $role_labels = [
     'superadmin' => 'Superadmin',
     'admin'      => 'Admin General',
-    'sekretaris' => 'Sekretariat BEM',
+    'sekretaris' => 'Sekretariat BPM',
     'kominfo'    => 'Kominfo & Media',
-    'anggota'    => 'Pengurus BEM'
+    'anggota'    => 'Pengurus BPM'
 ];
 $display_role = $role_labels[$admin_role] ?? 'User';
 ?>
@@ -33,7 +33,7 @@ $display_role = $role_labels[$admin_role] ?? 'User';
 <div class="page-header">
     <div>
         <h1><i class="fas fa-tachometer-alt"></i> Dashboard <?php echo htmlspecialchars($display_role, ENT_QUOTES, 'UTF-8'); ?></h1>
-        <p>Selamat datang di panel kendali BEM Kabinet Astawidya</p>
+        <p>Selamat datang di panel kendali BPM Kabinet Astawidya</p>
     </div>
     <div class="date-display">
         <i class="far fa-calendar-alt"></i>
@@ -79,7 +79,7 @@ switch ($admin_role) {
 }
 ?>
 
-<!-- BEM MOBILE APP INSTALLER BANNER (BLACK, WHITE & SOFT MUTED BLUE PALETTE) -->
+<!-- BPM MOBILE APP INSTALLER BANNER (BLACK, WHITE & SOFT MUTED BLUE PALETTE) -->
 <style>
 .apk-download-banner {
     margin-top: 20px;
@@ -134,7 +134,7 @@ switch ($admin_role) {
         </div>
         <div style="flex: 1; min-width: 0; overflow: hidden;">
             <h3 class="apk-banner-title" style="margin: 0 0 4px 0; font-size: 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700;">
-                Aplikasi Mobile Pengurus BEM
+                Aplikasi Mobile Pengurus BPM
                 <span class="badge" style="background: rgba(74, 144, 226, 0.15); color: #70a1ff; border: 1px solid rgba(74, 144, 226, 0.3); font-weight: 700; font-size: 0.65rem; padding: 3px 8px; border-radius: 20px;">v1.0 Release</span>
             </h3>
             <p class="apk-banner-desc" style="margin: 0 0 4px 0; font-size: 0.78rem; color: #888888; line-height: 1.4;">

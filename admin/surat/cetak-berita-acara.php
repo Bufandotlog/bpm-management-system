@@ -383,7 +383,7 @@ function format_paragraphs($text) {
                 <div class="kop-teks">
                     <h1>BADAN EKSEKUTIF MAHASISWA</h1>
                     <h2>I N S T B U N A S</h2>
-                    <h4>SK No. 547/SK-BEM/INSTBUNAS/VII/2025</h4>
+                    <h4>SK No. 547/SK-BPM/INSTBUNAS/VII/2025</h4>
                     <div class="kop-alamat">JL. Siliwangi No. 121 (Jl. Raya Kadipaten - Majalengka) Heuleut - Kadipaten - Majalengka</div>
                 </div>
                 <div class="kop-extra">
@@ -426,7 +426,7 @@ function format_paragraphs($text) {
                                 telah dilaksanakan kegiatan <?php echo htmlspecialchars($ba['nama_kegiatan'] ?? ''); ?> 
                                 dengan tema <i>"<?php echo htmlspecialchars($konten['tema_kegiatan'] ?? ''); ?>"</i>, 
                                 yang berlangsung dari pukul <?php echo htmlspecialchars($konten['waktu_mulai'] ?? ''); ?> WIB hingga selesai. 
-                                Kegiatan ini diselenggarakan oleh Badan Eksekutif Mahasiswa (BEM) bekerja sama dengan pihak rektorat Institut Budi Utomo Nasional Majalengka. 
+                                Kegiatan ini diselenggarakan oleh Badan Eksekutif Mahasiswa (BPM) bekerja sama dengan pihak rektorat Institut Budi Utomo Nasional Majalengka. 
                                 Adapun rincian kegiatan yang telah dilaksanakan adalah:
                             </p>
 
@@ -459,7 +459,7 @@ function format_paragraphs($text) {
                             <tr>
                                 <td>
                                     <div class="sig-title">
-                                        Ketua BEM<br>
+                                        Ketua BPM<br>
                                         INSTBUNAS Majalengka
                                     </div>
                                     
@@ -470,11 +470,11 @@ function format_paragraphs($text) {
                                     <?php if (($konten['use_ttd_presma'] ?? '1') === '1'): ?>
                                         <?php if (!empty($pengaturan['ttd_presma_image'])): ?>
                                             <div class="sig-image-wrap">
-                                                <img src="<?php echo uploadUrl($pengaturan['ttd_presma_image']); ?>" alt="TTD Ketua BEM">
+                                                <img src="<?php echo uploadUrl($pengaturan['ttd_presma_image']); ?>" alt="TTD Ketua BPM">
                                             </div>
                                         <?php elseif (!empty($konten['ketua_bem_ttd'])): ?>
                                             <div class="sig-image-wrap">
-                                                <img src="<?php echo uploadUrl($konten['ketua_bem_ttd']); ?>" alt="TTD Ketua BEM">
+                                                <img src="<?php echo uploadUrl($konten['ketua_bem_ttd']); ?>" alt="TTD Ketua BPM">
                                             </div>
                                         <?php endif; ?>
                                     <?php endif; ?>
@@ -483,18 +483,18 @@ function format_paragraphs($text) {
                                 </td>
                                 <td>
                                     <div class="sig-title">
-                                        Sekretaris BEM<br>
+                                        Sekretaris BPM<br>
                                         INSTBUNAS Majalengka
                                     </div>
                                     
                                     <?php if (($konten['use_ttd_sekretaris'] ?? '1') === '1'): ?>
                                         <?php if (!empty($pengaturan['ttd_sekretaris_image'])): ?>
                                             <div class="sig-image-wrap">
-                                                <img src="<?php echo uploadUrl($pengaturan['ttd_sekretaris_image']); ?>" alt="TTD Sekretaris BEM">
+                                                <img src="<?php echo uploadUrl($pengaturan['ttd_sekretaris_image']); ?>" alt="TTD Sekretaris BPM">
                                             </div>
                                         <?php elseif (!empty($konten['sekretaris_bem_ttd'])): ?>
                                             <div class="sig-image-wrap">
-                                                <img src="<?php echo uploadUrl($konten['sekretaris_bem_ttd']); ?>" alt="TTD Sekretaris BEM">
+                                                <img src="<?php echo uploadUrl($konten['sekretaris_bem_ttd']); ?>" alt="TTD Sekretaris BPM">
                                             </div>
                                         <?php endif; ?>
                                     <?php endif; ?>

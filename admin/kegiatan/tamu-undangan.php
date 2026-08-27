@@ -853,7 +853,7 @@ function autoDetectKategori(inputNama) {
     if (katSelect.getAttribute('data-user-modified') === 'true') return;
 
     const val = inputNama.value.toLowerCase();
-    const internalKeywords = ['warek', 'rektor', 'dosen', 'kemahasiswaan', 'dekan', 'kaprodi', 'prodi', 'bem', 'bpm', 'hima', 'ukm', 'kabag', 'kasubag', 'civitas', 'mahasiswa', 'pembina', 'instbunas', 'panitia', 'jurusan', 'akademik'];
+    const internalKeywords = ['warek', 'rektor', 'dosen', 'kemahasiswaan', 'dekan', 'kaprodi', 'prodi', 'bpm', 'bpm', 'hima', 'ukm', 'kabag', 'kasubag', 'civitas', 'mahasiswa', 'pembina', 'instbunas', 'panitia', 'jurusan', 'akademik'];
     const externalKeywords = ['dinas', 'polres', 'kodim', 'bupati', 'pt ', 'cv ', 'instansi', 'komunitas', 'swasta', 'luar', 'kabupaten', 'kecamatan', 'desa', 'polda', 'gubernur', 'camat', 'lurah', 'media', 'pt.', 'cv.'];
 
     let isExt = false;

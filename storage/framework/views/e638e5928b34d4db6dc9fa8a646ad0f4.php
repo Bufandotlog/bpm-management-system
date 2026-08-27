@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Admin - BEM Kabinet Astawidya</title>
+    <title>Login Admin - BPM Kabinet Astawidya</title>
     <meta name="robots" content="noindex, nofollow">
 
     <style>
@@ -110,7 +110,7 @@
 <div class="login-container">
     <div class="login-card">
         <div class="login-header">
-            <h1>BEM Admin</h1>
+            <h1>BPM Admin</h1>
             <p>Kabinet Astawidya 2026/2027</p>
         </div>
 
@@ -194,7 +194,7 @@
         <?php endif; ?>
 
         <div class="login-footer">
-            &copy; <?php echo e(date('Y')); ?> BEM Kabinet Astawidya
+            &copy; <?php echo e(date('Y')); ?> BPM Kabinet Astawidya
         </div>
     </div>
 </div>

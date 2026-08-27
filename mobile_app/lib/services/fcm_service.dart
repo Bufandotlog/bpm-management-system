@@ -46,7 +46,7 @@ class FcmService {
     }
   }
 
-  /// Mengirimkan FCM Token ke backend PHP BEM
+  /// Mengirimkan FCM Token ke backend PHP BPM
   static Future<bool> sendTokenToServer(String sessionCookie) async {
     try {
       String? token = await _firebaseMessaging.getToken();

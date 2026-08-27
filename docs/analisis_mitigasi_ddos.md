@@ -1,6 +1,6 @@
 # Analisis & Panduan Mitigasi DDoS untuk Server Low-Spec (1GB RAM, 1 Core CPU)
 
-Dokumen ini menganalisis risiko dan memberikan panduan mitigasi taktis untuk mengamankan halaman publik Sistem Manajemen Administrasi BEM dari serangan DDoS (Distributed Denial of Service) dalam kondisi spesifikasi server terbatas dan **tanpa menggunakan Object Storage**.
+Dokumen ini menganalisis risiko dan memberikan panduan mitigasi taktis untuk mengamankan halaman publik Sistem Manajemen Administrasi BPM dari serangan DDoS (Distributed Denial of Service) dalam kondisi spesifikasi server terbatas dan **tanpa menggunakan Object Storage**.
 
 ---
 

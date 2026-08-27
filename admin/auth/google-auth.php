@@ -10,7 +10,7 @@ $config = getGoogleAuthConfig();
 
 if (!$config['configured']) {
     if ($action === 'login') {
-        redirect('astawidya/bem.php', 'Fitur Login dengan Google belum dikonfigurasi di server.', 'error');
+        redirect('astawidya/bpm.php', 'Fitur Login dengan Google belum dikonfigurasi di server.', 'error');
     } else {
         redirect('admin/system/pengaturan.php', 'Google OAuth belum dikonfigurasi di server. Silakan atur GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET di .env', 'error');
     }
@@ -22,7 +22,7 @@ if (!$config['configured']) {
 // ----------------------------------------------------
 if ($action === 'unlink') {
     if (!isLoggedIn()) {
-        redirect('astawidya/bem.php', 'Akses ditolak. Silakan login.', 'error');
+        redirect('astawidya/bpm.php', 'Akses ditolak. Silakan login.', 'error');
         exit();
     }
     
@@ -44,7 +44,7 @@ if ($action === 'unlink') {
 // ----------------------------------------------------
 if ($action === 'link') {
     if (!isLoggedIn()) {
-        redirect('astawidya/bem.php', 'Akses ditolak. Silakan login terlebih dahulu untuk menautkan akun.', 'error');
+        redirect('astawidya/bpm.php', 'Akses ditolak. Silakan login terlebih dahulu untuk menautkan akun.', 'error');
         exit();
     }
 

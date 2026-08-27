@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
             if (empty($files_to_consolidate)) {
                 $error = "File LPJ yang dipilih tidak ditemukan secara fisik di server.";
             } else {
-                $out_filename = 'MASTER_LPJ_Triwulan_BEM_' . time() . '.docx';
+                $out_filename = 'MASTER_LPJ_Triwulan_BPM_' . time() . '.docx';
                 $out_filepath = UPLOAD_PATH . '/lpj/' . $out_filename;
                 
                 // Ensure directory exists
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                 
                 // Build consolidation command
                 $files_escaped = array_map('escapeshellarg', $files_to_consolidate);
-                $manager_script = escapeshellarg(__DIR__ . '/../../scratch/bem_lpj_manager.py');
+                $manager_script = escapeshellarg(__DIR__ . '/../../scratch/bpm_lpj_manager.py');
                 $command = "python3 {$manager_script} consolidate " . escapeshellarg($out_filepath) . " " . implode(' ', $files_escaped) . " 2>&1";
                 $output = shell_exec($command);
                 

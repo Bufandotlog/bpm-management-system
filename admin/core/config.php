@@ -43,7 +43,7 @@ if ($admin_id > 0) {
         error_log("admin/core/config.php: User ID [{$admin_id}] tidak aktif atau tidak ditemukan — session dihancurkan");
         session_unset();
         session_destroy();
-        redirect('astawidya/bem.php', 'Sesi tidak valid, silakan login kembali.', 'error');
+        redirect('astawidya/bpm.php', 'Sesi tidak valid, silakan login kembali.', 'error');
         exit();
     }
 

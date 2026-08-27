@@ -59,7 +59,7 @@ $konten = json_decode($surat['konten_surat'], true) ?? [];
 // Helper untuk format teks HTML supaya tebal otomatis menangani yang digarisbawahi oleh user (jika perlu)
 $tujuan_html = nl2br(htmlspecialchars($surat['tujuan']));
 
-// Mengambil Ketua BEM yg aktif untuk fallback TTD bawah
+// Mengambil Ketua BPM yg aktif untuk fallback TTD bawah
 if (isset($BULK_KETUA)) {
     $ketua_bem = $BULK_KETUA;
 } else {
@@ -318,7 +318,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 <div class="kop-teks">
                     <h1>BADAN EKSEKUTIF MAHASISWA</h1>
                     <h2>INSTBUNAS</h2>
-                    <h4>SK No. 610/VIII/SK-BEM/INSTBUNAS/2024</h4>
+                    <h4>SK No. 610/VIII/SK-BPM/INSTBUNAS/2024</h4>
                     <div class="kop-alamat">Jl. Siliwangi No. 121 (Jl. Raya Kadipaten - Majalengka) Heuleut - Kadipaten - Majalengka</div>
                 </div>
                 <div class="kop-extra">
@@ -399,7 +399,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 $tema_keg  = trim($konten['tema'] ?? '');
                 $custom    = trim($konten['tema_kegiatan'] ?? '');
 
-                // Ambil tahun dari nomor surat (bagian terakhir: 001/L/BEMCUP/BEM/IV/2026)
+                // Ambil tahun dari nomor surat (bagian terakhir: 001/L/BPMCUP/BPM/IV/2026)
                 $parts_nomor = explode('/', $surat['nomor_surat']);
                 $tahun_surat = end($parts_nomor) ?: date('Y');
 
@@ -601,8 +601,8 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                         <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_warek_name'] ?? 'II MUHAMAD MISBAH, S.Pd.I., SE., MM.'); ?></div>
                     </td>
                     <td style="position:relative;">
-                        Ketua BEM<br>
-                        <span class="ttd-jabatan"><?php echo htmlspecialchars(trim(str_ireplace('Ketua BEM', '', $pengaturan['ttd_presma_jabatan'] ?? 'INSTBUNAS Majalengka'))); ?></span>
+                        Ketua BPM<br>
+                        <span class="ttd-jabatan"><?php echo htmlspecialchars(trim(str_ireplace('Ketua BPM', '', $pengaturan['ttd_presma_jabatan'] ?? 'INSTBUNAS Majalengka'))); ?></span>
                         <?php if(!empty($pengaturan['cap_presma_image']) && ($konten['use_cap_presma'] ?? '1') === '1'): ?>
                             <img src="<?php echo uploadUrl($pengaturan['cap_presma_image']); ?>" style="position:absolute; bottom:0px; left:10%; max-width:180px; max-height:130px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
                         <?php endif; ?>

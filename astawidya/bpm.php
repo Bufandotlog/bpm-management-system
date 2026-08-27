@@ -1,12 +1,12 @@
 <?php
-// astawidya/bem.php - Login Panel BEM
+// astawidya/bpm.php - Login Panel BPM
 // Terlindungi oleh Cookie Gate
 
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/google-oauth.php';
 
 // Ambil kunci gerbang dari .env, default jika tidak ada
-$adminGateKey = $_ENV['ADMIN_GATE_KEY'] ?? 'astawidya-bem';
+$adminGateKey = $_ENV['ADMIN_GATE_KEY'] ?? 'astawidya-bpm';
 
 // Jika mengakses dengan query string kunci (?key=xxx), pasang cookie
 if (isset($_GET['key']) && $_GET['key'] === $adminGateKey) {
@@ -224,7 +224,7 @@ $cssVer = file_exists(__DIR__ . '/../admin/css/login.css') ? filemtime(__DIR__ .
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Admin - BEM Kabinet Astawidya</title>
+    <title>Login Admin - BPM Kabinet Astawidya</title>
     <link rel="stylesheet" href="../admin/css/login.css?v=<?php echo $cssVer; ?>">
     <?php
     $appEnvFront = defined('APP_ENV') ? APP_ENV : ($_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'production');
@@ -243,7 +243,7 @@ $cssVer = file_exists(__DIR__ . '/../admin/css/login.css') ? filemtime(__DIR__ .
 <div class="login-container">
     <div class="login-card">
         <div class="login-header">
-            <h1>BEM Admin</h1>
+            <h1>BPM Admin</h1>
             <p>Kabinet Astawidya 2025/2026</p>
         </div>
 
@@ -329,7 +329,7 @@ $cssVer = file_exists(__DIR__ . '/../admin/css/login.css') ? filemtime(__DIR__ .
         <?php endif; ?>
 
         <div class="login-footer">
-            &copy; 2025 BEM Kabinet Astawidya
+            &copy; 2025 BPM Kabinet Astawidya
         </div>
     </div>
 </div>

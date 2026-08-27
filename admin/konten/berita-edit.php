@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action_hapus_foto'])
     <h1><i class="fas fa-<?php echo $id ? 'edit' : 'plus-circle'; ?>"></i>
         <?php echo $id ? 'Edit' : 'Tambah'; ?> Berita
     </h1>
-    <p><?php echo $id ? 'Perbarui' : 'Tulis'; ?> berita untuk website BEM</p>
+    <p><?php echo $id ? 'Perbarui' : 'Tulis'; ?> berita untuk website BPM</p>
 </div>
 
 <?php flashMessage(); ?>

@@ -31,7 +31,7 @@ if ($target_id > 0) {
         $konten = json_decode($existing['konten_json'], true) ?: [];
         $edit_data = array_merge($existing, $konten);
         
-        // Extract sequence number from nomor_berita (e.g. 020/BA-KULIAHUMUM/BEM/VI/2026 -> 020)
+        // Extract sequence number from nomor_berita (e.g. 020/BA-KULIAHUMUM/BPM/VI/2026 -> 020)
         $parts = explode('/', $existing['nomor_berita']);
         $edit_data['nomor_urut'] = $parts[0] ?? '';
         $edit_data['kode_kegiatan'] = isset($parts[1]) ? str_replace('BA-', '', $parts[1]) : '';
@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action_type = $_POST['action_type'] ?? 'insert';
         $nomor_urut = sanitizeText($_POST['nomor_urut'], 10);
         $kode_keg = strtoupper(str_replace(' ', '', sanitizeText($_POST['kode_kegiatan'], 50)));
-        $nomor_berita = "{$nomor_urut}/BA-{$kode_keg}/BEM/{$bulan_romawi}/{$tahun}";
+        $nomor_berita = "{$nomor_urut}/BA-{$kode_keg}/BPM/{$bulan_romawi}/{$tahun}";
         
         $nama_kegiatan = sanitizeText($_POST['nama_kegiatan'], 255);
         
@@ -154,15 +154,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $use_cap_warek = isset($_POST['use_cap_warek']) ? '1' : '0';
         
         // Laporan fields (Hardcoded & Server Time)
-        $pelaksana_tipe = sanitizeText($_POST['pelaksana_tipe'] ?? 'BEM', 100);
+        $pelaksana_tipe = sanitizeText($_POST['pelaksana_tipe'] ?? 'BPM', 100);
         $kolaborasi_instbunas = isset($_POST['kolaborasi_instbunas']) ? '1' : '0';
         
-        if ($pelaksana_tipe === 'BEM') {
-            $base_pelaksana = 'Badan Eksekutif Mahasiswa (BEM)';
+        if ($pelaksana_tipe === 'BPM') {
+            $base_pelaksana = 'Badan Eksekutif Mahasiswa (BPM)';
         } elseif ($pelaksana_tipe === 'BPH') {
-            $base_pelaksana = 'Badan Pengurus Harian (BPH) BEM';
+            $base_pelaksana = 'Badan Pengurus Harian (BPH) BPM';
         } else {
-            $base_pelaksana = $pelaksana_tipe . ' BEM';
+            $base_pelaksana = $pelaksana_tipe . ' BPM';
         }
         
         if ($kolaborasi_instbunas === '1') {
@@ -400,12 +400,12 @@ $list_anggota_kem = dbFetchAll("
 ", [$periode_id], "i");
 
 $anggota_map = [
-    'BEM' => [],
+    'BPM' => [],
     'BPH' => []
 ];
 
 foreach($list_anggota_bph as $m) {
-    $anggota_map['BEM'][] = $m['nama'];
+    $anggota_map['BPM'][] = $m['nama'];
     $anggota_map['BPH'][] = $m['nama'];
 }
 
@@ -414,7 +414,7 @@ foreach($list_anggota_kem as $m) {
         $anggota_map[$m['kem_nama']] = [];
     }
     $anggota_map[$m['kem_nama']][] = $m['anggota_nama'];
-    $anggota_map['BEM'][] = $m['anggota_nama'];
+    $anggota_map['BPM'][] = $m['anggota_nama'];
 }
 
 foreach ($list_kementerian as $kem) {
@@ -476,7 +476,7 @@ $def = [
     'warek_nuptk' => '7756762662200002',
     'use_ttd_warek' => '1',
     'use_cap_warek' => '1',
-    'pelaksana_kegiatan' => 'Badan Eksekutif Mahasiswa (BEM) & INSTBUNAS Majalengka',
+    'pelaksana_kegiatan' => 'Badan Eksekutif Mahasiswa (BPM) & INSTBUNAS Majalengka',
     'tujuan' => [
         'Meningkatkan tali persaudaraan antar mahasiswa.',
         'Meningkatkan jiwa kepemimpinan dan rasa tanggung jawab.'
@@ -500,7 +500,7 @@ if ($is_edit || $is_clone) {
     $edit_data = $def;
 }
 
-$pelaksana_tipe_val = $edit_data['pelaksana_tipe'] ?? 'BEM';
+$pelaksana_tipe_val = $edit_data['pelaksana_tipe'] ?? 'BPM';
 $kolaborasi_val = $edit_data['kolaborasi_instbunas'] ?? '1';
 
 if (!isset($edit_data['pelaksana_tipe']) && isset($edit_data['pelaksana_kegiatan'])) {
@@ -513,12 +513,12 @@ if (!isset($edit_data['pelaksana_tipe']) && isset($edit_data['pelaksana_kegiatan
         $base = trim($pk);
     }
     
-    if ($base === 'Badan Eksekutif Mahasiswa (BEM)') {
-        $pelaksana_tipe_val = 'BEM';
-    } elseif ($base === 'Badan Pengurus Harian (BPH) BEM') {
+    if ($base === 'Badan Eksekutif Mahasiswa (BPM)') {
+        $pelaksana_tipe_val = 'BPM';
+    } elseif ($base === 'Badan Pengurus Harian (BPH) BPM') {
         $pelaksana_tipe_val = 'BPH';
     } else {
-        $pelaksana_tipe_val = trim(preg_replace('/\s+BEM$/i', '', $base));
+        $pelaksana_tipe_val = trim(preg_replace('/\s+BPM$/i', '', $base));
     }
 }
 
@@ -1200,8 +1200,8 @@ if (!empty($tanggal_kegiatan_val)) {
                             <i class="fas fa-search tpl-search-icon"></i>
                             <input type="text" id="pelaksana_tipe_input" name="pelaksana_tipe" class="tpl-search-input" placeholder="Pilih Pelaksana Kegiatan..." value="<?php echo htmlspecialchars($pelaksana_tipe_val); ?>" required readonly onclick="showTplResults('pelaksana')" style="cursor:pointer; background-color: var(--input-bg);">
                             <div class="tpl-results" id="results-pelaksana">
-                                <div class="tpl-item" onclick="selectPelaksana('BEM')">
-                                    <div class="tpl-item-label">Badan Eksekutif Mahasiswa (BEM)</div>
+                                <div class="tpl-item" onclick="selectPelaksana('BPM')">
+                                    <div class="tpl-item-label">Badan Eksekutif Mahasiswa (BPM)</div>
                                 </div>
                                 <div class="tpl-item" onclick="selectPelaksana('BPH')">
                                     <div class="tpl-item-label">Badan Pengurus Harian (BPH)</div>
@@ -1264,9 +1264,9 @@ if (!empty($tanggal_kegiatan_val)) {
             </div>
             <div class="card-body">
                 <div class="grid-3">
-                    <!-- KETUA BEM -->
+                    <!-- KETUA BPM -->
                     <div class="signature-box" style="padding: 20px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
-                        <div class="signature-title" style="font-weight: bold; font-size: 1.1rem; color: #8BB9F0; margin-bottom: 15px;"><i class="fas fa-user-graduate"></i> Ketua BEM</div>
+                        <div class="signature-title" style="font-weight: bold; font-size: 1.1rem; color: #8BB9F0; margin-bottom: 15px;"><i class="fas fa-user-graduate"></i> Ketua BPM</div>
                         <div class="form-group">
                             <label>Nama Lengkap</label>
                             <input type="text" name="ketua_bem_nama" value="<?php echo htmlspecialchars($edit_data['ketua_bem_nama']); ?>" required>
@@ -1280,7 +1280,7 @@ if (!empty($tanggal_kegiatan_val)) {
                                 </label>
                             </div>
                             <div class="switch-container" style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="switch-label" style="font-size: 0.9rem; color: var(--text-muted);">Sertakan Cap BEM</span>
+                                <span class="switch-label" style="font-size: 0.9rem; color: var(--text-muted);">Sertakan Cap BPM</span>
                                 <label class="switch">
                                     <input type="checkbox" name="use_cap_presma" value="1" <?php echo ($edit_data['use_cap_presma'] ?? '1') == '1' ? 'checked' : ''; ?>>
                                     <span class="slider"></span>
@@ -1289,9 +1289,9 @@ if (!empty($tanggal_kegiatan_val)) {
                         </div>
                     </div>
 
-                    <!-- SEKRETARIS BEM -->
+                    <!-- SEKRETARIS BPM -->
                     <div class="signature-box" style="padding: 20px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
-                        <div class="signature-title" style="font-weight: bold; font-size: 1.1rem; color: #8BB9F0; margin-bottom: 15px;"><i class="fas fa-file-signature"></i> Sekretaris BEM</div>
+                        <div class="signature-title" style="font-weight: bold; font-size: 1.1rem; color: #8BB9F0; margin-bottom: 15px;"><i class="fas fa-file-signature"></i> Sekretaris BPM</div>
                         <div class="form-group">
                             <label>Nama Lengkap</label>
                             <input type="text" name="sekretaris_bem_nama" value="<?php echo htmlspecialchars($edit_data['sekretaris_bem_nama']); ?>" required>

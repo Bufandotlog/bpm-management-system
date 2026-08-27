@@ -23,11 +23,11 @@ void main() async {
   // Inisialisasi Background Downloader
   await DownloadService.initialize();
 
-  runApp(const BemMobileApp());
+  runApp(const BpmMobileApp());
 }
 
-class BemMobileApp extends StatelessWidget {
-  const BemMobileApp({super.key});
+class BpmMobileApp extends StatelessWidget {
+  const BpmMobileApp({super.key});
 
   @override
   Widget build(BuildContext context) {

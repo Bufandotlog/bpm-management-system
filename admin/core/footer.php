@@ -25,12 +25,12 @@ $adminJsVer  = file_exists($adminJsPath) ? filemtime($adminJsPath) : '1';
     </nav>
 
     <?php if (!empty($bottom_sheet_items)): ?>
-    <!-- Bottom Sheet Drawer (untuk Konten BEM) -->
+    <!-- Bottom Sheet Drawer (untuk Konten BPM) -->
     <div class="bottom-sheet-overlay" id="bottomSheetOverlay" onclick="closeMobileBottomSheet()"></div>
     <div class="bottom-sheet-panel" id="bottomSheetPanel">
         <div class="sheet-handle"></div>
         <div class="sheet-header">
-            <h4><i class="fas fa-university"></i> Konten BEM</h4>
+            <h4><i class="fas fa-university"></i> Konten BPM</h4>
             <button type="button" class="sheet-close-btn" onclick="closeMobileBottomSheet()">&times;</button>
         </div>
         <div class="sheet-menu-list">

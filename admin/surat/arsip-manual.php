@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="form-group">
             <label>Nomor Surat</label>
-            <input type="text" name="nomor_surat" class="form-control" required placeholder="Contoh: 123/L/BEM/IV/2026" value="<?php echo htmlspecialchars($edit_data['nomor_surat']); ?>">
+            <input type="text" name="nomor_surat" class="form-control" required placeholder="Contoh: 123/L/BPM/IV/2026" value="<?php echo htmlspecialchars($edit_data['nomor_surat']); ?>">
         </div>
 
         <div class="form-group">
@@ -167,7 +167,7 @@ function updateLabels(val) {
     if (val === 'M' || val === 'I') {
         labelTgl.innerText = 'Tanggal Diterima';
         labelTujuan.innerText = 'Asal Instansi (Pengirim)';
-        inputTujuan.placeholder = 'Universitas Majalengka / BEM...';
+        inputTujuan.placeholder = 'Universitas Majalengka / BPM...';
     } else {
         labelTgl.innerText = 'Tanggal Dikirim';
         labelTujuan.innerText = 'Tujuan (Kepada Yth)';

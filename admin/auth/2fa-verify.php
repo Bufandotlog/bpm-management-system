@@ -103,7 +103,7 @@ $cssVer = file_exists(__DIR__ . '/css/login.css') ? filemtime(__DIR__ . '/css/lo
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verifikasi 2FA - BEM Admin</title>
+    <title>Verifikasi 2FA - BPM Admin</title>
     <link rel="stylesheet" href="<?php echo baseUrl('admin/css/login.css?v=' . $cssVer); ?>">
     <style>
         .totp-input{font-size:2rem;letter-spacing:12px;text-align:center;font-family:monospace}

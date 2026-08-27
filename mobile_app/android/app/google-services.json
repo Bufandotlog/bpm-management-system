@@ -1,15 +1,15 @@
 {
   "project_info": {
     "project_number": "162415501575",
-    "project_id": "bem-astawidya-mobile",
-    "storage_bucket": "bem-astawidya-mobile.firebasestorage.app"
+    "project_id": "bpm-astawidya-mobile",
+    "storage_bucket": "bpm-astawidya-mobile.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
         "mobilesdk_app_id": "1:162415501575:android:cd8c470e730ac824d7a5a2",
         "android_client_info": {
-          "package_name": "com.bem.astawidya"
+          "package_name": "com.bpm.astawidya"
         }
       },
       "oauth_client": [],

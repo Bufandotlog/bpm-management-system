@@ -13,7 +13,7 @@ $pendingDokumentasi   = dbFetchOne("SELECT COUNT(*) as total FROM kegiatan WHERE
 $berita_terpopuler = dbFetchOne("SELECT judul, tanggal, penulis, status FROM berita WHERE periode_id = ? ORDER BY id DESC LIMIT 1", [$periode_id], "i");
 if (!$berita_terpopuler) {
     $berita_terpopuler = [
-        'judul' => 'Pelantikan Pengurus BEM Astawidya Kabinet 2026 Resmi Digelar di Auditorium Utama',
+        'judul' => 'Pelantikan Pengurus BPM Astawidya Kabinet 2026 Resmi Digelar di Auditorium Utama',
         'tanggal' => '2026-08-12',
         'penulis' => 'Tim Humas & Kominfo',
         'views_count' => 1250,
@@ -27,7 +27,7 @@ if (!$berita_terpopuler) {
 // 1. Data Analytics Views Kategori Berita (Donut Chart 1)
 $categories_analytics = [
     ['nama' => 'Pengumuman Resmi', 'views' => 450, 'count' => 8, 'pct' => 45, 'color' => '#4A90E2', 'dash' => '141, 314', 'offset' => '0'],
-    ['nama' => 'Kegiatan BEM', 'views' => 300, 'count' => 14, 'pct' => 30, 'color' => '#2ecc71', 'dash' => '94, 314', 'offset' => '-141'],
+    ['nama' => 'Kegiatan BPM', 'views' => 300, 'count' => 14, 'pct' => 30, 'color' => '#2ecc71', 'dash' => '94, 314', 'offset' => '-141'],
     ['nama' => 'Opini Mahasiswa', 'views' => 150, 'count' => 5, 'pct' => 15, 'color' => '#f1c40f', 'dash' => '47, 314', 'offset' => '-235'],
     ['nama' => 'Prestasi & Rekap', 'views' => 100, 'count' => 7, 'pct' => 10, 'color' => '#9b59b6', 'dash' => '32, 314', 'offset' => '-282']
 ];
@@ -166,7 +166,7 @@ $readiness_color = $total_content_readiness >= 80 ? '#2ecc71' : ($total_content_
             <h3 class="kominfo-barchart-title" style="display: flex; align-items: center; gap: 8px;">
                 <i class="fas fa-chart-bar" style="color: #4A90E2;"></i> Distribusi Artikel per Kategori (Diagram Batang)
             </h3>
-            <p style="margin: 0; font-size: 0.72rem; color: #aaa;">Volume publikasi berita BEM Astawidya.</p>
+            <p style="margin: 0; font-size: 0.72rem; color: #aaa;">Volume publikasi berita BPM Astawidya.</p>
         </div>
         <span class="badge" style="background: rgba(74, 144, 226, 0.2); color: #4A90E2; font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 10px; border: 1px solid rgba(74, 144, 226, 0.3);">
             Total <?php echo $totalBerita; ?> Artikel
@@ -185,7 +185,7 @@ $readiness_color = $total_content_readiness >= 80 ? '#2ecc71' : ($total_content_
             <rect x="40" y="40" width="55" height="80" rx="6" fill="#4A90E2" opacity="0.9" />
             <text x="67" y="28" fill="#4A90E2" font-size="11" font-weight="bold" text-anchor="middle">8 Artikel</text>
 
-            <!-- Batang 2: Kegiatan BEM (14 Artikel - Peak) -->
+            <!-- Batang 2: Kegiatan BPM (14 Artikel - Peak) -->
             <rect x="165" y="10" width="55" height="110" rx="6" fill="#2ecc71" opacity="0.9" />
             <text x="192" y="-2" fill="#2ecc71" font-size="11" font-weight="extrabold" text-anchor="middle">14 Artikel (Peak)</text>
 
@@ -305,14 +305,14 @@ $readiness_color = $total_content_readiness >= 80 ? '#2ecc71' : ($total_content_
 
 </div>
 
-<!-- 3. WIDGET MONITOR KELENGKAPAN KONTEN WEBSITE BEM (4 DOMAIN KONTEN MASTER FIX @25%) -->
+<!-- 3. WIDGET MONITOR KELENGKAPAN KONTEN WEBSITE BPM (4 DOMAIN KONTEN MASTER FIX @25%) -->
 <div class="card" style="background: var(--sidebar-bg); border: 1px solid var(--sidebar-border); border-radius: 12px; padding: 18px; margin-top: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
         <div>
             <h3 style="font-size: 0.9rem; color: #fff; margin: 0 0 2px 0; display: flex; align-items: center; gap: 6px;">
-                <i class="fas fa-tasks" style="color: <?php echo $readiness_color; ?>;"></i> Monitor Kelengkapan Konten Master Website BEM
+                <i class="fas fa-tasks" style="color: <?php echo $readiness_color; ?>;"></i> Monitor Kelengkapan Konten Master Website BPM
             </h3>
-            <p style="margin: 0; font-size: 0.72rem; color: #aaa;">Progress tim Kominfo melengkapi 4 domain data master website BEM.</p>
+            <p style="margin: 0; font-size: 0.72rem; color: #aaa;">Progress tim Kominfo melengkapi 4 domain data master website BPM.</p>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
             <div style="font-size: 1.15rem; font-weight: 800; color: <?php echo $readiness_color; ?>;"><?php echo $total_content_readiness; ?>%</div>
@@ -425,7 +425,7 @@ $readiness_color = $total_content_readiness >= 80 ? '#2ecc71' : ($total_content_
     <a href="<?php echo baseUrl('admin/konten/berita-edit.php'); ?>" class="action-card" style="padding: 12px;"><i class="fas fa-plus-circle"></i><span>Tambah Berita</span></a>
     <a href="<?php echo baseUrl('admin/konten/berita.php'); ?>" class="action-card" style="background: rgba(74, 144, 226, 0.1); border-color: rgba(74, 144, 226, 0.3); padding: 12px;"><i class="fas fa-chart-bar"></i><span>Analytics Berita</span></a>
     <a href="<?php echo baseUrl('admin/konten/kepengurusan.php'); ?>" class="action-card" style="background: rgba(155, 89, 182, 0.1); border-color: rgba(155, 89, 182, 0.3); padding: 12px;"><i class="fas fa-user-friends"></i><span>Kelola Anggota</span></a>
-    <a href="<?php echo baseUrl('admin/konten/visi-misi.php'); ?>" class="action-card" style="background: rgba(241, 196, 15, 0.1); border-color: rgba(241, 196, 15, 0.3); padding: 12px;"><i class="fas fa-pen-nib"></i><span>Konten BEM</span></a>
+    <a href="<?php echo baseUrl('admin/konten/visi-misi.php'); ?>" class="action-card" style="background: rgba(241, 196, 15, 0.1); border-color: rgba(241, 196, 15, 0.3); padding: 12px;"><i class="fas fa-pen-nib"></i><span>Konten BPM</span></a>
 </div>
 
 <!-- JAVASCRIPT DINAMIS FILTER RENTANG WAKTU GRAPH WITH DATA LABELS -->

@@ -66,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              "Sistem Informasi Manajemen BEM",
+              "Sistem Informasi Manajemen BPM",
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,

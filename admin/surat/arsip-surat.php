@@ -851,7 +851,7 @@ function copyRedaksi(data, btn) {
     }
 
     let perihal = stripHtml(data.perihal);
-    let kegiatan = stripHtml(data.kegiatan || "Kegiatan BEM");
+    let kegiatan = stripHtml(data.kegiatan || "Kegiatan BPM");
     let tujuan = stripHtml(data.tujuan);
     let tujuanShort = stripHtml(data.tujuan_short);
     

@@ -152,7 +152,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   domStorageEnabled: true,
                   useOnDownloadStart: true,
                   // File-access flags sengaja TIDAK diaktifkan: aplikasi hanya
-                  // memuat https://bembudiutomo.my.id (tidak ada file://), sehingga
+                  // memuat https://bpmbudiutomo.my.id (tidak ada file://), sehingga
                   // allowFileAccessFromFileURLs/allowUniversalAccessFromFileURLs
                   // tidak diperlukan dan dibiarkan pada default aman (false).
                   // Mengaktifkannya hanya memperluas attack surface (page bisa
@@ -175,7 +175,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                 onLoadStop: (controller, url) async {
                   _pullToRefreshController?.endRefreshing();
 
-                  // Jika user berhasil login di web BEM, otomatis Daftarkan FCM Token
+                  // Jika user berhasil login di web BPM, otomatis Daftarkan FCM Token
                   if (url != null && url.toString().contains('/admin/')) {
                     CookieManager cookieManager = CookieManager.instance();
                     List<Cookie> cookies = await cookieManager.getCookies(url: url);
@@ -214,8 +214,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   }
                 },
                 onDownloadStartRequest: (controller, request) async {
-                  // Intercept pengunduhan file PDF / DOCX dari WebView BEM
-                  String fileName = request.suggestedFilename ?? "dokumen_bem.pdf";
+                  // Intercept pengunduhan file PDF / DOCX dari WebView BPM
+                  String fileName = request.suggestedFilename ?? "dokumen_bpm.pdf";
                   await DownloadService.downloadAndOpenFile(request.url.toString(), fileName);
                 },
               ),

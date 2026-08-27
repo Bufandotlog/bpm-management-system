@@ -633,7 +633,7 @@ input.barang-qty::-webkit-outer-spin-button {
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <input type="text" name="nama_acara" id="nama_acara" required placeholder="Contoh: BEM CUP" oninput="updateDayNumbers()" value="<?php echo $edit_data ? htmlspecialchars($edit_data['nama_acara']) : ''; ?>" style="flex: 2;">
+                        <input type="text" name="nama_acara" id="nama_acara" required placeholder="Contoh: BPM CUP" oninput="updateDayNumbers()" value="<?php echo $edit_data ? htmlspecialchars($edit_data['nama_acara']) : ''; ?>" style="flex: 2;">
                     </div>
                 </div>
                 <div class="form-group">

@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $status_pendaftaran === 'buka') {
                     if (!empty($adminIds)) {
                         createNotificationAndPush(
                             $adminIds,
-                            "👤 Pendaftar BEM Baru",
+                            "👤 Pendaftar BPM Baru",
                             "{$nama_lengkap} ({$username}) mendaftar sebagai pengurus di {$penempatan}.",
                             baseUrl('admin/konten/pendaftaran.php?tab=pending'),
                             "info"
@@ -140,7 +140,7 @@ if ($periode_id > 0) {
 
 <div class="container">
     <div class="daftar-container">
-        <h2 style="text-align: center; margin-bottom: 30px;">Pendaftaran Pengurus BEM</h2>
+        <h2 style="text-align: center; margin-bottom: 30px;">Pendaftaran Pengurus BPM</h2>
 
         <?php if ($status_pendaftaran === 'tutup'): ?>
             <div style="text-align: center; padding: 50px 20px;">

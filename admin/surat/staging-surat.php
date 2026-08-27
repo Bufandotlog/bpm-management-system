@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_
                     ['ketuplat', 'sie_humas']
                 );
                 if (!empty($targetUserIds)) {
-                    $kegNama = dbFetchOne("SELECT nama_kegiatan FROM kegiatan WHERE id = ?", [$selected_kegiatan_id])['nama_kegiatan'] ?? 'Kegiatan BEM';
+                    $kegNama = dbFetchOne("SELECT nama_kegiatan FROM kegiatan WHERE id = ?", [$selected_kegiatan_id])['nama_kegiatan'] ?? 'Kegiatan BPM';
                     createNotificationAndPush(
                         $targetUserIds,
                         "📨 Surat Baru Siap Disebar!",
