@@ -1,0 +1,277 @@
+/* ========== MAIN STYLE.CSS ========== */
+/* File ini mengimpor semua file CSS lainnya */
+
+@import url('variables.css');
+@import url('navbar.css');
+@import url('hero.css');
+@import url('sambutan.css');
+@import url('visi-misi.css');
+@import url('cards.css');
+@import url('kepengurusan.css');
+@import url('detail-menteri.css');
+@import url('berita.css');
+@import url('kontak.css');
+@import url('footer.css');
+@import url('responsive.css');
+@import url('kepengurusan-dropdown.css');
+/* @import url('global-background.css'); */ /* NONAKTIFKAN */
+
+/* Animasi Scroll (umum) */
+.sambutan, .visi-misi, .card, .kontak-item, .menteri-item, .section-title {
+    opacity: 0;
+    transform: translateY(35px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sambutan.visible, .visi-misi.visible, .card.visible, .kontak-item.visible, .menteri-item.visible, .section-title.visible {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    visibility: visible !important;
+}
+
+/* ===== KONTEN DI ATAS HERO ===== */
+
+/* HANYA UNTUK HALAMAN INDEX - konten dimulai setelah hero */
+.page-index .sambutan {
+    margin-top: 100vh !important;
+    position: relative;
+    z-index: 10;
+    display: block;
+}
+
+/* HALAMAN LAIN - sambutan tidak perlu margin */
+.page-berita .sambutan,
+.page-kepengurusan .sambutan,
+.page-kontak .sambutan,
+.page-berita-detail .sambutan,
+.page-detail-menteri .sambutan {
+    margin-top: 0 !important;
+}
+
+.visi-misi {
+    display: block;
+    position: relative;
+    z-index: 10;
+}
+
+.card-grid, .home-news-grid {
+    display: grid;
+    opacity: 1;
+    visibility: visible;
+    position: relative;
+    z-index: 10;
+}
+
+footer {
+    position: relative;
+    z-index: 10;
+}
+
+/* Hero tetap di belakang */
+.hero {
+    z-index: -1 !important;
+}
+
+/* ===== NAVBAR DI ATAS HERO ===== */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(74, 144, 226, 0.2);
+}
+
+/* ===== KONTEN KHUSUS PER HALAMAN ===== */
+
+/* Sembunyikan hero content di halaman selain index */
+.page-berita .hero-content,
+.page-kepengurusan .hero-content,
+.page-kontak .hero-content,
+.page-berita-detail .hero-content,
+.page-detail-menteri .hero-content {
+    display: none;
+}
+
+/* Sembunyikan scroll hint di halaman selain index */
+.page-berita .scroll-hint,
+.page-kepengurusan .scroll-hint,
+.page-kontak .scroll-hint,
+.page-berita-detail .scroll-hint,
+.page-detail-menteri .scroll-hint {
+    display: none;
+}
+
+/* ===== ATUR MARGIN UNTUK HALAMAN NON-INDEX ===== */
+/* Halaman non-index - konten langsung terlihat */
+.page-berita main,
+.page-kepengurusan main,
+.page-kontak main,
+.page-berita-detail main,
+.page-detail-menteri main {
+    margin-top: 0; /* Langsung terlihat, tanpa margin */
+}
+
+/* Beri sedikit padding untuk hero caption di halaman berita */
+.page-berita .hero-caption {
+    margin-top: 0;
+    padding-top: 2rem;
+}
+
+/* Halaman index - biarkan sambutan yang mengatur margin */
+.page-index main {
+    margin-top: 0;
+}
+
+/* Pastikan card menggunakan style dari cards.css */
+.card {
+    width: auto;
+    flex: 1 1 auto;
+}
+
+/* Pastikan home news card tetap di tengah */
+.home-news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 2rem;
+    justify-content: center;
+}
+
+.home-news-card {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+/* Responsive - hanya untuk halaman index */
+@media (max-width: 768px) {
+    .page-index .sambutan {
+        margin-top: 90vh !important;
+    }
+}
+
+/* ✅ TAMBAHKAN DI PALING BAWAH style.css */
+
+/* ===== MOBILE FIX: HERO TITLE KABINET ASTAWIDYA ===== */
+@media (max-width: 768px) {
+    .hero-title {
+        line-height: 1.3;
+    }
+
+    .hero-title .biru {
+        letter-spacing: 0;  /* Hapus -2px yang paksa teks melebar */
+        display: block;     /* "ASTAWIDYA" turun ke baris sendiri */
+    }
+
+    .hero-sub {
+        letter-spacing: 5px; /* Kurangi dari 12px */
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-title .biru {
+        display: block;
+        letter-spacing: 0;
+    }
+
+    .hero-sub {
+        letter-spacing: 2px;
+        font-size: 0.85rem;
+    }
+}
+
+/* ===== SECTIONS SNAP SCROLL & EXIT/ENTER TRANSITIONS (INDEX PAGE) ===== */
+@media (min-width: 992px) {
+    /* Enable native scroll snapping on HTML container */
+    html.index-html-snap {
+        scroll-snap-type: y mandatory;
+        scroll-behavior: smooth;
+    }
+    
+    /* Transparent blocker to reserve space for fixed Hero */
+    html.index-html-snap .hero-snap-point {
+        height: 100vh;
+        width: 100%;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+        pointer-events: none;
+        display: block;
+    }
+    
+    /* Make each section a full viewport screen */
+    html.index-html-snap .home-section {
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+        min-height: 100vh;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        box-sizing: border-box;
+        position: relative;
+        overflow: hidden;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 90px 2rem 40px !important; /* Spacing for fixed header and layout margin */
+        
+        /* Transition properties */
+        will-change: transform, opacity;
+        opacity: 0;
+        transform: scale(0.8) translateY(120px);
+        transition: opacity 1s cubic-bezier(0.25, 1, 0.5, 1), 
+                    transform 1s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    
+    /* Center containers vertically inside full screen snap sections */
+    html.index-html-snap .visi-misi-section .container,
+    html.index-html-snap .berita-section .container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+        width: 100%;
+    }
+    
+    /* Focus active state (Current element in view) */
+    html.index-html-snap .home-section.focus-active {
+        opacity: 1 !important;
+        transform: scale(1) translateY(0) !important;
+        z-index: 10;
+        pointer-events: auto;
+    }
+    
+    /* Exit UP state (Scrolling down - exits to top: zoom in + translate up + fade out) */
+    html.index-html-snap .home-section.focus-exit-up {
+        opacity: 0 !important;
+        transform: scale(1.22) translateY(-140px) !important;
+        z-index: 5;
+        pointer-events: none;
+    }
+    
+    /* Exit DOWN state (Scrolling up - exits to bottom: zoom out + translate down + fade out) */
+    html.index-html-snap .home-section.focus-exit-down {
+        opacity: 0 !important;
+        transform: scale(0.8) translateY(140px) !important;
+        z-index: 5;
+        pointer-events: none;
+    }
+    
+    /* Let footer snap gracefully at the bottom */
+    html.index-html-snap footer {
+        scroll-snap-align: end;
+        scroll-snap-stop: always;
+    }
+}
+
+/* Fallback for mobile/tablet to hide the snap point */
+@media (max-width: 991px) {
+    .hero-snap-point {
+        display: none !important;
+    }
+}
+
