@@ -19,6 +19,6 @@ class AppConfig {
 
   // --- FIREBASE (project: bpm-astawidya) ---
   static const String firebaseProjectId = 'bpm-astawidya';
-  static const String firebaseDatabaseUrl = 'https://bpm-astawidya-default-rtdb.asia-southeast2.firebasedatabase.app';
+  static const String firebaseDatabaseUrl = 'https://bpm-astawidya-default-rtdb.asia-southeast1.firebasedatabase.app';
   static const String firebaseStorageBucket = 'bpm-astawidya.appspot.com';
 }
