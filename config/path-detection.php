@@ -119,6 +119,18 @@ function resolveBaseUrl() {
         // Gunakan filter_var untuk validasi dan sanitasi
         $filtered = filter_var($url, FILTER_SANITIZE_URL);
         if ($filtered && filter_var($filtered, FILTER_VALIDATE_URL)) {
+            // [FIX] Validasi DNS host: jika BASE_URL pakai domain publik tapi host
+            //       tidak resolve di environment ini (misal prod di laptop dev),
+            //       fallback ke deteksi otomatis agar asset tidak error DNS_PROBE_POSSIBLE.
+            $host = parse_url($filtered, PHP_URL_HOST);
+            if ($host !== 'localhost' && $host !== '127.0.0.1' && !in_array($host, ['0.0.0.0', '::1'])) {
+                $dnsOk = @gethostbynamel($host);
+                if (empty($dnsOk) && php_sapi_name() !== 'cli') {
+                    // Web context: domain tidak resolve → jangan paksa BASE_URL ini
+                    error_log("resolveBaseUrl(): BASE_URL host [{$host}] tidak resolve di environment ini, fallback ke deteksi otomatis");
+                    return detectBaseUrl();
+                }
+            }
             // Pastikan selalu ada trailing slash
             return rtrim($filtered, '/') . '/';
         } else {
@@ -137,10 +149,18 @@ function resolveBaseUrl() {
 
 if (php_sapi_name() === 'cli') {
     $rootDir = dirname(__DIR__);
-    // CLI mode: gunakan fallback yang lebih aman
-    $baseUrlCli = $_ENV['BASE_URL'] ?? 'http://localhost/bpm/';
-    // Pastikan trailing slash
-    $baseUrlCli = rtrim($baseUrlCli, '/') . '/';
+    // CLI mode: deteksi otomatis base path agar tak hardcode ke /bpm/
+    $scriptBase = basename($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '');
+    $envBase = trim($_ENV['BASE_URL'] ?? '');
+    if ($envBase && preg_match('#^https?://#i', $envBase)) {
+        $baseUrlCli = rtrim($envBase, '/') . '/';
+    } else {
+        $auto = detectBaseUrl();
+        // deteksi path relatif dari folder project (bpm atau bem)
+        $projFolder = basename($rootDir);
+        $auto = preg_replace('#/$#', '', $auto) . '/' . $projFolder . '/';
+        $baseUrlCli = $auto;
+    }
     defined('BASE_URL')    || define('BASE_URL',    $baseUrlCli);
     defined('UPLOAD_PATH') || define('UPLOAD_PATH', $rootDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR);
     defined('UPLOAD_URL')  || define('UPLOAD_URL',  BASE_URL . 'uploads/');
