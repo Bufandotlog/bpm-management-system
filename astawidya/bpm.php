@@ -236,7 +236,7 @@ $cssVer = file_exists(__DIR__ . '/../admin/css/login.css') ? filemtime(__DIR__ .
     $hasTurnstile = $turnstileEnabledFront && !empty($turnstileSiteKey) && !$isLocked;
     if ($hasTurnstile):
     ?>
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer onerror="onTurnstileScriptError()"></script>
     <?php endif; ?>
 </head>
 <body>
@@ -389,6 +389,24 @@ function onTurnstileExpired() {
         notice.style.display = 'block';
     }
 }
+
+function onTurnstileScriptError() {
+    var form   = document.getElementById('loginForm');
+    var notice = document.getElementById('turnstileNotice');
+    if (notice) {
+        notice.textContent = '✖ Skrip verifikasi diblokir oleh AdBlocker / Ekstensi Browser. Nonaktifkan AdBlocker lalu refresh.';
+        notice.style.color = '#f44336';
+        notice.style.display = 'block';
+    }
+}
+
+<?php if ($hasTurnstile): ?>
+setTimeout(function() {
+    if (typeof turnstile === 'undefined') {
+        onTurnstileScriptError();
+    }
+}, 3500);
+<?php endif; ?>
 </script>
 </body>
 </html>
