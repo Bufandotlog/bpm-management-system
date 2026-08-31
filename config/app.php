@@ -20,16 +20,25 @@ defined('SITE_NAME') || define('SITE_NAME', 'BPM Kabinet Astawidya');
 // ============================================
 if (session_status() === PHP_SESSION_NONE) {
 
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path'     => '/',
-        'domain'   => '',
-        'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
-
-    // Pakai @ agar tidak fatal di shared hosting yang restrict ini_set
+    
+// Canonical host enforcement (www only) - cegah OAuth state mismatch lintas www/non-www
+$canonicalHost = 'www.bembudiutomo.my.id';
+$requestHost = $_SERVER['HTTP_HOST'] ?? '';
+if ($requestHost !== $canonicalHost) {
+    $scheme = (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
+    $redirectTo = $scheme . '://' . $canonicalHost . $_SERVER['REQUEST_URI'];
+    header('Location: ' . $redirectTo, true, 301);
+    exit;
+}
+// Session cookie domain wildcard untuk persist lintas www/non-www
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '.bembudiutomo.my.id',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);// Pakai @ agar tidak fatal di shared hosting yang restrict ini_set
     @ini_set('session.use_strict_mode', 1);
     @ini_set('session.gc_maxlifetime', 1800);
 

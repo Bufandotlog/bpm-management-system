@@ -20,8 +20,8 @@ if (!empty($error)) {
 }
 
 // Validasi state token untuk anti-CSRF
-$expectedState = $_SESSION['google_auth_state'] ?? '';
-unset($_SESSION['google_auth_state']);
+$expectedState = $_SESSION['google_oauth']['state'] ?? '';
+unset($_SESSION['google_oauth']['state']);
 
 if (empty($state) || empty($expectedState) || !hash_equals($expectedState, $state)) {
     if (isLoggedIn()) {
@@ -33,8 +33,8 @@ if (empty($state) || empty($expectedState) || !hash_equals($expectedState, $stat
 }
 
 // Tentukan action ('link' atau 'login')
-$action = $_SESSION['google_auth_action'] ?? (str_starts_with($state, 'link_') ? 'link' : 'login');
-unset($_SESSION['google_auth_action']);
+$action = $_SESSION['google_oauth']['action'] ?? (str_starts_with($state, 'link_') ? 'link' : 'login');
+unset($_SESSION['google_oauth']['action']);
 
 // Tukar authorization code dengan access token
 $tokenData = exchangeGoogleCodeForToken($code);
