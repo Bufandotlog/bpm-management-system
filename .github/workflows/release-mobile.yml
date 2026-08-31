@@ -1,0 +1,189 @@
+name: Release BPM Mobile
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile_app/**'
+      - '.github/workflows/release-mobile.yml'
+
+# Hindari race-condition: hanya satu workflow release berjalan pada satu waktu.
+concurrency:
+  group: release-bpm-mobile
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Deploy APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter 3.44.9
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.44.9'
+          cache: true
+
+      - name: Decode Android signing material
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_PROPS_B64: ${{ secrets.KEY_PROPERTIES_BASE64 }}
+        run: |
+          set -euo pipefail
+          mkdir -p mobile_app/android/app
+          echo "$KEYSTORE_B64" | base64 -d > mobile_app/android/app/bpm-release.keystore
+          echo "$KEY_PROPS_B64" | base64 -d > mobile_app/android/key.properties
+          echo "Keystore + key.properties decoded."
+
+      - name: Show Flutter version
+        working-directory: mobile_app
+        run: flutter --version
+
+      - name: Install dependencies
+        working-directory: mobile_app
+        run: flutter pub get
+
+      - name: Parse version from pubspec.yaml
+        id: version
+        working-directory: mobile_app
+        run: |
+          set -euo pipefail
+          RAW=$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}' | tr -d '\r\n')
+          VERSION=${RAW%%+*}
+          BUILD=${RAW##*+}
+          if [[ -z "$VERSION" || -z "$BUILD" ]]; then
+            echo "ERROR: cannot parse version from pubspec.yaml (raw='$RAW')" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Parsed: version=$VERSION build=$BUILD"
+
+      - name: Run flutter analyze
+        working-directory: mobile_app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build APK (universal)
+        working-directory: mobile_app
+        run: flutter build apk --release
+
+      - name: Build APK (split per ABI)
+        working-directory: mobile_app
+        run: flutter build apk --release --split-per-abi
+
+      - name: Inspect produced APKs
+        working-directory: mobile_app/build/app/outputs/flutter-apk
+        run: |
+          set -euo pipefail
+          ls -la
+          echo "---"
+          for f in *.apk; do
+            [[ -e "$f" ]] || { echo "No APK found"; exit 1; }
+            SIZE_MB=$(du -m "$f" | cut -f1)
+            SHA=$(sha256sum "$f" | awk '{print $1}')
+            echo "${f}|${SIZE_MB}|${SHA}"
+          done
+
+      - name: Generate SHA-256 file
+        working-directory: mobile_app/build/app/outputs/flutter-apk
+        run: |
+          set -euo pipefail
+          sha256sum app-release.apk app-*-release.apk 2>/dev/null | grep -v '.sha1' > sha256.txt || true
+          cat sha256.txt
+
+      - name: Generate releases.json
+        working-directory: mobile_app/build/app/outputs/flutter-apk
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD: ${{ steps.version.outputs.build }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import json, os, hashlib, datetime, glob
+
+          version = os.environ['VERSION']
+          build = int(os.environ['BUILD'])
+          files = ['app-release.apk'] + sorted(glob.glob('app-*-release.apk'))
+          seen = set()
+          apks = []
+          for f in files:
+              if f in seen or not os.path.exists(f):
+                  continue
+              seen.add(f)
+              size_mb = round(os.path.getsize(f) / (1024*1024), 1)
+              with open(f, 'rb') as fh:
+                  sha = hashlib.sha256(fh.read()).hexdigest()
+              if f == 'app-release.apk':
+                  arch = 'universal'
+              elif 'arm64' in f:
+                  arch = 'arm64-v8a'
+              elif 'armeabi' in f:
+                  arch = 'armeabi-v7a'
+              elif 'x86_64' in f:
+                  arch = 'x86_64'
+              elif 'x86-' in f:
+                  arch = 'x86'
+              else:
+                  arch = 'other'
+              apks.append({'arch': arch, 'file': f, 'size_mb': size_mb, 'sha256': sha})
+
+          data = {
+              'app': 'BPM Astawidya',
+              'latest': version,
+              'build': build,
+              'released_at': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+              'apks': apks,
+          }
+          with open('releases.json', 'w') as fh:
+              json.dump(data, fh, indent=2)
+          print(json.dumps(data, indent=2))
+          PYEOF
+
+      - name: Deploy to VPS (rsync via SSH)
+        working-directory: mobile_app/build/app/outputs/flutter-apk
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/deploy_key
+          echo "$SSH_KEY" > /tmp/deploy_key/id_ed25519
+          chmod 600 /tmp/deploy_key/id_ed25519
+          eval "$(ssh-agent -s)"
+          ssh-add /tmp/deploy_key/id_ed25519
+          mkdir -p ~/.ssh
+          echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+          # rsync dari working-directory yang sudah benar (step sebelumnya).
+          # Working-directory step ini sama dengan step generate releases.json/sha256
+          # agar APK + metadata selalu dikirim sebagai satu paket.
+          rsync -avz \
+            -e "ssh -i /tmp/deploy_key/id_ed25519 -p 40222 -o StrictHostKeyChecking=accept-new" \
+            ./app-release.apk \
+            ./app-arm64-v8a-release.apk \
+            ./app-armeabi-v7a-release.apk \
+            ./app-x86-release.apk \
+            ./app-x86_64-release.apk \
+            ./sha256.txt \
+            ./releases.json \
+            "${VPS_USER}@${VPS_HOST}:/var/www/html/bpm/downloads/"
+          ssh-agent -k || true
+          rm -rf /tmp/deploy_key
