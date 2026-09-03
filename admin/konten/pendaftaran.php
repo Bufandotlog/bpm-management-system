@@ -96,15 +96,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $bph_id = getOrCreateBphByPosisi('ketua', $periode_id);
                         }
 
-                        dbInsert("INSERT INTO anggota_bph (periode_id, created_by, bph_id, user_id, nama, jabatan, foto) VALUES (?, ?, ?, ?, ?, ?, ?)", [
+                        dbInsert("INSERT INTO anggota_bph (periode_id, created_by, bph_id, user_id, nama, jabatan, file_ttd) VALUES (?, ?, ?, ?, ?, ?, ?)", [
                             $periode_id, $_SESSION['admin_id'], $bph_id, $user_id, $row['nama_lengkap'], $row['jabatan'], $row['file_ttd']
                         ]);
                     } else {
-                        dbInsert("INSERT INTO anggota_kementerian (periode_id, created_by, kementerian_id, user_id, nama, jabatan, foto) VALUES (?, ?, ?, ?, ?, ?, ?)", [
+                        dbInsert("INSERT INTO anggota_kementerian (periode_id, created_by, kementerian_id, user_id, nama, jabatan, file_ttd) VALUES (?, ?, ?, ?, ?, ?, ?)", [
                             $periode_id, $_SESSION['admin_id'], $row['kementerian_id'], $user_id, $row['nama_lengkap'], $row['jabatan'], $row['file_ttd']
                         ]);
                     }
-                    
+
+                    // [FIX 2026-09-04] Auto-promote TTD pendaftar ke panitia_tetap
+                    // jika jabatan mengandung "ketua" atau "sekretaris".
+                    // Mirror BEM commit 0bcef56.
+                    $jabatan_norm = strtolower(trim($row['jabatan'] ?? ''));
+                    $panitia_jabatan = null;
+                    if (strpos($jabatan_norm, 'ketua') !== false && strpos($jabatan_norm, 'sekretaris') === false) {
+                        $panitia_jabatan = 'ketua';
+                    } elseif (strpos($jabatan_norm, 'sekretaris') !== false) {
+                        $panitia_jabatan = 'sekretaris';
+                    }
+
+                    if ($panitia_jabatan !== null && !empty($row['file_ttd'])) {
+                        $exists = dbFetchOne(
+                            "SELECT id FROM panitia_tetap
+                             WHERE periode_id = ?
+                               AND UPPER(nama) COLLATE utf8mb4_general_ci = UPPER(?) COLLATE utf8mb4_general_ci
+                               AND jabatan = ?",
+                            [$periode_id, $row['nama_lengkap'], $panitia_jabatan],
+                            "iss"
+                        );
+                        if (!$exists) {
+                            dbInsert(
+                                "INSERT INTO panitia_tetap (periode_id, nama, jabatan, file_ttd) VALUES (?, ?, ?, ?)",
+                                [$periode_id, strtoupper(trim($row['nama_lengkap'])), $panitia_jabatan, $row['file_ttd']],
+                                "isss"
+                            );
+                        }
+                    }
+
                     dbQuery("UPDATE pendaftaran_anggota SET status = 'approved' WHERE id = ?", [$id]);
                     dbCommit();
 
