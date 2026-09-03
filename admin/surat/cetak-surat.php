@@ -21,7 +21,7 @@ $surat = dbFetchOne("
 ", [$id, $periode_id], "ii");
 
 if (!$surat) {
-    die("Surat tidak ditemukan atau Anda tidak memiliki akses ke periode ini.");
+    accessDenied("Surat tidak ditemukan atau Anda tidak memiliki akses ke periode ini.");
 }
 
 // Otorisasi Akses
@@ -51,7 +51,62 @@ if (!empty($surat['id_kegiatan'])) {
 }
 
 if (!$isSekretaris && !$isHumas && !$isPanitiaBerhak) {
-    die("Akses ditolak: Anda tidak memiliki izin untuk mengunduh/mencetak surat ini. Hanya Sekretaris, Superadmin, Humas, atau Ketua Pelaksana/Sie Humas terkait yang diizinkan.");
+    die('<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akses Ditolak</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg, #1A2F4A 0%, #4A90E2 100%);
+    padding:20px;
+  }
+  .denied-card {
+    background:#fff; border-radius:16px; max-width:480px; width:100%;
+    padding:40px 32px; text-align:center;
+    box-shadow:0 20px 50px rgba(0,0,0,.3);
+    border-top:6px solid #E74C3C;
+  }
+  .denied-icon {
+    width:84px; height:84px; margin:0 auto 18px; border-radius:50%;
+    background:#FDECEA; display:flex; align-items:center; justify-content:center;
+  }
+  .denied-icon svg { width:44px; height:44px; fill:#E74C3C; }
+  .denied-card h1 { color:#E74C3C; font-size:24px; margin-bottom:10px; }
+  .denied-card p { color:#555; font-size:15px; line-height:1.6; margin-bottom:22px; }
+  .denied-card .roles {
+    background:#F7F9FC; border:1px solid #E3E9F2; border-radius:10px;
+    padding:12px 16px; font-size:13.5px; color:#34495E; margin-bottom:24px; text-align:left; line-height:1.7;
+  }
+  .denied-card .roles strong { color:#1A2F4A; }
+  .denied-btn {
+    display:inline-block; text-decoration:none; background:#4A90E2; color:#fff;
+    padding:11px 26px; border-radius:8px; font-weight:600; font-size:14px;
+    transition:background .2s ease;
+  }
+  .denied-btn:hover { background:#1A2F4A; }
+</style>
+</head>
+<body>
+  <div class="denied-card">
+    <div class="denied-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 22h20L12 2zm0 3.8l7.1 13.2H4.9L12 5.8zM11 10v5h2v-5h-2zm0 6v2h2v-2h-2z"/></svg>
+    </div>
+    <h1>Akses Ditolak</h1>
+    <p>Anda tidak memiliki izin untuk mengunduh atau mencetak surat ini.</p>
+    <div class="roles">
+      Halaman ini hanya dapat diakses oleh:<br>
+      <strong>Sekretaris, Superadmin, Humas,</strong> atau<br>
+      <strong>Ketua Pelaksana / Sie Humas</strong> terkait.
+    </div>
+    <a class="denied-btn" href="javascript:history.back()">&larr; Kembali</a>
+  </div>
+</body>
+</html>');
 }
 
 $konten = json_decode($surat['konten_surat'], true) ?? [];
@@ -59,13 +114,17 @@ $konten = json_decode($surat['konten_surat'], true) ?? [];
 // Helper untuk format teks HTML supaya tebal otomatis menangani yang digarisbawahi oleh user (jika perlu)
 $tujuan_html = nl2br(htmlspecialchars($surat['tujuan']));
 
-// Mengambil Ketua BPM yg aktif untuk fallback TTD bawah
+// Mengambil Ketua BEM yg aktif untuk fallback TTD bawah
 if (isset($BULK_KETUA)) {
-    $ketua_bpm = $BULK_KETUA;
+    $ketua_bem = $BULK_KETUA;
 } else {
-    $ketua_bpm = getKetua($periode_id);
+    $ketua_bem = getKetua($periode_id);
 }
-$nama_ketua_bpm = $ketua_bpm['nama_lengkap'] ?? 'DEDE ANGGI MUHYIDIN';
+$nama_ketua_bem = $ketua_bem['nama_lengkap'] ?? 'DEDE ANGGI MUHYIDIN';
+
+// [FITUR 2026-09-04] Sekretaris fallback untuk Format 2
+$sekretaris_bem_data = getSekretarisUmum($periode_id);
+$nama_sekretaris_bem = $sekretaris_bem_data['anggota'][0]['nama'] ?? 'Sekretaris BEM';
 
 // Ambil Pengaturan Tabel Tanda Tangan Tetap
 if (isset($BULK_PENGATURAN)) {
@@ -318,7 +377,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 <div class="kop-teks">
                     <h1>BADAN EKSEKUTIF MAHASISWA</h1>
                     <h2>INSTBUNAS</h2>
-                    <h4>SK No. 610/VIII/SK-BPM/INSTBUNAS/2024</h4>
+                    <h4>SK No. 610/VIII/SK-BEM/INSTBUNAS/2024</h4>
                     <div class="kop-alamat">Jl. Siliwangi No. 121 (Jl. Raya Kadipaten - Majalengka) Heuleut - Kadipaten - Majalengka</div>
                 </div>
                 <div class="kop-extra">
@@ -330,7 +389,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                         <i class="fab fa-whatsapp"></i> <span>083869304199</span>
                     </div>
                     <div class="contact-item email">
-                        <i class="fas fa-envelope"></i> <span>bpm.instbunas@gmail.com</span>
+                        <i class="fas fa-envelope"></i> <span>beminstbunas@gmail.com</span>
                     </div>
                 </div>
             </div>
@@ -399,7 +458,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 $tema_keg  = trim($konten['tema'] ?? '');
                 $custom    = trim($konten['tema_kegiatan'] ?? '');
 
-                // Ambil tahun dari nomor surat (bagian terakhir: 001/L/BPMCUP/BPM/IV/2026)
+                // Ambil tahun dari nomor surat (bagian terakhir: 001/L/BEMCUP/BEM/IV/2026)
                 $parts_nomor = explode('/', $surat['nomor_surat']);
                 $tahun_surat = end($parts_nomor) ?: date('Y');
 
@@ -459,7 +518,53 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             // Ekstrak nama pendek (sebelum tanda koma pertama)
             $tujuan_parts = explode(',', $tujuan_raw);
             $tujuan_nama_pendek = trim($tujuan_parts[0]);
-            
+
+            // --- EKSTRAK JUDUL MATERI dari rundown (surat pemateri) ---
+            // Judul diambil dari teks ACARA setelah "Penyampaian Materi " pada item
+            // rundown yang ditujukan ke pemateri ini (cocok di keterangan/nama).
+            $judul_materi = '';
+            if (
+                strpos(strtolower($surat['perihal']), 'pemateri') !== false
+                && !empty($konten['rundown_internal_ids'])
+            ) {
+                $r_ids = (array) $konten['rundown_internal_ids'];
+                try {
+                    $pdo_j = getConnection();
+                    foreach ($r_ids as $rid) {
+                        $stmt_j = $pdo_j->prepare('SELECT rundown_json FROM arsip_rundown WHERE id = ?');
+                        $stmt_j->execute([$rid]);
+                        $rj = $stmt_j->fetch(PDO::FETCH_ASSOC);
+                        if (!$rj) {
+                            continue;
+                        }
+                        $rundown_arr = json_decode($rj['rundown_json'], true);
+                        if (!is_array($rundown_arr)) {
+                            continue;
+                        }
+                        foreach ($rundown_arr as $day) {
+                            if (!is_array($day) || empty($day['items'])) {
+                                continue;
+                            }
+                            foreach ($day['items'] as $item) {
+                                $acara = (string) ($item['acara'] ?? '');
+                                $ket   = (string) ($item['keterangan'] ?? '');
+                                if (
+                                    stripos($ket, $tujuan_nama_pendek) !== false
+                                    || stripos($acara, $tujuan_nama_pendek) !== false
+                                ) {
+                                    if (preg_match('/penyampaian\s+materi\s*(.*)$/i', $acara, $m)) {
+                                        $judul_materi = trim($m[1]);
+                                        break 3;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable $e) {
+                    // judul opsional — abaikan jika DB error
+                }
+            }
+
             $konteks_text         = trim($konten['konteks'] ?? '');
             
             // Tentukan "buntut" kalimat (suffix) secara pintar
@@ -525,6 +630,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 . ' kepada '
                 . $sapaan
                 . htmlspecialchars($tujuan_nama_pendek)
+                . (!empty($judul_materi) ? ' dengan judul <strong>"' . htmlspecialchars($judul_materi) . '"</strong>' : '')
                 . $suffix;
             ?>
             <p class="indent"><?php echo $paragraf_permohonan; ?></p>
@@ -541,9 +647,9 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             <p style="margin-top: 15px;"><b><i>Wassalamu'alaikum Wr. Wb.</i></b></p>
         </div>
 
-        <!-- 4. TANDA TANGAN -->
+        <!-- 4. TANDA TANGAN [FITUR 2026-09-04] Multi-format -->
         <div class="ttd-area">
-            <?php 
+            <?php
             $kode_keg = "";
             $parts = explode('/', $surat['nomor_surat']);
             if (isset($parts[2])) $kode_keg = $parts[2];
@@ -555,64 +661,118 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             }
 
             // Helper untuk deteksi TTD (Base64 vs File)
-            function renderTTD($val) {
-                if (empty($val)) return '';
-                if (strpos($val, 'data:image') !== false) return htmlspecialchars($val);
-                return uploadUrl($val);
+            if (!function_exists('renderTTD_inline')) {
+                function renderTTD_inline($val) {
+                    if (empty($val)) return '';
+                    if (strpos($val, 'data:image') !== false) return htmlspecialchars($val);
+                    return uploadUrl($val);
+                }
             }
+
+            // [FITUR 2026-09-04] Format TTD selector
+            $format_ttd = $konten['format_ttd'] ?? '1';
+            if (!in_array($format_ttd, ['1', '2', '3'], true)) {
+                $format_ttd = '1';
+            }
+            $tahun_surat = end($parts) ?: date('Y');
+            // [FITUR 2026-09-04] Nama periode untuk header Format 2
+            $periode_label_header = $db_periode['nama'] ?? 'PERIODE ' . $tahun_surat;
+
+            if ($format_ttd === '2'):
+                // FORMAT 2: BEM Direct Periode (2 TTD) — Tanpa Panitia, Tanpa Warek/BPM
             ?>
-            <div class="ttd-title">PANITIA PELAKSANA <?php echo strtoupper(strip_tags($nama_panitia)); ?> <?php echo end($parts) ?: date('Y'); ?></div>
-            
-            <table class="ttd-table" style="margin-bottom: 5px;">
-                <tr>
-                    <td style="position:relative;">
-                        Ketua Pelaksana
-                        <?php if(!empty($pengaturan['cap_panitia_image']) && ($konten['use_cap_panitia'] ?? '1') === '1'): ?>
-                            <img src="<?php echo uploadUrl($pengaturan['cap_panitia_image']); ?>" style="position:absolute; top:20px; left:100%; transform:translateX(-50%); max-width:190px; max-height:95px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
-                        <?php endif; ?>
-                        <?php if(!empty($konten['panitia_ketua_ttd'])): ?>
-                            <img src="<?php echo renderTTD($konten['panitia_ketua_ttd']); ?>" style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
-                        <?php endif; ?>
-                        <div class="ttd-name"><?php echo htmlspecialchars($konten['panitia_ketua'] ?? ''); ?></div>
-                    </td>
-                    <td style="position:relative;">
-                        Sekretaris
-                        <?php if(!empty($konten['panitia_sekretaris_ttd'])): ?>
-                            <img src="<?php echo renderTTD($konten['panitia_sekretaris_ttd']); ?>" style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
-                        <?php endif; ?>
-                        <div class="ttd-name"><?php echo htmlspecialchars($konten['panitia_sekretaris'] ?? ''); ?></div>
-                    </td>
-                </tr>
-            </table>
+                <div class="ttd-title">BEM INSTBUNAS MAJALENGKA PERIODE <?php echo strtoupper(htmlspecialchars($periode_label_header)); ?></div>
+                <table class="ttd-table" style="margin-bottom: 5px;">
+                    <tr>
+                        <td style="position:relative;">
+                            Ketua BEM
+                            <?php if(!empty($pengaturan['cap_presma_image']) && ($konten['use_cap_presma'] ?? '1') === '1'): ?>
+                                <img src="<?php echo uploadUrl($pengaturan['cap_presma_image']); ?>" style="position:absolute; bottom:0px; left:10%; max-width:180px; max-height:130px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
+                            <?php endif; ?>
+                            <?php if(!empty($pengaturan['ttd_presma_image']) && ($konten['use_ttd_presma'] ?? '1') === '1'): ?>
+                                <img src="<?php echo uploadUrl($pengaturan['ttd_presma_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
+                            <?php endif; ?>
+                            <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_presma_name'] ?? $nama_ketua_bem); ?></div>
+                        </td>
+                        <td style="position:relative;">
+                            Sekretaris
+                            <?php if(!empty($pengaturan['ttd_sekretaris_image'])): ?>
+                                <img src="<?php echo uploadUrl($pengaturan['ttd_sekretaris_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
+                            <?php endif; ?>
+                            <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_sekretaris_name'] ?? $nama_sekretaris_bem); ?></div>
+                        </td>
+                    </tr>
+                </table>
+            <?php
+            else:
+                // FORMAT 1 & 3: Panitia Pelaksana (Atas) + Mengetahui (Bawah)
+                // Format 1: Mengetahui Warek III + Ketua BEM
+                // Format 3: Mengetahui Warek III + Ketua BPM
+            ?>
+                <div class="ttd-title">PANITIA PELAKSANA <?php echo strtoupper(strip_tags($nama_panitia)); ?> <?php echo $tahun_surat; ?></div>
 
-            <div style="margin-top: -10px; margin-bottom: 10px;">Mengetahui,</div>
+                <table class="ttd-table" style="margin-bottom: 5px;">
+                    <tr>
+                        <td style="position:relative;">
+                            <?php echo ($format_ttd === '3') ? 'Ketua BEM' : 'Ketua Pelaksana'; ?>
+                            <?php if(!empty($pengaturan['cap_panitia_image']) && ($konten['use_cap_panitia'] ?? '1') === '1'): ?>
+                                <img src="<?php echo uploadUrl($pengaturan['cap_panitia_image']); ?>" style="position:absolute; top:20px; left:100%; transform:translateX(-50%); max-width:190px; max-height:95px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
+                            <?php endif; ?>
+                            <?php if(!empty($konten['panitia_ketua_ttd'])): ?>
+                                <img src="<?php echo renderTTD_inline($konten['panitia_ketua_ttd']); ?>" style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
+                            <?php endif; ?>
+                            <div class="ttd-name"><?php echo htmlspecialchars($konten['panitia_ketua'] ?? ''); ?></div>
+                        </td>
+                        <td style="position:relative;">
+                            Sekretaris
+                            <?php if(!empty($konten['panitia_sekretaris_ttd'])): ?>
+                                <img src="<?php echo renderTTD_inline($konten['panitia_sekretaris_ttd']); ?>" style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
+                            <?php endif; ?>
+                            <div class="ttd-name"><?php echo htmlspecialchars($konten['panitia_sekretaris'] ?? ''); ?></div>
+                        </td>
+                    </tr>
+                </table>
 
-            <table class="ttd-table">
-                <tr>
-                    <td style="position:relative;">
-                        a.n Rektor INSTBUNAS Majalengka<br>
-                        <span class="ttd-jabatan"><?php echo htmlspecialchars($pengaturan['ttd_warek_jabatan'] ?? 'WAREK III Bid. Kemahasiswaan'); ?></span>
-                        <?php if(!empty($pengaturan['cap_warek_image']) && ($konten['use_cap_warek'] ?? '1') === '1'): ?>
-                            <img src="<?php echo uploadUrl($pengaturan['cap_warek_image']); ?>" style="position:absolute; bottom:0px; left:0; max-width:180px; max-height:130px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
-                        <?php endif; ?>
-                        <?php if(!empty($pengaturan['ttd_warek_image']) && ($konten['use_ttd_warek'] ?? '1') === '1'): ?>
-                            <img src="<?php echo uploadUrl($pengaturan['ttd_warek_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
-                        <?php endif; ?>
-                        <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_warek_name'] ?? 'II MUHAMAD MISBAH, S.Pd.I., SE., MM.'); ?></div>
-                    </td>
-                    <td style="position:relative;">
-                        Ketua BPM<br>
-                        <span class="ttd-jabatan"><?php echo htmlspecialchars(trim(str_ireplace('Ketua BPM', '', $pengaturan['ttd_presma_jabatan'] ?? 'INSTBUNAS Majalengka'))); ?></span>
-                        <?php if(!empty($pengaturan['cap_presma_image']) && ($konten['use_cap_presma'] ?? '1') === '1'): ?>
-                            <img src="<?php echo uploadUrl($pengaturan['cap_presma_image']); ?>" style="position:absolute; bottom:0px; left:10%; max-width:180px; max-height:130px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
-                        <?php endif; ?>
-                        <?php if(!empty($pengaturan['ttd_presma_image']) && ($konten['use_ttd_presma'] ?? '1') === '1'): ?>
-                            <img src="<?php echo uploadUrl($pengaturan['ttd_presma_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
-                        <?php endif; ?>
-                        <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_presma_name'] ?? $nama_ketua_bpm); ?></div>
-                    </td>
-                </tr>
-            </table>
+                <div style="margin-top: -10px; margin-bottom: 10px;">Mengetahui,</div>
+
+                <table class="ttd-table">
+                    <tr>
+                        <td style="position:relative;">
+                            a.n Rektor INSTBUNAS Majalengka<br>
+                            <span class="ttd-jabatan"><?php echo htmlspecialchars($pengaturan['ttd_warek_jabatan'] ?? 'WAREK III Bid. Kemahasiswaan'); ?></span>
+                            <?php if(!empty($pengaturan['cap_warek_image']) && ($konten['use_cap_warek'] ?? '1') === '1'): ?>
+                                <img src="<?php echo uploadUrl($pengaturan['cap_warek_image']); ?>" style="position:absolute; bottom:0px; left:0; max-width:180px; max-height:130px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
+                            <?php endif; ?>
+                            <?php if(!empty($pengaturan['ttd_warek_image']) && ($konten['use_ttd_warek'] ?? '1') === '1'): ?>
+                                <img src="<?php echo uploadUrl($pengaturan['ttd_warek_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
+                            <?php endif; ?>
+                            <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_warek_name'] ?? 'II MUHAMAD MISBAH, S.Pd.I., SE., MM.'); ?></div>
+                        </td>
+                        <td style="position:relative;">
+                            <?php if ($format_ttd === '3'): ?>
+                                Ketua BPM
+                                <?php if(!empty($pengaturan['cap_bpm_image']) && ($konten['use_cap_bpm'] ?? '1') === '1'): ?>
+                                    <img src="<?php echo uploadUrl($pengaturan['cap_bpm_image']); ?>" style="position:absolute; bottom:0px; left:10%; max-width:180px; max-height:130px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
+                                <?php endif; ?>
+                                <?php if(!empty($pengaturan['ttd_bpm_image']) && ($konten['use_ttd_bpm'] ?? '1') === '1'): ?>
+                                    <img src="<?php echo uploadUrl($pengaturan['ttd_bpm_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
+                                <?php endif; ?>
+                                <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_bpm_name'] ?? ''); ?></div>
+                            <?php else: ?>
+                                Ketua BEM<br>
+                                <span class="ttd-jabatan"><?php echo htmlspecialchars(trim(str_ireplace('Ketua BEM', '', $pengaturan['ttd_presma_jabatan'] ?? 'INSTBUNAS Majalengka'))); ?></span>
+                                <?php if(!empty($pengaturan['cap_presma_image']) && ($konten['use_cap_presma'] ?? '1') === '1'): ?>
+                                    <img src="<?php echo uploadUrl($pengaturan['cap_presma_image']); ?>" style="position:absolute; bottom:0px; left:10%; max-width:180px; max-height:130px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:2;">
+                                <?php endif; ?>
+                                <?php if(!empty($pengaturan['ttd_presma_image']) && ($konten['use_ttd_presma'] ?? '1') === '1'): ?>
+                                    <img src="<?php echo uploadUrl($pengaturan['ttd_presma_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
+                                <?php endif; ?>
+                                <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_presma_name'] ?? $nama_ketua_bem); ?></div>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                </table>
+            <?php endif; ?>
         </div>
 
     </div>

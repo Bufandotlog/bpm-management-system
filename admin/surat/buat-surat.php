@@ -79,15 +79,9 @@ $list_panitia_all = dbFetchAll("SELECT pt.*, pk.nama AS periode_label FROM panit
 $panitia_ketua_list = array_filter($list_panitia_all, fn($p) => $p['jabatan'] === 'ketua');
 $panitia_sekretaris_list = array_filter($list_panitia_all, fn($p) => $p['jabatan'] === 'sekretaris');
 
-// [FIX 2026-09-04] Label periode untuk picker. Mirror BEM commit 016bb24.
-$periode_label_picker = '';
-if (!empty($list_panitia_all)) {
-    $periode_label_picker = $list_panitia_all[0]['periode_label'] ?? '';
-}
-if (empty($periode_label_picker)) {
-    $periode_info = dbFetchOne("SELECT nama FROM periode_kepengurusan WHERE id = ?", [$periode_id], "i");
-    $periode_label_picker = $periode_info['nama'] ?? ('Periode ' . $periode_id);
-}
+// Label periode untuk info di picker
+$periode_info = dbFetchOne("SELECT nama FROM periode_kepengurusan WHERE id = ?", [$periode_id], "i");
+$periode_label_picker = $periode_info['nama'] ?? ('Periode ' . $periode_id);
 
 // Ambil data lampiran internal (Peminjaman Barang)
 $lampiran_internal_list = dbFetchAll("SELECT id, nama_acara, tanggal_kegiatan, tahun FROM lampiran_pinjam WHERE periode_id = ? ORDER BY created_at DESC", [$periode_id], "i");
@@ -134,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jenis_surat   = $_POST['jenis_surat'] === 'D' ? 'D' : 'L';
         $nomor_urut    = sanitizeText($_POST['nomor_urut'], 10);
         $kode_keg      = strtoupper(str_replace(' ', '', sanitizeText($_POST['kode_kegiatan'], 50)));
-        $nomor_surat   = "{$nomor_urut}/{$jenis_surat}/{$kode_keg}/BPM/{$bulan_romawi}/{$tahun}";
+        $nomor_surat   = "{$nomor_urut}/{$jenis_surat}/{$kode_keg}/BEM/{$bulan_romawi}/{$tahun}";
         $tanggal_dikirim_raw = sanitizeText($_POST['tanggal_dikirim'] ?? '', 50);
         $tanggal_dikirim = null;
         if (!empty($tanggal_dikirim_raw) && $tanggal_dikirim_raw !== 'Belum Di kirim') {
@@ -244,12 +238,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // --- HANDLER LAMPIRAN INTERNAL (JSON DATA) ---
         $lampiran_internal_ids = $_POST['lampiran_internal'] ?? [];
         $konten_data['lampiran_internal_ids'] = $lampiran_internal_ids;
-        
+
         // --- HANDLER RUNDOWN INTERNAL (JSON DATA) ---
         $rundown_internal_ids = $_POST['rundown_internal'] ?? [];
         $konten_data['rundown_internal_ids'] = $rundown_internal_ids;
-        
+
         $konten_data['lampiran_files'] = $lampiran_files;
+
+        // [FITUR 2026-09-04] Format TTD selector
+        $format_ttd = $_POST['format_ttd'] ?? '1';
+        if (!in_array($format_ttd, ['1', '2', '3'], true)) {
+            $format_ttd = '1';
+        }
+        $konten_data['format_ttd'] = $format_ttd;
+
         $konten_json = json_encode($konten_data);
         
         if ($konten_json === false) {
@@ -317,7 +319,8 @@ $def = [
     'konteks'                  => '',
     'panitia_ketua'            => '',
     'panitia_sekretaris'       => '',
-    'tembusan'                 => ''
+    'tembusan'                 => '',
+    'format_ttd'               => '1'  // [FITUR 2026-09-04] default Format 1
 ];
 if ($is_edit || $is_clone) {
     foreach($def as $k=>$v) if(!isset($edit_data[$k])) $edit_data[$k] = $v;
@@ -899,7 +902,11 @@ if ($is_edit || $is_clone) {
             <div class="card-header"><i class="fas fa-quote-left"></i> Paragraf Pembuka</div>
             <div class="card-body">
                 <?php
-                // [FIX 2026-09-04] Mode detection: prioritas TEMPLATE (mirror BEM 444707e)
+                // [FIX 2026-09-04] Mode detection: prioritas TEMPLATE
+                // Mode custom HANYA jika nama_kegiatan kosong DAN tema_kegiatan ada isinya.
+                // Sebelumnya: !empty(tema_kegiatan) && empty(nama_kegiatan) — benar jika salah satu kosong.
+                // BUG: untuk surat yang punya KEDUA nama_kegiatan + tema_kegiatan, mode jadi custom
+                // (salah), menyembunyikan blok template & membuat field nama_kegiatan/tema "hilang" dari view.
                 $mode_custom_default = empty($edit_data['nama_kegiatan']) && !empty($edit_data['tema_kegiatan']);
                 ?>
                 <div style="display:flex; justify-content:flex-end; margin-bottom:20px;">
@@ -1140,6 +1147,39 @@ if ($is_edit || $is_clone) {
             </div>
         </div>
 
+        <!-- CARD 4.5: FORMAT & LAYOUT TANDA TANGAN [FITUR 2026-09-04] -->
+        <div class="card">
+            <div class="card-header"><i class="fas fa-th-large"></i> Format &amp; Layout Tanda Tangan</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Pilih Format Tanda Tangan</label>
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+                        <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid #2a3545; border-radius:6px; cursor:pointer; background:rgba(74,144,226,0.05);">
+                            <input type="radio" name="format_ttd" value="1" <?php echo ($edit_data['format_ttd'] ?? '1') === '1' ? 'checked' : ''; ?> style="margin-top:4px;">
+                            <div>
+                                <div style="font-weight:bold; color:#8BB9F0;">Format 1 — Panitia Pelaksana + Mengetahui Warek III &amp; Ketua BEM</div>
+                                <div style="font-size:0.85rem; color:#aaa; margin-top:4px;">Header: PANITIA PELAKSANA [NAMA KEGIATAN]. Baris atas: Ketua Pelaksana &amp; Sekretaris. Baris bawah: WAREK III &amp; Ketua BEM (Mengetahui).</div>
+                            </div>
+                        </label>
+                        <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid #2a3545; border-radius:6px; cursor:pointer;">
+                            <input type="radio" name="format_ttd" value="2" <?php echo ($edit_data['format_ttd'] ?? '') === '2' ? 'checked' : ''; ?> style="margin-top:4px;">
+                            <div>
+                                <div style="font-weight:bold; color:#8BB9F0;">Format 2 — BEM Direct (2 TTD Periode)</div>
+                                <div style="font-size:0.85rem; color:#aaa; margin-top:4px;">Header: BEM INSTBUNAS MAJALENGKA PERIODE [TAHUN]. Baris: Ketua BEM &amp; Sekretaris BEM. Tanpa panitia/Warek/BPM.</div>
+                            </div>
+                        </label>
+                        <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid #2a3545; border-radius:6px; cursor:pointer;">
+                            <input type="radio" name="format_ttd" value="3" <?php echo ($edit_data['format_ttd'] ?? '') === '3' ? 'checked' : ''; ?> style="margin-top:4px;">
+                            <div>
+                                <div style="font-weight:bold; color:#8BB9F0;">Format 3 — Panitia Pelaksana + Mengetahui Warek III &amp; Ketua BPM</div>
+                                <div style="font-size:0.85rem; color:#aaa; margin-top:4px;">Header: PANITIA PELAKSANA [NAMA KEGIATAN]. Baris atas: Ketua BEM/Ketua Pelaksana &amp; Sekretaris. Baris bawah: WAREK III &amp; Ketua BPM (Mengetahui).</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- CARD 5: TANDA TANGAN PANITIA -->
         <div class="card">
             <div class="card-header"><i class="fas fa-pen-nib"></i> Penanggung Jawab / Panitia</div>
@@ -1226,10 +1266,10 @@ if ($is_edit || $is_clone) {
             <div class="card-body">
                 <div class="grid-2">
                     <div class="switch-container"><span class="switch-label"><i class="fas fa-user-tie"></i> Sertakan TTD WAREK III</span><label class="switch"><input type="checkbox" name="use_ttd_warek" value="1" <?php echo ($edit_data['use_ttd_warek'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
-                    <div class="switch-container"><span class="switch-label"><i class="fas fa-user-graduate"></i> Sertakan TTD PRESMA BPM</span><label class="switch"><input type="checkbox" name="use_ttd_presma" value="1" <?php echo ($edit_data['use_ttd_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
+                    <div class="switch-container"><span class="switch-label"><i class="fas fa-user-graduate"></i> Sertakan TTD PRESMA BEM</span><label class="switch"><input type="checkbox" name="use_ttd_presma" value="1" <?php echo ($edit_data['use_ttd_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
                     <div class="switch-container"><span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap PANITIA</span><label class="switch"><input type="checkbox" name="use_cap_panitia" value="1" <?php echo ($edit_data['use_cap_panitia'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
                     <div class="switch-container"><span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap WAREK</span><label class="switch"><input type="checkbox" name="use_cap_warek" value="1" <?php echo ($edit_data['use_cap_warek'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
-                    <div class="switch-container"><span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap BPM</span><label class="switch"><input type="checkbox" name="use_cap_presma" value="1" <?php echo ($edit_data['use_cap_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
+                    <div class="switch-container"><span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap BEM</span><label class="switch"><input type="checkbox" name="use_cap_presma" value="1" <?php echo ($edit_data['use_cap_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label></div>
                 </div>
             </div>
         </div>
@@ -1450,8 +1490,11 @@ function filterLampiran() {
             rteNamaKeg.innerHTML = namaKegiatanAsli;
             inputNamaKeg.value = namaKegiatanAsli;
         }
-        // [FIX 2026-09-04 mirror BEM 596ada3] JANGAN clear hidden input saat clone/edit
-        // jika kegiatan_id tidak ada di <select>. Preserve PHP-rendered value.
+        // [FIX 2026-09-04] JANGAN clear rte_nama_keg/input_nama_kegiatan saat clone/edit
+        // jika kegiatan_id tidak ada di <select>. Sebelumnya, line 1451-1452 clear hidden
+        // input, menyebabkan preview paragraf tampil [Nama Kegiatan] placeholder
+        // walaupun data nama_kegiatan ada di $edit_data (hidden input value dari PHP).
+        // Cukup preserve nilai existing; user masih bisa edit manual.
     }
     
     if (rteTema && inputTema) {
@@ -1459,7 +1502,7 @@ function filterLampiran() {
             rteTema.innerHTML = temaKegiatan;
             inputTema.value = temaKegiatan;
         }
-        // Sama: jangan clear. Preserve value.
+        // Sama seperti di atas: jangan clear. Preserve value existing.
     }
     
     if(typeof updatePreviewParagraf === 'function') updatePreviewParagraf();
@@ -1543,11 +1586,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if(document.getElementById('preview-paragraf-text')) {
         updatePreviewParagraf();
     }
-    // [FIX 2026-09-04] Sync date picker dari out-tanggal (formatted) saat clone (mirror BEM 444707e)
+    // [FIX 2026-09-04] Sync date picker tgl-mulai (YYYY-MM-DD) dari out-tanggal
+    // (formatted "Sabtu, 5 September 2026") saat clone/edit. Tanpa ini, date picker
+    // kosong saat clone, dan formatTanggalRange() return early sehingga JS
+    // tidak bisa regenerate preview dari input date.
     const tglMulai = document.getElementById('tgl-mulai');
     const outTanggal = document.getElementById('out-tanggal');
     if (tglMulai && outTanggal && !tglMulai.value) {
         const formatted = outTanggal.value || '';
+        // Parse "Sabtu, 5 September 2026" atau "Sabtu-Minggu, 5-6 September 2026"
         const match = formatted.match(/(\d{1,2})(?:\s*-\s*(\d{1,2}))?\s+([A-Za-z]+)\s+(\d{4})/);
         if (match) {
             const day = match[1].padStart(2, '0');
