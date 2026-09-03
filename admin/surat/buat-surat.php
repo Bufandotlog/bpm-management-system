@@ -1449,20 +1449,17 @@ function filterLampiran() {
         if (namaKegiatanAsli !== '') {
             rteNamaKeg.innerHTML = namaKegiatanAsli;
             inputNamaKeg.value = namaKegiatanAsli;
-        } else {
-            rteNamaKeg.innerHTML = '';
-            inputNamaKeg.value = '';
         }
+        // [FIX 2026-09-04 mirror BEM 596ada3] JANGAN clear hidden input saat clone/edit
+        // jika kegiatan_id tidak ada di <select>. Preserve PHP-rendered value.
     }
     
     if (rteTema && inputTema) {
         if (temaKegiatan !== '') {
             rteTema.innerHTML = temaKegiatan;
             inputTema.value = temaKegiatan;
-        } else {
-            rteTema.innerHTML = '';
-            inputTema.value = '';
         }
+        // Sama: jangan clear. Preserve value.
     }
     
     if(typeof updatePreviewParagraf === 'function') updatePreviewParagraf();
