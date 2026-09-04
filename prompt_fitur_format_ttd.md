@@ -20,17 +20,17 @@ Fitur ini memungkinkan Sekretaris/Admin untuk memilih 1 dari 3 format tanda tang
   * Kanan: `Ketua BEM INSTBUNAS Majalengka` (Nama, TTD, & Cap BEM - `ttd_presma_*` / `ttd_ketua_bem_*`)
 
 ### 2. FORMAT 2 (BEM Direct Periode - 2 TTD)
-* **Header TTD**: `BEM INSTBUNAS MAJALENGKA PERIODE [PERIODE]` (Misal: PERIODE 2026/2027)
+* **Header TTD**: `BEM INSTBUNAS MAJALENGKA PERIODE [TAHUN_MULAI/TAHUN_SELESAI]` (Misal: PERIODE 2026/2027)
 * **Baris TTD (2 Kolom)**:
   * Kiri: `Ketua BEM` (Nama & TTD Ketua BEM - `ttd_presma_*` / `ttd_ketua_bem_*`) + `Cap BEM`
   * Kanan: `Sekretaris` (Nama & TTD Sekretaris BEM - `ttd_sekretaris_*`)
 * **Tanpa**: Panitia Pelaksana & Tanpa Mengetahui Warek III / BPM.
 
-### 3. FORMAT 3 (Panitia Pelaksana + Mengetahui Warek III & Ketua BPM)
-* **Header TTD**: `PANITIA PELAKSANA [NAMA KEGIATAN] [TAHUN]`
+### 3. FORMAT 3 (BEM Direct + Mengetahui Warek III & Ketua BPM)
+* **Header TTD**: `BEM INSTBUNAS MAJALENGKA PERIODE [TAHUN_MULAI/TAHUN_SELESAI]` (Sama dengan Format 2, bukan Panitia Pelaksana)
 * **Baris Atas (2 Kolom)**:
-  * Kiri: `Ketua BEM` / `Ketua Pelaksana` (Nama & TTD Ketua)
-  * Kanan: `Sekretaris` (Nama & TTD Sekretaris)
+  * Kiri: `Ketua BEM` + sub-label `INSTBUNAS Majalengka` (Nama & TTD Ketua)
+  * Kanan: `Sekretaris Umum` + sub-label `INSTBUNAS Majalengka` (Nama & TTD Sekretaris)
 * **Sub-Header**: `Mengetahui,`
 * **Baris Bawah (2 Kolom)**:
   * Kiri: `a.n. Rektor INSTBUNAS Majalengka` / `WAREK III Bid. Kemahasiswaan` (Nama, TTD, & Cap Warek III)
