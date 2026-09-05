@@ -1,0 +1,15 @@
+{
+  "latest": "1.0.0",
+  "apks": [
+    {
+      "arch": "universal",
+      "file": "bpm-mobile-v1.0.apk",
+      "sha256": "d5aa38de289f7f9d3fe55fe91ef3a1af4046f3fc5079974d53817222d659454f",
+      "size": 49056626
+    }
+  ],
+  "preview": {
+    "version": "0.1.0",
+    "apks": []
+  }
+}
