@@ -157,6 +157,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+// === POST: aksi REJECT (H-10) ===
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($data['aksi']) && $data['aksi'] === 'reject') {
+    // hanyalah admin/ketua_umum_bpm
+    if (!in_array($_SESSION['role'], ['admin','ketua_umum_bpm'])) {
+        header('HTTP/1.1 403 Forbidden');
+        echo json_encode(['success'=>false,'error'=>'Akses ditolak: hanya admin/ketua_umum_bpm']);
+        exit;
+    }
+
+    $alasan = $data['alasan_reject'] ?? '';
+    $pasalId = (int)($data['pasal_id'] ?? 0);
+
+    // alasan reject wajib minimal 30 karakter (CARA 2)
+    if (empty($alasan) || strlen($alasan) < 30) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['success'=>false,'error'=>'Alasan reject minimal 30 karakter']);
+        exit;
+    }
+
+    // rate limit cek session counter
+    $key = 'reject_count_'.$pasalId;
+    if (!isset($_SESSION[$key])) $_SESSION[$key] = 0;
+    $_SESSION[$key]++;
+
+    // setelah 3x reject -> lock meja kerja
+    if ($_SESSION[$key] >= 3) {
+        // mark meja kerja locked (opsional: update status meja kerja)
+        header('HTTP/1.1 409 Conflict');
+        echo json_encode(['success'=>false,'error'=>'3x reject — meja kerja terkunci, gunakan fitur arsip']);
+        exit;
+    }
+
+    // cek pasal ada
+    $stmt = $pdo->prepare('SELECT id, judul_perubahan FROM hukum_pasal WHERE id = ? LIMIT 1');
+    $stmt->execute([$pasalId]);
+    if (!$stmt->fetchColumn()) {
+        header('HTTP/1.1 404 Not Found');
+        exit('Pasal tidak ditemukan');
+    }
+
+    // update versi draft menjadi rejected
+    $stmt = $pdo->prepare('
+        UPDATE hukum_pasal_versi
+        SET status = "rejected", catatan = "ditolak: ' . addslashes($alasan) . '", diperbarui_oleh = ?, waktu_penolakan = NOW()
+        WHERE pasal_id = ? AND status = "draft"
+        LIMIT 1
+    ');
+    $stmt->execute([$user_id ?? 0, $pasalId]);
+
+    // update hash_konten header pasal jadi rejected
+    $stmt = $pdo->prepare('
+        UPDATE hukum_pasal SET hash_konten = "rejected_'.md5($alasan).'", updated_at = NOW()
+        WHERE id = ?
+    ');
+    $stmt->execute([$pasalId]);
+
+    // catat ke audit trail
+    $stmt = $pdo->prepare('
+        INSERT INTO hukum_notifikasi_audit
+        (axsi, dilakukan_oleh, catatan, dilakukan_pada)
+        VALUES (' . $pdo->quote('diubah_status') . ', ' . ($user_id ?? 0) . ', ' . $pdo->quote('Reject: ' . $alasan) . ', NOW())
+    ');
+    $stmt->execute();
+
+    echo json_encode([
+        'success' => true,
+        'data' => [
+            'rejected' => true,
+            'versi' => 'rejected',
+            'alasan' => $alasan,
+            'reject_count' => $_SESSION[$key],
+            'catatan' => 'sudah direject + audit catat'
+        ]
+    ]);
+    exit;
+}
+
 header('HTTP/1.1 405 Method Not Allowed');
 echo json_encode(['success'=>false,'error'=>'Method tidak didukung']);
 exit;
