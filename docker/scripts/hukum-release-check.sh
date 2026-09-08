@@ -36,15 +36,16 @@ check_schema_contract() {
 }
 
 check_public_visibility() {
-    grep -Fq "status = \\'aktif\\'" hukum.php &&
-        grep -Fq "status = \\'aktif\\'" hukum-detail.php
+    grep -Eq "status = ['\\\\]*'aktif['\\\\]*" hukum.php &&
+        grep -Eq "status = ['\\\\]*'aktif['\\\\]*" includes/hukum-public.php &&
+        grep -q "hukum_public_document_by_slug" hukum-detail.php
 }
 
 check_permission_contract() {
-    grep -q "hukum_require_permission('hukum.view')" api/hukum/documents.php &&
-        grep -q "hukum_require_permission('hukum.document.create')" api/hukum/documents.php &&
-        grep -q "hukum_require_permission('hukum.staging.review')" api/hukum/review.php &&
-        grep -q "hukum_require_permission('hukum.commit.create')" api/hukum/commit.php
+    grep -Eq "hukum_require_permission\\(['\\\"]hukum.view['\\\"]\\)" api/hukum/documents.php &&
+        grep -Eq "hukum_require_permission\\(['\\\"]hukum.document.create['\\\"]\\)" api/hukum/documents.php &&
+        grep -q "hukum_review_apply_decision" api/hukum/review.php &&
+        grep -Eq "hukum_require_permission\\(['\\\"]hukum.commit.create['\\\"]\\)" api/hukum/commit.php
 }
 
 check_migration_safety() {

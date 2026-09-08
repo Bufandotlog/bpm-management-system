@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/workspace_service.php';
 $method = hukum_require_method(['GET', 'POST']);
 $pdo = getConnection();
 
@@ -15,34 +16,55 @@ if ($method === 'GET') {
     )]);
 }
 
-hukum_require_permission('hukum.workspace.create');
 $input = hukum_input();
+if (($input['action'] ?? '') === 'withdraw') {
+    hukum_require_permission('hukum.workspace.create');
+    $workspaceId = (int) ($input['workspace_id'] ?? 0);
+    if ($workspaceId <= 0) {
+        hukum_json_response(['success' => false, 'message' => 'workspace_id wajib.'], 400);
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $result = hukum_withdraw_workspace($pdo, $workspaceId, hukum_current_user_id(), $input['reason'] ?? null);
+        $pdo->commit();
+        hukum_json_response(['success' => true, 'id' => $result['id'], 'status' => $result['status']], 200);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $status = (int) $e->getCode();
+        hukum_json_response([
+            'success' => false,
+            'message' => $e->getMessage(),
+        ], $status > 0 && $status < 600 ? $status : 409);
+    }
+}
+
+hukum_require_permission('hukum.workspace.create');
 $dokumenId = (int) ($input['dokumen_id'] ?? 0);
 $judulPerubahan = trim((string) ($input['judul_perubahan'] ?? ''));
 if ($judulPerubahan === '') {
     hukum_json_response(['success' => false, 'message' => 'judul_perubahan wajib.'], 400);
 }
-$pdo->beginTransaction();
-$doc = dbFetchOne('SELECT periode_id FROM hukum_dokumen WHERE id = ? FOR UPDATE', [$dokumenId]);
+
+$doc = dbFetchOne('SELECT periode_id FROM hukum_dokumen WHERE id = ?', [$dokumenId]);
 if (!$doc) {
-    $pdo->rollBack();
     hukum_json_response(['success' => false, 'message' => 'Dokumen tidak ditemukan.'], 404);
 }
-hukum_require_document_period((int) $doc['periode_id']);
-$active = dbFetchOne(
-    'SELECT id FROM hukum_workspace WHERE dokumen_id = ? AND status IN (\'aktif\', \'diajukan\') LIMIT 1 FOR UPDATE',
-    [$dokumenId]
-);
-if ($active) {
-    $pdo->rollBack();
-    hukum_json_response(['success' => false, 'message' => 'Dokumen sudah memiliki workspace aktif.'], 409);
+
+try {
+    $pdo->beginTransaction();
+    $result = hukum_create_workspace($pdo, $dokumenId, $judulPerubahan, $input['tujuan'] ?? null, hukum_current_user_id());
+    $pdo->commit();
+    hukum_json_response(['success' => true, 'id' => $result['id'], 'status' => $result['status']], 201);
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    $status = (int) $e->getCode();
+    hukum_json_response([
+        'success' => false,
+        'message' => $e->getMessage(),
+    ], $status > 0 && $status < 600 ? $status : 409);
 }
-$stmt = $pdo->prepare(
-    'INSERT INTO hukum_workspace (dokumen_id, judul_perubahan, tujuan, status, dibuat_oleh)
-     VALUES (?, ?, ?, \'aktif\', ?)'
-);
-$stmt->execute([$dokumenId, $judulPerubahan, $input['tujuan'] ?? null, hukum_current_user_id()]);
-$id = (int) $pdo->lastInsertId();
-hukum_audit($pdo, 'hukum_workspace', $id, 'create', null, $input);
-$pdo->commit();
-hukum_json_response(['success' => true, 'id' => $id], 201);

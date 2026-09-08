@@ -30,6 +30,8 @@ if ($method === 'POST') {
     $anakId = (int) ($input['pasal_anak_id'] ?? 0);
     $indukId = (int) ($input['pasal_induk_id'] ?? 0);
     $jenis = (string) ($input['jenis_relasi'] ?? 'mengacu');
+    $sourceVersionId = isset($input['source_version_id']) ? (int) $input['source_version_id'] : 0;
+    $targetVersionId = isset($input['target_version_id']) ? (int) $input['target_version_id'] : 0;
     if ($anakId <= 0 || $indukId <= 0 || $anakId === $indukId) {
         hukum_json_response(['success' => false, 'message' => 'Pasal anak dan induk harus valid dan berbeda.'], 400);
     }
@@ -42,14 +44,30 @@ if ($method === 'POST') {
     );
     if (count($pasals) !== 2) hukum_json_response(['success' => false, 'message' => 'Pasal tidak ditemukan.'], 404);
     hukum_require_document_period((int) $pasals[0]['periode_id']);
+
+    if ($sourceVersionId <= 0) {
+        $sourceVersion = dbFetchOne(
+            'SELECT id FROM hukum_pasal_versi WHERE pasal_id = ? ORDER BY id DESC LIMIT 1',
+            [$anakId]
+        );
+        $sourceVersionId = $sourceVersion ? (int) $sourceVersion['id'] : 0;
+    }
+    if ($targetVersionId <= 0) {
+        $targetVersion = dbFetchOne(
+            'SELECT id FROM hukum_pasal_versi WHERE pasal_id = ? ORDER BY id DESC LIMIT 1',
+            [$indukId]
+        );
+        $targetVersionId = $targetVersion ? (int) $targetVersion['id'] : 0;
+    }
+
     $stmt = $pdo->prepare(
-        'INSERT INTO hukum_relasi_pasal (pasal_anak_id, pasal_induk_id, jenis_relasi, dibuat_oleh, dibuat_oleh_user_id)
-         VALUES (?, ?, ?, \'manual\', ?)'
+        'INSERT INTO hukum_relasi_pasal (pasal_anak_id, pasal_induk_id, source_version_id, target_version_id, jenis_relasi, dibuat_oleh, dibuat_oleh_user_id)
+         VALUES (?, ?, ?, ?, ?, \'manual\', ?)'
     );
-    $stmt->execute([$anakId, $indukId, $jenis, hukum_current_user_id()]);
+    $stmt->execute([$anakId, $indukId, $sourceVersionId > 0 ? $sourceVersionId : null, $targetVersionId > 0 ? $targetVersionId : null, $jenis, hukum_current_user_id()]);
     $id = (int) $pdo->lastInsertId();
     hukum_audit($pdo, 'hukum_relasi_pasal', $id, 'create', null, $input);
-    hukum_json_response(['success' => true, 'id' => $id], 201);
+    hukum_json_response(['success' => true, 'id' => $id, 'source_version_id' => $sourceVersionId, 'target_version_id' => $targetVersionId], 201);
 }
 
 hukum_require_permission('hukum.pasal.update');

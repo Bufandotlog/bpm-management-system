@@ -17,4 +17,12 @@
 .hukum-pasal { border-top:1px solid #edf0f2; padding:16px 0; line-height:1.7; }
 .hukum-pasal h3 { color:#334e68; margin:0 0 8px; }
 .hukum-pasal ul { margin:8px 0; padding-left:22px; }
+.hukum-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin:18px 0 24px; }
+.hukum-diff-table { display:grid; gap:12px; }
+.hukum-diff-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; border:1px solid #e9edf2; border-radius:8px; padding:12px 14px; background:#f9fbfd; }
+.hukum-status-tag { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+.status-added { background:#eafaf0; color:#1d6c3f; }
+.status-removed { background:#fdeceb; color:#9f2d2d; }
+.status-modified { background:#fff3d6; color:#8a6719; }
+.status-unchanged { background:#edf3ff; color:#355d9d; }
 @media (max-width:700px) { .hukum-public-card, .hukum-document-header, .hukum-chapter { padding:16px; } }

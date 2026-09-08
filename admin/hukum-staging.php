@@ -22,8 +22,8 @@ hukum_require_permission('hukum.view');
         </div>
         <div class="hukum-table-wrap">
             <table class="hukum-table">
-                <thead><tr><th>Dokumen</th><th>Perubahan</th><th>Diajukan</th><th>Aksi</th></tr></thead>
-                <tbody id="stagingBody"><tr><td colspan="4" class="hukum-empty">Memuat data...</td></tr></tbody>
+                <thead><tr><th>Dokumen</th><th>Perubahan</th><th>Approval</th><th>Diajukan</th><th>Aksi</th></tr></thead>
+                <tbody id="stagingBody"><tr><td colspan="5" class="hukum-empty">Memuat data...</td></tr></tbody>
             </table>
         </div>
     </div>
@@ -50,30 +50,35 @@ function hukumNotice(message, type = 'success') {
 }
 async function hukumLoadStaging() {
     try {
-        const result = await hukumRequest('staging.php');
+    const result = await hukumRequest('review.php');
         const rows = (result.data || []).filter(item => item.status === 'menunggu_review');
         document.getElementById('stagingCount').textContent = rows.length + ' item';
-        document.getElementById('stagingBody').innerHTML = rows.length ? rows.map(item => `<tr>
-            <td>${hukumEscape(item.judul)}</td>
-            <td>${hukumEscape(item.judul_perubahan)}</td>
-            <td>${hukumEscape(item.diajukan_at)}</td>
-            <td>${hukumCanReview ? `<button class="hukum-btn gold" type="button" onclick="hukumReview(${Number(item.id)}, 'approve')">Setujui</button>
-                <button class="hukum-btn danger" type="button" onclick="hukumReview(${Number(item.id)}, 'reject')">Tolak</button>` : '<span class="hukum-muted">Read-only</span>'}</td>
-        </tr>`).join('') : '<tr><td colspan="4" class="hukum-empty">Tidak ada staging menunggu review.</td></tr>';
-    } catch (error) {
-        hukumNotice(error.message, 'error');
-    }
+    document.getElementById('stagingBody').innerHTML = rows.length ? rows.map(item => {
+        const summary = item.approval_summary || {progress:'0/2', komisi_i:{status:'menunggu'}, ketua_umum:{status:'menunggu'}};
+        const canAction = hukumCanReview && (summary.komisi_i.status === 'menunggu' || summary.ketua_umum.status === 'menunggu');
+        return `<tr>
+        <td>${hukumEscape(item.judul)}</td>
+        <td>${hukumEscape(item.judul_perubahan)}</td>
+        <td><span class="hukum-badge">${hukumEscape(summary.progress)}</span><br><small>${hukumEscape(summary.komisi_i.status || 'menunggu')} / ${hukumEscape(summary.ketua_umum.status || 'menunggu')}</small></td>
+        <td>${hukumEscape(item.diajukan_at)}</td>
+        <td>${hukumCanReview ? `<button class="hukum-btn gold" type="button" ${canAction ? '' : 'disabled'} onclick="hukumReview(${Number(item.id)}, 'approve')">Setujui</button>
+            <button class="hukum-btn danger" type="button" ${canAction ? '' : 'disabled'} onclick="hukumReview(${Number(item.id)}, 'reject')">Tolak</button>` : '<span class="hukum-muted">Read-only</span>'}</td>
+    </tr>`;
+    }).join('') : '<tr><td colspan="5" class="hukum-empty">Tidak ada staging menunggu review.</td></tr>';
+} catch (error) {
+    hukumNotice(error.message, 'error');
+}
 }
 async function hukumReview(id, decision) {
-    const note = decision === 'reject' ? window.prompt('Alasan penolakan wajib diisi:') : '';
-    if (decision === 'reject' && !note) return;
-    try {
-        await hukumRequest('review.php', {method:'POST', body:JSON.stringify({staging_id:id, decision, note})});
-        hukumNotice('Status staging diperbarui.');
-        hukumLoadStaging();
-    } catch (error) {
-        hukumNotice(error.message, 'error');
-    }
+const note = decision === 'reject' ? window.prompt('Alasan penolakan wajib diisi:') : '';
+if (decision === 'reject' && !note) return;
+try {
+    await hukumRequest('review.php', {method:'POST', body:JSON.stringify({staging_id:id, decision, note})});
+    hukumNotice('Status staging diperbarui.');
+    hukumLoadStaging();
+} catch (error) {
+    hukumNotice(error.message, 'error');
+}
 }
 hukumLoadStaging();
 </script>

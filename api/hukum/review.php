@@ -1,51 +1,92 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
-hukum_require_method(['POST']);
-hukum_require_permission('hukum.staging.review');
+require_once __DIR__ . '/../admin/core/hukum-auth.php';
+require_once __DIR__ . '/review_service.php';
+
+$method = hukum_require_method(['GET', 'POST']);
 $pdo = getConnection();
+
+if ($method === 'GET') {
+    hukum_require_permission('hukum.view');
+    $stagingId = (int) ($_GET['staging_id'] ?? $_GET['id'] ?? 0);
+    if ($stagingId > 0) {
+        $row = dbFetchOne(
+            'SELECT s.*, w.dokumen_id, w.judul_perubahan, d.judul, d.periode_id
+             FROM hukum_staging s
+             JOIN hukum_workspace w ON w.id = s.workspace_id
+             JOIN hukum_dokumen d ON d.id = w.dokumen_id
+             WHERE s.id = ?',
+            [$stagingId]
+        );
+        if (!$row) hukum_json_response(['success' => false, 'message' => 'Staging tidak ditemukan.'], 404);
+        hukum_require_document_period((int) $row['periode_id']);
+        $approval = hukum_review_approval_rows($pdo, $stagingId);
+        $row['approval_summary'] = $approval['summary'];
+        $row['approval_rows'] = $approval['rows'];
+        hukum_json_response(['success' => true, 'data' => $row]);
+    }
+
+    $user = hukum_current_user();
+    $sql = 'SELECT s.*, w.dokumen_id, w.judul_perubahan, d.judul, d.periode_id
+            FROM hukum_staging s
+            JOIN hukum_workspace w ON w.id = s.workspace_id
+            JOIN hukum_dokumen d ON d.id = w.dokumen_id';
+    $params = [];
+    if (!$user['can_access_all'] && $user['role'] !== 'superadmin') {
+        $sql .= ' WHERE d.periode_id = ?';
+        $params[] = $user['periode_id'];
+    }
+    $sql .= ' ORDER BY s.diajukan_at DESC, s.id DESC';
+    $rows = dbFetchAll($sql, $params);
+    foreach ($rows as &$item) {
+        $item['approval_summary'] = hukum_review_approval_rows($pdo, (int) $item['id'])['summary'];
+    }
+    unset($item);
+    hukum_json_response(['success' => true, 'data' => $rows]);
+}
+
 $input = hukum_input();
 $stagingId = (int) ($input['staging_id'] ?? 0);
 $decision = (string) ($input['decision'] ?? '');
 if (!in_array($decision, ['approve', 'reject'], true)) {
     hukum_json_response(['success' => false, 'message' => 'decision harus approve atau reject.'], 400);
 }
-$staging = dbFetchOne(
-    'SELECT s.*, w.dokumen_id, w.status AS workspace_status, d.periode_id
-     FROM hukum_staging s
-     JOIN hukum_workspace w ON w.id = s.workspace_id
-     JOIN hukum_dokumen d ON d.id = w.dokumen_id
-     WHERE s.id = ?',
-    [$stagingId]
-);
-if (!$staging) hukum_json_response(['success' => false, 'message' => 'Staging tidak ditemukan.'], 404);
-hukum_require_document_period((int) $staging['periode_id']);
-if ($staging['status'] !== 'menunggu_review') {
-    hukum_json_response(['success' => false, 'message' => 'Staging sudah diproses.'], 409);
-}
-if ($decision === 'reject' && trim((string) ($input['note'] ?? '')) === '') {
-    hukum_json_response(['success' => false, 'message' => 'Catatan wajib saat menolak staging.'], 400);
+if ($stagingId <= 0) {
+    hukum_json_response(['success' => false, 'message' => 'staging_id wajib.'], 400);
 }
 
 $pdo->beginTransaction();
-$newStatus = $decision === 'approve' ? 'disetujui' : 'ditolak';
-$pdo->prepare(
-    'UPDATE hukum_staging
-     SET status = ?, direview_oleh = ?, direview_at = NOW(), review_note = ?
-     WHERE id = ?'
-)->execute([$newStatus, hukum_current_user_id(), $input['note'] ?? null, $stagingId]);
-if ($decision === 'reject') {
-    $versions = dbFetchAll(
-        'SELECT pasal_versi_id FROM hukum_staging_versi WHERE staging_id = ?', [$stagingId]
+try {
+    $result = hukum_review_apply_decision($pdo, $stagingId, $decision, $input['note'] ?? null, hukum_current_user_id());
+    $staging = dbFetchOne(
+        'SELECT s.*, w.dokumen_id, d.periode_id
+         FROM hukum_staging s
+         JOIN hukum_workspace w ON w.id = s.workspace_id
+         JOIN hukum_dokumen d ON d.id = w.dokumen_id
+         WHERE s.id = ?',
+        [$stagingId]
     );
-    $mark = $pdo->prepare(
-        'UPDATE hukum_pasal_versi SET status = \'rejected\', rejected_at = NOW(), rejected_by = ?, rejection_reason = ?
-         WHERE id = ? AND status = \'staged\''
-    );
-    foreach ($versions as $version) {
-        $mark->execute([hukum_current_user_id(), $input['note'], $version['pasal_versi_id']]);
+    if (!$staging) {
+        throw new RuntimeException('Staging tidak ditemukan.', 404);
     }
-    $pdo->prepare('UPDATE hukum_workspace SET status = \'aktif\' WHERE id = ?')->execute([$staging['workspace_id']]);
+    hukum_audit($pdo, 'hukum_staging', $stagingId, 'review_' . $decision, null, [
+        'status' => $result['status'],
+        'role' => $result['role'],
+        'note' => $input['note'] ?? null,
+        'decision' => $decision,
+        'document_id' => (int) $staging['dokumen_id'],
+        'periode_id' => (int) $staging['periode_id'],
+    ], [
+        'role_context' => strtolower((string) ($_SESSION['admin_role'] ?? '')),
+        'periode_id' => (int) $staging['periode_id'],
+        'context_json' => ['document_id' => (int) $staging['dokumen_id'], 'decision' => $decision],
+        'result' => 'success',
+    ]);
+    $pdo->commit();
+    hukum_json_response(['success' => true, 'status' => $result['status'], 'decision' => $result['role']]);
+} catch (Throwable $exception) {
+    $pdo->rollBack();
+    $code = $exception->getCode();
+    $status = is_numeric($code) && (int) $code > 0 ? (int) $code : 409;
+    hukum_json_response(['success' => false, 'message' => $exception->getMessage()], $status);
 }
-hukum_audit($pdo, 'hukum_staging', $stagingId, $decision, $staging, ['status' => $newStatus, 'note' => $input['note'] ?? null]);
-$pdo->commit();
-hukum_json_response(['success' => true, 'status' => $newStatus]);

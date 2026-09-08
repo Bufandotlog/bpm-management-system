@@ -39,6 +39,144 @@ function hukum_current_user(): array
     ];
 }
 
+function hukum_period_for_document(int $documentId): ?int
+{
+    $row = dbFetchOne(
+        'SELECT periode_id FROM hukum_dokumen WHERE id = ? LIMIT 1',
+        [$documentId]
+    );
+
+    return $row !== null && isset($row['periode_id']) ? (int) $row['periode_id'] : null;
+}
+
+function hukum_business_membership_for_user(int $userId, int $periodeId, string $jabatan): bool
+{
+    if ($userId <= 0 || $periodeId <= 0) {
+        return false;
+    }
+
+    $row = dbFetchOne(
+        "SELECT id FROM hukum_keanggotaan
+         WHERE user_id = ?
+           AND periode_id = ?
+           AND jabatan = ?
+           AND aktif = 1
+           AND (selesai_pada IS NULL OR selesai_pada >= CURDATE())
+         LIMIT 1",
+        [$userId, $periodeId, $jabatan]
+    );
+
+    return $row !== null;
+}
+
+function hukum_is_komisi_i(int $userId = 0, ?int $periodeId = null, ?int $documentId = null): bool
+{
+    if ($userId <= 0) {
+        $userId = hukum_current_user_id();
+    }
+
+    if ($documentId !== null && $documentId > 0) {
+        $periodeId = hukum_period_for_document($documentId) ?? $periodeId;
+    }
+
+    if ($periodeId === null) {
+        $periodeId = hukum_current_user_periode_id();
+    }
+
+    if ($periodeId <= 0) {
+        return false;
+    }
+
+    return hukum_business_membership_for_user($userId, (int) $periodeId, 'komisi_i');
+}
+
+function hukum_is_ketua_umum(int $userId = 0, ?int $periodeId = null, ?int $documentId = null): bool
+{
+    if ($userId <= 0) {
+        $userId = hukum_current_user_id();
+    }
+
+    if ($documentId !== null && $documentId > 0) {
+        $periodeId = hukum_period_for_document($documentId) ?? $periodeId;
+    }
+
+    if ($periodeId === null) {
+        $periodeId = hukum_current_user_periode_id();
+    }
+
+    if ($periodeId <= 0) {
+        return false;
+    }
+
+    return hukum_business_membership_for_user($userId, (int) $periodeId, 'ketua_umum');
+}
+
+function hukum_technical_role_is_admin(?string $role = null): bool
+{
+    $role = strtolower(trim((string) ($role ?? hukum_current_user_role())));
+
+    return in_array($role, ['admin', 'superadmin', 'ketua_umum_bpm'], true);
+}
+
+function hukum_can_review_staging(int $documentId, ?int $userId = null): bool
+{
+    if ($documentId <= 0) {
+        return false;
+    }
+
+    if ($userId === null || $userId <= 0) {
+        $userId = hukum_current_user_id();
+    }
+
+    $periodeId = hukum_period_for_document($documentId);
+    if ($periodeId === null || $periodeId <= 0) {
+        return false;
+    }
+
+    $currentRole = strtolower(hukum_current_user_role());
+    $technicalAdmin = hukum_technical_role_is_admin($currentRole);
+
+    if (hukum_is_komisi_i($userId, $periodeId) && in_array($currentRole, ['komisi_i', 'admin', 'superadmin'], true)) {
+        return true;
+    }
+
+    if (hukum_is_ketua_umum($userId, $periodeId) && $technicalAdmin) {
+        return true;
+    }
+
+    return false;
+}
+
+function hukum_can_commit_as(int $documentId, string $peran, ?int $userId = null): bool
+{
+    $peran = strtolower(trim($peran));
+    if (!in_array($peran, ['komisi_i', 'ketua_umum'], true)) {
+        return false;
+    }
+
+    if ($userId === null || $userId <= 0) {
+        $userId = hukum_current_user_id();
+    }
+
+    $periodeId = hukum_period_for_document($documentId);
+    if ($periodeId === null || $periodeId <= 0) {
+        return false;
+    }
+
+    $currentRole = strtolower(hukum_current_user_role());
+    $technicalAdmin = hukum_technical_role_is_admin($currentRole);
+
+    if ($peran === 'komisi_i') {
+        return hukum_is_komisi_i($userId, $periodeId) && in_array($currentRole, ['komisi_i', 'admin'], true);
+    }
+
+    if ($peran === 'ketua_umum') {
+        return hukum_is_ketua_umum($userId, $periodeId) && $technicalAdmin;
+    }
+
+    return false;
+}
+
 function hukum_role_permissions(): array
 {
     return [

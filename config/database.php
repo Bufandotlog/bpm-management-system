@@ -273,6 +273,10 @@ function getConnection(): PDO
 {
     static $pdo = null;
 
+    if (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+        return $GLOBALS['pdo'];
+    }
+
     if ($pdo instanceof PDO) {
         return $pdo;
     }
@@ -356,53 +360,55 @@ function getConnection(): PDO
  *
  * @return PDOStatement
  */
-function dbQuery(
-    string $sql,
-    array $params = [],
-    string $types = ''
-): PDOStatement {
-    try {
-        $pdo = getConnection();
+if (!function_exists('dbQuery')) {
+    function dbQuery(
+        string $sql,
+        array $params = [],
+        string $types = ''
+    ): PDOStatement {
+        try {
+            $pdo = getConnection();
 
-        if (DB_DEBUG) {
-            error_log('[DB QUERY] ' . $sql);
+            if (DB_DEBUG) {
+                error_log('[DB QUERY] ' . $sql);
 
-            if (!empty($params)) {
+                if (!empty($params)) {
+                    error_log(
+                        '[DB PARAMS] ' .
+                        json_encode(
+                            $params,
+                            JSON_UNESCAPED_UNICODE
+                        )
+                    );
+                }
+            }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+
+            if (DB_DEBUG) {
                 error_log(
-                    '[DB PARAMS] ' .
-                    json_encode(
-                        $params,
-                        JSON_UNESCAPED_UNICODE
-                    )
+                    '[DB SUCCESS] Query executed | row_count: ' .
+                    $stmt->rowCount()
                 );
             }
-        }
 
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+            return $stmt;
 
-        if (DB_DEBUG) {
+        } catch (PDOException $e) {
             error_log(
-                '[DB SUCCESS] Query executed | row_count: ' .
-                $stmt->rowCount()
+                '[DB ERROR] ' .
+                $e->getMessage() .
+                ' | Query: ' .
+                $sql
+            );
+
+            throw new RuntimeException(
+                'DB Error: ' . $e->getMessage(),
+                0,
+                $e
             );
         }
-
-        return $stmt;
-
-    } catch (PDOException $e) {
-        error_log(
-            '[DB ERROR] ' .
-            $e->getMessage() .
-            ' | Query: ' .
-            $sql
-        );
-
-        throw new RuntimeException(
-            'DB Error: ' . $e->getMessage(),
-            0,
-            $e
-        );
     }
 }
 
@@ -414,30 +420,34 @@ function dbQuery(
 /**
  * Ambil satu baris.
  */
-function dbFetchOne(
-    string $sql,
-    array $params = [],
-    string $types = ''
-): ?array {
-    $stmt = dbQuery($sql, $params, $types);
+if (!function_exists('dbFetchOne')) {
+    function dbFetchOne(
+        string $sql,
+        array $params = [],
+        string $types = ''
+    ): ?array {
+        $stmt = dbQuery($sql, $params, $types);
 
-    $result = $stmt->fetch();
+        $result = $stmt->fetch();
 
-    return $result !== false ? $result : null;
+        return $result !== false ? $result : null;
+    }
 }
 
 
 /**
  * Ambil semua baris.
  */
-function dbFetchAll(
-    string $sql,
-    array $params = [],
-    string $types = ''
-): array {
-    $stmt = dbQuery($sql, $params, $types);
+if (!function_exists('dbFetchAll')) {
+    function dbFetchAll(
+        string $sql,
+        array $params = [],
+        string $types = ''
+    ): array {
+        $stmt = dbQuery($sql, $params, $types);
 
-    return $stmt->fetchAll();
+        return $stmt->fetchAll();
+    }
 }
 
 
@@ -448,28 +458,32 @@ function dbFetchAll(
 /**
  * Insert dan kembalikan ID.
  */
-function dbInsert(
-    string $sql,
-    array $params = [],
-    string $types = ''
-): int {
-    dbQuery($sql, $params, $types);
+if (!function_exists('dbInsert')) {
+    function dbInsert(
+        string $sql,
+        array $params = [],
+        string $types = ''
+    ): int {
+        dbQuery($sql, $params, $types);
 
-    return (int) getConnection()->lastInsertId();
+        return (int) getConnection()->lastInsertId();
+    }
 }
 
 
 /**
  * Update / Delete.
  */
-function dbUpdate(
-    string $sql,
-    array $params = [],
-    string $types = ''
-): int {
-    $stmt = dbQuery($sql, $params, $types);
+if (!function_exists('dbUpdate')) {
+    function dbUpdate(
+        string $sql,
+        array $params = [],
+        string $types = ''
+    ): int {
+        $stmt = dbQuery($sql, $params, $types);
 
-    return $stmt->rowCount();
+        return $stmt->rowCount();
+    }
 }
 
 

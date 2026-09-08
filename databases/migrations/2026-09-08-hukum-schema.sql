@@ -75,13 +75,20 @@ CREATE TABLE IF NOT EXISTS hukum_workspace (
   dokumen_id INT NOT NULL,
   judul_perubahan VARCHAR(255) NOT NULL,
   tujuan TEXT NULL,
-  status ENUM('aktif','diajukan','ditutup','dibatalkan') NOT NULL DEFAULT 'aktif',
+  status ENUM('aktif','diajukan','siap_commit','committed','ditutup','dibatalkan') NOT NULL DEFAULT 'aktif',
   dibuat_oleh INT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   closed_at DATETIME NULL,
   closed_by INT NULL,
+  active_slot TINYINT AS (
+    CASE
+      WHEN status IN ('aktif','diajukan','siap_commit') THEN 1
+      ELSE NULL
+    END
+  ) STORED,
   PRIMARY KEY (id),
+  UNIQUE KEY uq_hukum_workspace_active_slot (dokumen_id, active_slot),
   KEY idx_hukum_workspace_dokumen_status (dokumen_id, status),
   CONSTRAINT fk_hukum_workspace_dokumen
     FOREIGN KEY (dokumen_id) REFERENCES hukum_dokumen (id) ON DELETE CASCADE,
