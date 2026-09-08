@@ -20,6 +20,8 @@ $pageClassMap = [
     'berita.php' => 'page-berita',
     'kepengurusan.php' => 'page-kepengurusan',
     'arsip-periode.php' => 'page-arsip',        // ✅ TAMBAHKAN
+    'hukum.php' => 'page-hukum',
+    'hukum-detail.php' => 'page-hukum-detail',
     'kontak.php' => 'page-kontak',
     'daftar.php' => 'page-daftar',
     'berita-detail.php' => 'page-berita-detail',
@@ -156,6 +158,9 @@ $isHomePage = ($current_page == 'index.php');
                 <!-- ✅ TAMBAHKAN: Menu Arsip -->
                 <li class="<?php echo ($current_page == 'arsip-periode.php') ? 'active' : ''; ?>">
                     <a href="<?php echo baseUrl('arsip-periode.php'); ?>">Arsip</a>
+                </li>
+                <li class="<?php echo in_array($current_page, ['hukum.php', 'hukum-detail.php'], true) ? 'active' : ''; ?>">
+                    <a href="<?php echo baseUrl('hukum.php'); ?>">Produk Hukum</a>
                 </li>
                 <li class="<?php echo ($current_page == 'kontak.php') ? 'active' : ''; ?>">
                     <a href="<?php echo baseUrl('kontak.php'); ?>">Kontak</a>

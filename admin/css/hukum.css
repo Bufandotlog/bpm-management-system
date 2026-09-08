@@ -1,0 +1,34 @@
+.hukum-shell { max-width: 1440px; margin: 0 auto; }
+.hukum-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.hukum-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,.1); }
+.hukum-tab { border:0; border-bottom:2px solid transparent; background:transparent; color:#aaa; padding:10px 14px; cursor:pointer; font-weight:600; }
+.hukum-tab.active { color:#fff; border-bottom-color:#c9a227; }
+.hukum-panel { display:none; }
+.hukum-panel.active { display:block; }
+.hukum-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:18px; }
+.hukum-stat, .hukum-card { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:18px; }
+.hukum-stat strong { display:block; font-size:1.8rem; color:#fff; }
+.hukum-stat span { color:#999; font-size:.85rem; }
+.hukum-card h2, .hukum-card h3 { margin:0 0 12px; color:#fff; }
+.hukum-table-wrap { overflow-x:auto; }
+.hukum-table { width:100%; border-collapse:collapse; }
+.hukum-table th, .hukum-table td { border-bottom:1px solid rgba(255,255,255,.08); padding:11px 10px; text-align:left; vertical-align:top; }
+.hukum-table th { color:#aaa; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+.hukum-table td { color:#ddd; }
+.hukum-table tr:hover { background:rgba(255,255,255,.03); }
+.hukum-badge { display:inline-flex; border-radius:999px; padding:3px 9px; font-size:.75rem; background:rgba(201,162,39,.16); color:#e6c95d; }
+.hukum-muted { color:#999; }
+.hukum-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.hukum-form-grid .full { grid-column:1/-1; }
+.hukum-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.hukum-btn { border:1px solid rgba(255,255,255,.2); border-radius:7px; color:#fff; background:#1d2d42; padding:8px 12px; cursor:pointer; text-decoration:none; }
+.hukum-btn:hover { filter:brightness(1.2); }
+.hukum-btn.gold { background:#7d6515; border-color:#c9a227; }
+.hukum-btn.danger { background:#672b2b; border-color:#a95050; }
+.hukum-empty { color:#999; padding:28px 10px; text-align:center; }
+.hukum-drawer { margin-top:14px; }
+.hukum-notice { display:none; margin-bottom:14px; border-radius:8px; padding:10px 12px; }
+.hukum-notice.show { display:block; }
+.hukum-notice.success { background:rgba(46,125,50,.2); color:#a5d6a7; }
+.hukum-notice.error { background:rgba(198,40,40,.2); color:#ef9a9a; }
+@media (max-width:700px) { .hukum-form-grid { grid-template-columns:1fr; } .hukum-form-grid .full { grid-column:auto; } }

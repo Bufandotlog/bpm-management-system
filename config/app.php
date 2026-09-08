@@ -21,24 +21,34 @@ defined('SITE_NAME') || define('SITE_NAME', 'BPM Kabinet Astawidya');
 if (session_status() === PHP_SESSION_NONE) {
 
     
-// Canonical host enforcement (www only) - cegah OAuth state mismatch lintas www/non-www
-$canonicalHost = 'www.bembudiutomo.my.id';
-$requestHost = $_SERVER['HTTP_HOST'] ?? '';
-if ($requestHost !== $canonicalHost) {
+// Canonical host enforcement (www only) - cegah OAuth state mismatch lintas www/non-www.
+// Local development hosts must remain accessible on the PHP built-in server.
+$canonicalHost = $_ENV['CANONICAL_HOST'] ?? 'www.bembudiutomo.my.id';
+$requestHost = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+$requestHostname = (string) (parse_url('http://' . $requestHost, PHP_URL_HOST) ?? '');
+$localHosts = ['localhost', '127.0.0.1', '::1'];
+$isLocalHost = in_array($requestHostname, $localHosts, true);
+if ($requestHostname !== '' && !$isLocalHost
+    && $requestHost !== strtolower($canonicalHost)) {
     $scheme = (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
-    $redirectTo = $scheme . '://' . $canonicalHost . $_SERVER['REQUEST_URI'];
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+    $redirectTo = $scheme . '://' . $canonicalHost . $requestUri;
     header('Location: ' . $redirectTo, true, 301);
     exit;
 }
-// Session cookie domain wildcard untuk persist lintas www/non-www
-session_set_cookie_params([
+$isHttpsRequest = (($_SERVER['HTTPS'] ?? '') === 'on')
+    || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+$sessionCookie = [
     'lifetime' => 0,
     'path' => '/',
-    'domain' => '.bembudiutomo.my.id',
-    'secure' => true,
+    'secure' => $isHttpsRequest,
     'httponly' => true,
     'samesite' => 'Lax'
-]);// Pakai @ agar tidak fatal di shared hosting yang restrict ini_set
+];
+if (!$isLocalHost) {
+    $sessionCookie['domain'] = '.bembudiutomo.my.id';
+}
+session_set_cookie_params($sessionCookie);// Pakai @ agar tidak fatal di shared hosting yang restrict ini_set
     @ini_set('session.use_strict_mode', 1);
     @ini_set('session.gc_maxlifetime', 1800);
 

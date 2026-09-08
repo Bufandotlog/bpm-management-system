@@ -19,6 +19,7 @@
                 <a href="index.php">Beranda</a>
                 <a href="berita.php">Berita</a>
                 <a href="kepengurusan.php">Kepengurusan</a>
+                <a href="hukum.php">Produk Hukum</a>
                 <a href="kontak.php">Kontak</a>
             </div>
             <div class="footer-section">
