@@ -203,10 +203,10 @@ Berisi seluruh sistem manajemen administrasi surat menyurat, rundown, inventaris
      ```
    * **Spesifikasi Batasan Ukuran Upload PHP:** Jika Anda menemui error saat mengunggah berkas PDF lampiran berukuran sangat besar, hal ini biasanya disebabkan oleh batasan default PHP. Anda dapat meningkatkannya dengan mengedit berkas `php.ini` Anda dan menyesuaikan konfigurasi berikut:
      ```ini
-     upload_max_filesize = 20M
-     post_max_size = 24M
+     upload_max_filesize = 10M
+     post_max_size = 25M
      ```
-     *Setelah memperbarui `php.ini`, pastikan untuk merestart web server Anda (Apache/Nginx/PHP Server) agar perubahan tersebut diterapkan.*
+     *Konfigurasi lokal project tersedia di `.user.ini`; untuk PHP built-in server, jalankan `php -c .user.ini -S localhost:8000` dan restart server setelah perubahan.*
 2. **Masalah CORS saat Memuat Lampiran PDF Luar**
    * Di dalam file `cetak-surat.php`, pemanggilan lampiran PDF eksternal sudah disempurnakan menggunakan alamat relatif aman (`../uploads/umum/lampiran/...`).
    * Pastikan browser Anda tidak memblokir local resource fetch. Menggunakan web server bawaan PHP (`php -S localhost:8000`) menjamin bebas masalah CORS karena berjalan di bawah asal port yang sama (*same-origin*).

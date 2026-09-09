@@ -119,16 +119,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
 
     // --- 413 PROTECT: pre-check ukuran request sebelum PHP proses ---
     $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
-    $maxAllowed    = (int) (defined('MAX_FILE_SIZE') ? MAX_FILE_SIZE : 5 * 1024 * 1024);
-    // Beri buffer 1MB untuk field text tambahan
-    $limitWithBuffer = $maxAllowed + 1024 * 1024;
+    $postMaxSize = ini_get('post_max_size');
+    $postMaxBytes = function_exists('ini_parse_quantity')
+        ? ini_parse_quantity($postMaxSize)
+        : (int) $postMaxSize;
 
-    if ($contentLength > $limitWithBuffer) {
+    if ($contentLength > 0 && $postMaxBytes > 0 && $contentLength > $postMaxBytes) {
         redirect('admin/konten/kabinet.php',
-            'Ukuran file/permintaan melebihi batas maksimal (' . round($maxAllowed/1024/1024, 0) . 'MB). '
-            . 'Kompresi gambar (JPEG quality 80-90%) atau kurangi ukuran foto.',
+            'Ukuran total upload melebihi batas maksimal ' . $postMaxSize . '.',
             'error'
         );
+        exit();
+    }
+
+    if ($contentLength > 0 && empty($_POST) && empty($_FILES)) {
+        redirect('admin/konten/kabinet.php', 'Data upload tidak diterima oleh server.', 'error');
         exit();
     }
 
@@ -180,22 +185,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
         $new_foto_bersama_depth = '';
     }
 
-    // Upload baru
-    if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-        $upload = uploadFile($_FILES['logo'], 'kabinet');
-        if ($upload) { $new_logo = $upload; }
-    }
-    if (isset($_FILES['foto_bersama']) && $_FILES['foto_bersama']['error'] === UPLOAD_ERR_OK) {
-        $upload = uploadFile($_FILES['foto_bersama'], 'kabinet');
-        if ($upload) { $new_foto_bersama = $upload; }
-    }
-    if (isset($_FILES['foto_bersama_depth']) && $_FILES['foto_bersama_depth']['error'] === UPLOAD_ERR_OK) {
-        if (!validateKabinetDepthUpload($_FILES['foto_bersama_depth'])) {
-            redirect('admin/konten/kabinet.php', $_SESSION['error'] ?? 'Depth map tidak valid.', 'error');
-            exit();
+    $uploadErrorMessage = static function (string $label, int $error): string {
+        $maxMB = round(MAX_FILE_SIZE / 1024 / 1024, 0);
+        return match ($error) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => "{$label} terlalu besar. Maksimal ukuran file adalah {$maxMB} MB.",
+            UPLOAD_ERR_PARTIAL => "{$label} hanya terupload sebagian.",
+            UPLOAD_ERR_NO_TMP_DIR => "Folder temporary {$label} tidak tersedia.",
+            UPLOAD_ERR_CANT_WRITE => "Server gagal menulis {$label} ke disk.",
+            UPLOAD_ERR_EXTENSION => "Upload {$label} dihentikan oleh ekstensi PHP.",
+            default => "Upload {$label} gagal.",
+        };
+    };
+
+    $uploadedPaths = [];
+    $processUpload = static function (string $field, string $label, string $folder) use ($uploadErrorMessage, &$uploadedPaths): ?string {
+        if (!isset($_FILES[$field]) || ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return null;
         }
-        $upload = uploadFile($_FILES['foto_bersama_depth'], 'kabinet');
-        if ($upload) { $new_foto_bersama_depth = $upload; }
+
+        $file = $_FILES[$field];
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            throw new RuntimeException($uploadErrorMessage($label, (int) $file['error']));
+        }
+
+        $path = uploadFile($file, $folder);
+        if ($path === false) {
+            throw new RuntimeException($_SESSION['error'] ?? "Upload {$label} gagal.");
+        }
+
+        $uploadedPaths[] = $path;
+        return $path;
+    };
+
+    try {
+        $upload = $processUpload('logo', 'Logo', 'kabinet');
+        if ($upload !== null) {
+            $new_logo = $upload;
+        }
+
+        $upload = $processUpload('foto_bersama', 'Foto bersama', 'kabinet');
+        if ($upload !== null) {
+            $new_foto_bersama = $upload;
+        }
+
+        if (isset($_FILES['foto_bersama_depth']) && ($_FILES['foto_bersama_depth']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            if (($_FILES['foto_bersama_depth']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                throw new RuntimeException($uploadErrorMessage('Depth map', (int) $_FILES['foto_bersama_depth']['error']));
+            }
+            if (!validateKabinetDepthUpload($_FILES['foto_bersama_depth'])) {
+                throw new RuntimeException($_SESSION['error'] ?? 'Depth map tidak valid.');
+            }
+            $upload = $processUpload('foto_bersama_depth', 'Depth map', 'kabinet');
+            if ($upload !== null) {
+                $new_foto_bersama_depth = $upload;
+            }
+        }
+    } catch (RuntimeException $e) {
+        foreach ($uploadedPaths as $uploadedPath) {
+            deleteFile($uploadedPath);
+        }
+        redirect('admin/konten/kabinet.php', $e->getMessage(), 'error');
+        exit();
     }
 
     $result = dbQuery(
@@ -204,18 +254,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
         "ssiissss"
     );
 
-    if ($result !== false) {
-        foreach ([$old_logo, $old_foto_bersama, $old_foto_bersama_depth] as $oldValue) {
-            if (!empty($oldValue) && !in_array($oldValue, [$new_logo, $new_foto_bersama, $new_foto_bersama_depth], true)) {
-                deleteFile($oldValue);
-            }
+    if ($result === false) {
+        foreach ($uploadedPaths as $uploadedPath) {
+            deleteFile($uploadedPath);
         }
-        auditLog('UPDATE', 'kabinet', 1, 'Edit data kabinet: ' . $nama);
+        redirect('admin/konten/kabinet.php', 'Gagal memperbarui data!', 'error');
+        exit();
     }
 
+    foreach ([$old_logo, $old_foto_bersama, $old_foto_bersama_depth] as $oldValue) {
+        if (!empty($oldValue) && !in_array($oldValue, [$new_logo, $new_foto_bersama, $new_foto_bersama_depth], true)) {
+            deleteFile($oldValue);
+        }
+    }
+    auditLog('UPDATE', 'kabinet', 1, 'Edit data kabinet: ' . $nama);
+
     redirect('admin/konten/kabinet.php',
-        $result !== false ? 'Data kabinet berhasil diperbarui!' : 'Gagal memperbarui data!',
-        $result !== false ? 'success' : 'error'
+        'Data kabinet berhasil diperbarui!',
+        'success'
     );
     exit();
 }
