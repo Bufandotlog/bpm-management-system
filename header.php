@@ -105,12 +105,14 @@ $isHomePage = ($current_page == 'index.php');
 
     <!-- HERO SECTION - Tampil di semua halaman -->
     <section class="hero"<?php if ($hero_has_valid_relighting): ?> data-relighting-image="<?php echo htmlspecialchars($hero_relighting_image, ENT_QUOTES, 'UTF-8'); ?>" data-relighting-depth="<?php echo htmlspecialchars($hero_relighting_depth, ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>>
-        <div class="hero-background">
-            <img src="<?php echo htmlspecialchars($hero_background_url, ENT_QUOTES, 'UTF-8'); ?>"
-                 alt="<?php echo !empty($kabinet['foto_bersama']) ? 'Foto Bersama BPM Kabinet ' . htmlspecialchars($kabinet['nama'] ?? 'ASTAWIDYA') : 'Default Hero'; ?>"
-                 loading="lazy">
+        <div class="hero-visual">
+            <div class="hero-background">
+                <img src="<?php echo htmlspecialchars($hero_background_url, ENT_QUOTES, 'UTF-8'); ?>"
+                     alt="<?php echo !empty($kabinet['foto_bersama']) ? 'Foto Bersama BPM Kabinet ' . htmlspecialchars($kabinet['nama'] ?? 'ASTAWIDYA') : 'Default Hero'; ?>"
+                     loading="lazy">
+            </div>
+            <div class="hero-gradient-overlay"></div>
         </div>
-        <div class="hero-gradient-overlay"></div>
         
         <!-- Konten hero - HANYA TAMPIL DI INDEX -->
         <?php if ($isHomePage): ?>

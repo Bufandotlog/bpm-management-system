@@ -19,6 +19,15 @@
     pointer-events: none;
 }
 
+.hero-visual {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    transform-origin: center center;
+    will-change: transform, filter;
+}
+
 .bpm-relighting {
     position: absolute;
     inset: 0;
@@ -44,10 +53,6 @@
     width: 100%;
     height: 100%;
     z-index: 0;
-    will-change: transform, filter;
-    transform: scale(1.08);
-    transform-origin: center center;
-    transition: transform 0.15s linear, filter 0.15s linear;
 }
 
 .hero-background img {
@@ -56,10 +61,7 @@
     object-fit: cover;
     object-position: center 18%;
     display: block;
-    filter: brightness(0.72) contrast(1.18) saturate(0.85) blur(0px);
-    transform: scale(1.08);
-    transform-origin: center center;
-    transition: transform 0.15s linear, filter 0.15s linear;
+    filter: brightness(0.72) contrast(1.18) saturate(0.85);
 }
 
 /* Gradient overlay - SANGAT TIPIS */
@@ -242,11 +244,6 @@
         padding: 0 .75rem;
     }
 
-    .hero-background,
-    .hero-background img {
-        transform: scale(1.05);
-    }
-
     .hero-title {
         gap: 0.04em;
     }
@@ -298,6 +295,7 @@
         animation: none;
     }
 
+    .hero-visual,
     .hero-background img,
     .hero-gradient-overlay,
     .hero::after {

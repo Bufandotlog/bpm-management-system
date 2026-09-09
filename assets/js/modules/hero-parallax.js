@@ -1,9 +1,9 @@
 export function initHeroParallax() {
-    const heroBackground = document.querySelector('.hero-background');
+    const heroVisual = document.querySelector('.hero-visual');
     const heroImage = document.querySelector('.hero-background img');
     const heroContent = document.querySelector('.hero-content');
 
-    if (!heroBackground || !heroImage) return;
+    if (!heroVisual || !heroImage) return;
 
     if (window.__bpmHeroParallaxInitialized) {
         return;
@@ -22,26 +22,34 @@ export function initHeroParallax() {
         }
     }
 
-    heroBackground.style.transformOrigin = 'center center';
-    heroImage.style.transformOrigin = 'center center';
-    heroImage.style.filter = 'none';
-    heroBackground.style.transform = 'scale(1.08)';
-
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function update() {
+        if (prefersReducedMotion) {
+            heroVisual.style.transform = 'scale(1)';
+            heroVisual.style.filter = 'none';
+            if (heroContent) {
+                heroContent.style.transform = 'translate(-50%, -48%)';
+                heroContent.style.opacity = '1';
+            }
+            return;
+        }
+
         const scrollY = window.scrollY;
-        const maxScroll = Math.min(window.innerHeight * 1.3, 700);
-        const progress = Math.min(scrollY / maxScroll, 1);
-
-        const zoom = 1.1 - progress * 0.1;
-        const blur = progress * 7;
-        const brightness = 0.92 - progress * 0.28;
-        const contrast = 1.18 + progress * 0.2;
-
-        heroBackground.style.transform = `scale(${zoom})`;
-        heroBackground.style.filter = `blur(${blur}px) brightness(${brightness}) contrast(${contrast}) saturate(0.9)`;
-
+        const zoom = 1 + Math.min(scrollY / 500, 1) * 0.3;
+        let blur;
+        let brightness;
+        if (scrollY <= 500) {
+            blur = (scrollY / 500) * 10;
+            brightness = 0.85;
+        } else {
+            const extraScroll = scrollY - 500;
+            const extraFactor = Math.min(extraScroll / 500, 1);
+            blur = 10 + (extraFactor * 10);
+            brightness = 0.85 - (extraFactor * 0.3);
+        }
+        heroVisual.style.transform = `scale(${zoom})`;
+        heroVisual.style.filter = `blur(${blur}px) brightness(${brightness}) contrast(1.0)`;
         if (heroContent) {
             const textMove = Math.min(scrollY * 0.35, 180);
             heroContent.style.transform = `translate(-50%, calc(-50% - ${textMove}px))`;
@@ -57,10 +65,10 @@ export function initHeroParallax() {
     let rafId = null;
     function scheduleUpdate() {
         if (prefersReducedMotion) {
-            heroBackground.style.transform = 'scale(1.02)';
-            heroBackground.style.filter = 'blur(0px) brightness(0.9) contrast(1.18)';
+            heroVisual.style.transform = 'scale(1)';
+            heroVisual.style.filter = 'none';
             if (heroContent) {
-                heroContent.style.transform = 'translate(-50%, -50%)';
+                heroContent.style.transform = 'translate(-50%, -48%)';
                 heroContent.style.opacity = '1';
             }
             return;
