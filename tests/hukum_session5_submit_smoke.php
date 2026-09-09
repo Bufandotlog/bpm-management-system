@@ -67,7 +67,7 @@ $pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT NOT NULL)'
 $pdo->exec('CREATE TABLE periode_kepengurusan (id INTEGER PRIMARY KEY, nama TEXT NOT NULL)');
 $pdo->exec('CREATE TABLE hukum_dokumen (id INTEGER PRIMARY KEY, judul TEXT NOT NULL, periode_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "draft")');
 $pdo->exec('CREATE TABLE hukum_pasal (id INTEGER PRIMARY KEY, dokumen_id INTEGER NOT NULL, nomor_label TEXT NOT NULL, judul_pasal TEXT NULL, urutan INTEGER NOT NULL, UNIQUE(dokumen_id, nomor_label), UNIQUE(dokumen_id, urutan))');
-$pdo->exec('CREATE TABLE hukum_workspace (id INTEGER PRIMARY KEY, dokumen_id INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ("aktif","diajukan","ditutup","dibatalkan")), UNIQUE(dokumen_id, status))');
+$pdo->exec('CREATE TABLE hukum_workspace (id INTEGER PRIMARY KEY, dokumen_id INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ("aktif","diajukan","siap_commit","committed","ditutup","dibatalkan")), UNIQUE(dokumen_id, status))');
 $pdo->exec('CREATE TABLE hukum_pasal_versi (id INTEGER PRIMARY KEY, pasal_id INTEGER NOT NULL, workspace_id INTEGER NOT NULL, isi TEXT NOT NULL, hash_konten TEXT NOT NULL, status TEXT NOT NULL DEFAULT "draft", created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
 $pdo->exec('CREATE TABLE hukum_relasi_pasal (id INTEGER PRIMARY KEY, pasal_anak_id INTEGER NOT NULL, pasal_induk_id INTEGER NOT NULL, jenis_relasi TEXT NOT NULL DEFAULT "mengacu")');
 $pdo->exec('CREATE TABLE hukum_staging (id INTEGER PRIMARY KEY, workspace_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "menunggu_review", diajukan_oleh INTEGER NOT NULL, diajukan_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');

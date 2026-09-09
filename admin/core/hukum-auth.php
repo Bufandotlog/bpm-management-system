@@ -11,31 +11,40 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/hukum-actor-context.php';
 
 function hukum_current_user_id(): int
 {
-    return (int) ($_SESSION['admin_id'] ?? 0);
+    return hukum_authenticated_actor()?->id ?? 0;
 }
 
 function hukum_current_user_role(): string
 {
-    return strtolower(trim((string) ($_SESSION['admin_role'] ?? '')));
+    return hukum_authenticated_actor()?->technicalRole ?? '';
 }
 
 function hukum_current_user_periode_id(): int
 {
-    return (int) ($_SESSION['admin_periode_id'] ?? 0);
+    return hukum_authenticated_actor()?->periodId ?? 0;
 }
 
 function hukum_current_user(): array
 {
-    return [
-        'id' => hukum_current_user_id(),
-        'role' => hukum_current_user_role(),
-        'name' => (string) ($_SESSION['admin_name'] ?? ''),
-        'username' => (string) ($_SESSION['admin_username'] ?? ''),
-        'periode_id' => hukum_current_user_periode_id(),
-        'can_access_all' => !empty($_SESSION['admin_can_access_all']),
+    $actor = hukum_authenticated_actor();
+    return $actor === null ? [
+        'id' => 0,
+        'role' => '',
+        'name' => '',
+        'username' => '',
+        'periode_id' => 0,
+        'can_access_all' => false,
+    ] : [
+        'id' => $actor->id,
+        'role' => $actor->technicalRole,
+        'name' => $actor->displayName,
+        'username' => $actor->username,
+        'periode_id' => $actor->periodId,
+        'can_access_all' => $actor->canAccessAll,
     ];
 }
 
@@ -215,7 +224,8 @@ function hukum_role_permissions(): array
 
 function hukum_has_permission(string $permission): bool
 {
-    if (!isLoggedIn()) {
+    $actor = hukum_authenticated_actor();
+    if ($actor === null) {
         return false;
     }
 
@@ -238,7 +248,7 @@ function hukum_json_response(array $payload, int $status = 200): void
 
 function hukum_require_login(): void
 {
-    if (!isLoggedIn()) {
+    if (hukum_authenticated_actor() === null) {
         hukum_json_response([
             'success' => false,
             'code' => 'UNAUTHENTICATED',

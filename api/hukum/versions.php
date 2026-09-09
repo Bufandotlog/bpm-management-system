@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/version_service.php';
+
 $method = hukum_require_method(['GET', 'POST']);
 $pdo = getConnection();
 $pasalId = (int) ($_GET['pasal_id'] ?? 0);
@@ -20,24 +22,11 @@ if ($method === 'GET') {
     )]);
 }
 
-hukum_require_permission('hukum.pasal.update');
 $input = hukum_input();
-$workspaceId = (int) ($input['workspace_id'] ?? 0);
-$workspace = dbFetchOne('SELECT id, dokumen_id, status FROM hukum_workspace WHERE id = ?', [$workspaceId]);
-if (!$workspace || (int) $workspace['dokumen_id'] !== (int) $pasal['dokumen_id'] || $workspace['status'] !== 'aktif') {
-    hukum_json_response(['success' => false, 'message' => 'Workspace aktif tidak valid untuk pasal ini.'], 409);
+$input['pasal_id'] = $pasalId;
+try {
+    $result = hukum_create_draft_version($pdo, $input);
+    hukum_json_response(['success' => true] + $result, 201);
+} catch (Throwable $error) {
+    hukum_json_response(['success' => false, 'message' => $error->getMessage()], $error->getCode() >= 400 && $error->getCode() < 600 ? $error->getCode() : 500);
 }
-$isi = hukum_decode_json_field($input['isi'] ?? null, 'isi');
-$canonical = hukum_canonical_json($isi);
-$hash = hash('sha256', $canonical);
-$parentId = isset($input['dibuat_dari_versi_id']) ? (int) $input['dibuat_dari_versi_id'] : null;
-$stmt = $pdo->prepare(
-    'INSERT INTO hukum_pasal_versi
-     (pasal_id, workspace_id, isi, hash_konten, status, dibuat_oleh, dibuat_dari_versi_id)
-     VALUES (?, ?, ?, ?, \'draft\', ?, ?)'
-);
-$stmt->execute([$pasalId, $workspaceId, $canonical, $hash, hukum_current_user_id(), $parentId]);
-$id = (int) $pdo->lastInsertId();
-hukum_sync_inline_references($pdo, $pasalId, (int) $pasal['dokumen_id'], $isi);
-hukum_audit($pdo, 'hukum_pasal_versi', $id, 'create_draft', null, ['pasal_id' => $pasalId, 'hash_konten' => $hash]);
-hukum_json_response(['success' => true, 'id' => $id, 'hash_konten' => $hash], 201);

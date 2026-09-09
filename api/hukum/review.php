@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
-require_once __DIR__ . '/../admin/core/hukum-auth.php';
 require_once __DIR__ . '/review_service.php';
 
 $method = hukum_require_method(['GET', 'POST']);
@@ -25,7 +24,6 @@ if ($method === 'GET') {
         $row['approval_rows'] = $approval['rows'];
         hukum_json_response(['success' => true, 'data' => $row]);
     }
-
     $user = hukum_current_user();
     $sql = 'SELECT s.*, w.dokumen_id, w.judul_perubahan, d.judul, d.periode_id
             FROM hukum_staging s
@@ -48,45 +46,18 @@ if ($method === 'GET') {
 $input = hukum_input();
 $stagingId = (int) ($input['staging_id'] ?? 0);
 $decision = (string) ($input['decision'] ?? '');
-if (!in_array($decision, ['approve', 'reject'], true)) {
-    hukum_json_response(['success' => false, 'message' => 'decision harus approve atau reject.'], 400);
-}
-if ($stagingId <= 0) {
-    hukum_json_response(['success' => false, 'message' => 'staging_id wajib.'], 400);
+if ($stagingId <= 0 || !in_array($decision, ['approve', 'reject'], true)) {
+    hukum_json_response(['success' => false, 'message' => 'Request review tidak valid.'], 400);
 }
 
-$pdo->beginTransaction();
 try {
-    $result = hukum_review_apply_decision($pdo, $stagingId, $decision, $input['note'] ?? null, hukum_current_user_id());
-    $staging = dbFetchOne(
-        'SELECT s.*, w.dokumen_id, d.periode_id
-         FROM hukum_staging s
-         JOIN hukum_workspace w ON w.id = s.workspace_id
-         JOIN hukum_dokumen d ON d.id = w.dokumen_id
-         WHERE s.id = ?',
-        [$stagingId]
-    );
-    if (!$staging) {
-        throw new RuntimeException('Staging tidak ditemukan.', 404);
-    }
-    hukum_audit($pdo, 'hukum_staging', $stagingId, 'review_' . $decision, null, [
-        'status' => $result['status'],
-        'role' => $result['role'],
-        'note' => $input['note'] ?? null,
-        'decision' => $decision,
-        'document_id' => (int) $staging['dokumen_id'],
-        'periode_id' => (int) $staging['periode_id'],
-    ], [
-        'role_context' => strtolower((string) ($_SESSION['admin_role'] ?? '')),
-        'periode_id' => (int) $staging['periode_id'],
-        'context_json' => ['document_id' => (int) $staging['dokumen_id'], 'decision' => $decision],
-        'result' => 'success',
-    ]);
-    $pdo->commit();
+    // hukum_review_apply_decision remains the domain operation behind this adapter.
+    $result = hukum_review_decide($pdo, $stagingId, $decision, $input['note'] ?? null, hukum_current_user_id());
     hukum_json_response(['success' => true, 'status' => $result['status'], 'decision' => $result['role']]);
-} catch (Throwable $exception) {
-    $pdo->rollBack();
-    $code = $exception->getCode();
-    $status = is_numeric($code) && (int) $code > 0 ? (int) $code : 409;
-    hukum_json_response(['success' => false, 'message' => $exception->getMessage()], $status);
+} catch (Throwable $error) {
+    $code = $error->getCode();
+    hukum_json_response(
+        ['success' => false, 'message' => $error->getMessage()],
+        is_numeric($code) && (int) $code >= 400 ? (int) $code : 409
+    );
 }
