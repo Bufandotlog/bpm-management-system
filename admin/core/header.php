@@ -886,6 +886,31 @@ if (isset($page_css)) {
             </div>
             <?php endif; ?>
 
+            <?php
+            $hukum_roles = ['superadmin', 'admin', 'sekretaris', 'komisi_i', 'ketua_umum_bpm', 'kominfo', 'anggota'];
+            $is_hukum_active = in_array($current_page, ['hukum-dashboard.php', 'hukum-editor.php', 'hukum-staging.php'], true);
+            ?>
+            <?php if (in_array($admin_role, $hukum_roles, true)): ?>
+            <div class="sidebar-dropdown <?php echo $is_hukum_active ? 'active open' : ''; ?>">
+                <button type="button" class="sidebar-dropdown-toggle" onclick="toggleSidebarDropdown(this)">
+                    <i class="fas fa-balance-scale" style="color:#c9a227;"></i>
+                    <span>Hukum</span>
+                    <i class="fas fa-chevron-right chevron-icon"></i>
+                </button>
+                <div class="sidebar-dropdown-menu">
+                    <a href="<?php echo baseUrl('admin/hukum-dashboard.php'); ?>" class="<?php echo $current_page === 'hukum-dashboard.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-file-contract"></i><span>Dokumen Hukum</span>
+                    </a>
+                    <a href="<?php echo baseUrl('admin/hukum-editor.php'); ?>" class="<?php echo $current_page === 'hukum-editor.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-pen-ruler"></i><span>Editor Draft</span>
+                    </a>
+                    <a href="<?php echo baseUrl('admin/hukum-staging.php'); ?>" class="<?php echo $current_page === 'hukum-staging.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-layer-group"></i><span>Review / Staging</span>
+                    </a>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- LPJ (Dropdown) -->
             <?php if ($isSekretaris || $isSuperadmin || $admin_role === 'admin'): ?>
             <div class="sidebar-dropdown <?php echo $is_lpj_active ? 'active open' : ''; ?>">
