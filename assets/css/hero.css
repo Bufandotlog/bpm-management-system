@@ -19,6 +19,15 @@
     pointer-events: none;
 }
 
+.hero-visual {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    transform-origin: center center;
+    will-change: transform, filter;
+}
+
 .bpm-relighting {
     position: absolute;
     inset: 0;
@@ -44,7 +53,6 @@
     width: 100%;
     height: 100%;
     z-index: 0;
-    will-change: transform;
 }
 
 .hero-background img {
@@ -54,7 +62,6 @@
     object-position: center 18%;
     display: block;
     filter: brightness(0.72) contrast(1.12) saturate(0.8);
-    transition: none;
 }
 
 /* Gradient overlay - SANGAT TIPIS */
@@ -278,6 +285,7 @@
         animation: none;
     }
 
+    .hero-visual,
     .hero-background img,
     .hero-gradient-overlay,
     .hero::after {

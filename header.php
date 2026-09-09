@@ -87,22 +87,40 @@ $isHomePage = ($current_page == 'index.php');
 </head>
 <body class="<?php echo $page_class; ?>">
 
+    <?php
+    $hero_background_url = !empty($kabinet['foto_bersama'])
+        ? uploadUrl($kabinet['foto_bersama'])
+        : assetUrl('images/default-hero.jpg');
+
+    $hero_relighting_image = !empty($kabinet['foto_bersama'])
+        ? uploadUrl($kabinet['foto_bersama'])
+        : '';
+
+    $hero_relighting_depth = !empty($kabinet['foto_bersama_depth'])
+        ? uploadUrl($kabinet['foto_bersama_depth'])
+        : '';
+
+    $hero_has_valid_relighting = !empty($hero_relighting_image) && !empty($hero_relighting_depth);
+    ?>
+
     <!-- HERO SECTION - Tampil di semua halaman -->
-    <section class="hero" data-relighting-image="<?php echo assetUrl('relighting/wall.jpg'); ?>" data-relighting-depth="<?php echo assetUrl('relighting/wall-depth.webp'); ?>">
-        <div class="hero-background">
-            <?php if (!empty($kabinet['foto_bersama'])): ?>
-                <!-- PERBAIKAN: Gunakan uploadUrl() -->
-                <img src="<?php echo uploadUrl($kabinet['foto_bersama']); ?>" 
-                     alt="Foto Bersama BPM Kabinet <?php echo htmlspecialchars($kabinet['nama'] ?? 'ASTAWIDYA'); ?>"
-                     loading="lazy">
-            <?php else: ?>
-                <!-- PERBAIKAN: Gunakan assetUrl() -->
-                <img src="<?php echo assetUrl('images/default-hero.jpg'); ?>" 
-                     alt="Default Hero"
-                     loading="lazy">
-            <?php endif; ?>
+    <section class="hero"<?php if ($hero_has_valid_relighting): ?> data-relighting-image="<?php echo htmlspecialchars($hero_relighting_image, ENT_QUOTES, 'UTF-8'); ?>" data-relighting-depth="<?php echo htmlspecialchars($hero_relighting_depth, ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>>
+        <div class="hero-visual">
+            <div class="hero-background">
+                <?php if (!empty($kabinet['foto_bersama'])): ?>
+                    <!-- PERBAIKAN: Gunakan uploadUrl() -->
+                    <img src="<?php echo htmlspecialchars($hero_background_url, ENT_QUOTES, 'UTF-8'); ?>"
+                         alt="Foto Bersama BPM Kabinet <?php echo htmlspecialchars($kabinet['nama'] ?? 'ASTAWIDYA'); ?>"
+                         loading="lazy">
+                <?php else: ?>
+                    <!-- PERBAIKAN: Gunakan assetUrl() -->
+                    <img src="<?php echo htmlspecialchars($hero_background_url, ENT_QUOTES, 'UTF-8'); ?>"
+                         alt="Default Hero"
+                         loading="lazy">
+                <?php endif; ?>
+            </div>
+            <div class="hero-gradient-overlay"></div>
         </div>
-        <div class="hero-gradient-overlay"></div>
         
         <!-- Konten hero - HANYA TAMPIL DI INDEX -->
         <?php if ($isHomePage): ?>

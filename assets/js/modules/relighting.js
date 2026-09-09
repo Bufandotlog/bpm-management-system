@@ -384,7 +384,8 @@ export function initRelighting() {
     const container = document.createElement('div');
     container.id = 'bpm-relighting';
     container.className = 'bpm-relighting';
-    hero.prepend(container);
+    const visual = hero.querySelector('.hero-visual') || hero;
+    visual.prepend(container);
 
     createRelightingRenderer(container, imageUrl, depthUrl)
         .then((instance) => {

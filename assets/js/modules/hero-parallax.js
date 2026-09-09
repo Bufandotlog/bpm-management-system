@@ -1,8 +1,9 @@
 export function initHeroParallax() {
+    const heroVisual = document.querySelector('.hero-visual');
     const heroImage = document.querySelector('.hero-background img');
     const heroContent = document.querySelector('.hero-content');
     
-    if (!heroImage) return;
+    if (!heroVisual || !heroImage) return;
     
     // SIMPAN GAMBAR KE SESSION
     if (heroImage.src) {
@@ -16,10 +17,20 @@ export function initHeroParallax() {
             }));
         }
     }
-    
-    heroImage.style.filter = 'none';
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function update() {
+        if (prefersReducedMotion) {
+            heroVisual.style.transform = 'scale(1)';
+            heroVisual.style.filter = 'none';
+            if (heroContent) {
+                heroContent.style.transform = 'translate(-50%, -48%)';
+                heroContent.style.opacity = '1';
+            }
+            return;
+        }
+
         const scrollY = window.scrollY;
         
         // ===== BACKGROUND EFFECTS =====
@@ -47,8 +58,8 @@ export function initHeroParallax() {
         }
         
         // Terapkan efek
-        heroImage.style.transform = `scale(${zoom})`;
-        heroImage.style.filter = `blur(${blur}px) brightness(${brightness}) contrast(1.0)`;
+        heroVisual.style.transform = `scale(${zoom})`;
+        heroVisual.style.filter = `blur(${blur}px) brightness(${brightness}) contrast(1.0)`;
         
         // ===== TEKS HERO NAIK KE ATAS =====
         if (heroContent) {
@@ -64,6 +75,7 @@ export function initHeroParallax() {
     }
 
     window.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
     update();
     
     console.log('✅ Hero Parallax diinisialisasi');
