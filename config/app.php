@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
     // Canonical host enforcement
     $canonicalHost = $_ENV['CANONICAL_HOST'] ?? 'www.bembudiutomo.my.id';
     $requestHost = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
-    
+
     // Deteksi hostname tanpa port untuk pengecekan local
     $requestHostname = strtolower(explode(':', $requestHost)[0]);
     $localHosts = ['localhost', '127.0.0.1', '::1'];
@@ -35,6 +35,7 @@ if (session_status() === PHP_SESSION_NONE) {
         $sessionCookie['domain'] = '.bembudiutomo.my.id';
     }
     session_set_cookie_params($sessionCookie);
+
     @ini_set('session.use_strict_mode', 1);
     @ini_set('session.gc_maxlifetime', 1800);
     session_start();

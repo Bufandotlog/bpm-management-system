@@ -6,6 +6,10 @@ require_once __DIR__ . '/includes/functions.php';
 
 // Ambil data yang diperlukan untuk semua halaman
 $kabinet = getKabinet();
+$kabinet_nama = !empty($kabinet['nama']) ? $kabinet['nama'] : 'ASTAWIDYA';
+$kabinet_periode = (!empty($kabinet['tahun_mulai']) && !empty($kabinet['tahun_selesai']))
+    ? $kabinet['tahun_mulai'] . '/' . $kabinet['tahun_selesai']
+    : '2025/2026';
 
 // Untuk navigasi, kita tetap seperti biasa
 $page_title = $page_title ?? 'Beranda';
@@ -77,14 +81,14 @@ $isHomePage = ($current_page == 'index.php');
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Meta tags untuk SEO -->
-    <meta name="description" content="Website resmi BPM Kabinet <?php echo htmlspecialchars($kabinet['nama'] ?? 'ASTAWIDYA'); ?> - <?php echo htmlspecialchars($kabinet['arti'] ?? ''); ?>">
+    <meta name="description" content="Website resmi BPM Kabinet <?php echo htmlspecialchars($kabinet_nama); ?> - <?php echo htmlspecialchars($kabinet['arti'] ?? ''); ?>">
     <meta property="og:title" content="<?php echo SITE_NAME; ?>">
     <meta property="og:image" content="<?php echo !empty($kabinet['logo']) ? uploadUrl($kabinet['logo']) : assetUrl('images/og-default.jpg'); ?>">
 </head>
 <body class="<?php echo $page_class; ?>">
 
     <!-- HERO SECTION - Tampil di semua halaman -->
-    <section class="hero">
+    <section class="hero" data-relighting-image="<?php echo assetUrl('relighting/wall.jpg'); ?>" data-relighting-depth="<?php echo assetUrl('relighting/wall-depth.webp'); ?>">
         <div class="hero-background">
             <?php if (!empty($kabinet['foto_bersama'])): ?>
                 <!-- PERBAIKAN: Gunakan uploadUrl() -->
@@ -104,17 +108,11 @@ $isHomePage = ($current_page == 'index.php');
         <?php if ($isHomePage): ?>
         <div class="hero-content">
             <h1 class="hero-title">
-                KABINET <span class="biru"><?php echo htmlspecialchars($kabinet['nama'] ?? 'ASTAWIDYA'); ?></span>
+                <span class="hero-title-line">KABINET</span>
+                <span class="hero-title-line biru"><?php echo htmlspecialchars($kabinet_nama); ?></span>
             </h1>
             <p class="hero-sub">
-                BPM BUDI UTOMO NASIONAL 
-                <?php 
-                $periode = '';
-                if (!empty($kabinet['tahun_mulai']) && !empty($kabinet['tahun_selesai'])) {
-                    $periode = $kabinet['tahun_mulai'] . '/' . $kabinet['tahun_selesai'];
-                }
-                echo htmlspecialchars($periode ?: '2025/2026');
-                ?>
+                BPM BUDI UTOMO NASIONAL <?php echo htmlspecialchars($kabinet_periode); ?>
             </p>
             
         </div>

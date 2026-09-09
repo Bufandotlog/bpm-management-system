@@ -15,6 +15,7 @@ import { initTypingAnimation } from './modules/typing-animation.js';
 import { initBeritaCaptionFade } from './modules/berita-caption.js';
 import { initKepengurusanCaptionFade } from './modules/kepengurusan-caption.js';
 import { initKepengurusanDropdown } from './modules/kepengurusan-dropdown.js'; // BARU: Import dropdown module
+import { initRelighting } from './modules/relighting.js';
 
 import * as utilities from './modules/utilities.js';
 
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initBeritaCaptionFade();
     initKepengurusanCaptionFade();
     initKepengurusanDropdown(); // BARU: Inisialisasi custom dropdown
+    initRelighting();
     
     console.log('✅ Semua modul JavaScript berhasil diinisialisasi');
     

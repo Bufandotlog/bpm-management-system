@@ -78,14 +78,9 @@ function detectUploadPath() {
  * UNCHANGED dari v3.0.
  */
 function detectAppEnv() {
-    if (!empty($_ENV['APP_ENV'])) {
-        $env = strtolower(trim($_ENV['APP_ENV']));
-        return in_array($env, ['development', 'production', 'staging'])
-               ? $env : 'production';
-    }
-
-    if (!empty($_SERVER['APP_ENV'])) {
-        $env = strtolower(trim($_SERVER['APP_ENV']));
+    $env = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? getenv('APP_ENV');
+    if (!empty($env)) {
+        $env = strtolower(trim((string) $env));
         return in_array($env, ['development', 'production', 'staging'])
                ? $env : 'production';
     }
@@ -106,8 +101,9 @@ function detectAppEnv() {
  * [FIX v3.2] Tambah sanitasi URL dari .env untuk mencegah karakter berbahaya.
  */
 function resolveBaseUrl() {
-    if (!empty($_ENV['BASE_URL'])) {
-        $url = trim($_ENV['BASE_URL']);
+    $baseUrl = $_ENV['BASE_URL'] ?? $_SERVER['BASE_URL'] ?? getenv('BASE_URL');
+    if (!empty($baseUrl)) {
+        $url = trim((string) $baseUrl);
 
         // Validasi: harus diawali http:// atau https://
         if (!str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
@@ -151,7 +147,7 @@ if (php_sapi_name() === 'cli') {
     $rootDir = dirname(__DIR__);
     // CLI mode: deteksi otomatis base path agar tak hardcode ke /bpm/
     $scriptBase = basename($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '');
-    $envBase = trim($_ENV['BASE_URL'] ?? '');
+    $envBase = trim($_ENV['BASE_URL'] ?? $_SERVER['BASE_URL'] ?? getenv('BASE_URL') ?: '');
     if ($envBase && preg_match('#^https?://#i', $envBase)) {
         $baseUrlCli = rtrim($envBase, '/') . '/';
     } else {
