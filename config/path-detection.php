@@ -101,6 +101,15 @@ function detectAppEnv() {
  * [FIX v3.2] Tambah sanitasi URL dari .env untuk mencegah karakter berbahaya.
  */
 function resolveBaseUrl() {
+    $appEnv = strtolower((string) ($_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? getenv('APP_ENV') ?: 'production'));
+    $requestHost = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    $requestHostName = $requestHost !== '' ? strtolower(explode(':', $requestHost)[0]) : '';
+    $isLocalRequest = $requestHostName !== '' && in_array($requestHostName, ['localhost', '127.0.0.1', '0.0.0.0', '::1'], true);
+
+    if ($appEnv === 'development' && $isLocalRequest) {
+        return detectBaseUrl();
+    }
+
     $baseUrl = $_ENV['BASE_URL'] ?? $_SERVER['BASE_URL'] ?? getenv('BASE_URL');
     if (!empty($baseUrl)) {
         $url = trim((string) $baseUrl);

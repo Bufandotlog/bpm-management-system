@@ -211,6 +211,7 @@ CREATE TABLE `kabinet` (
   `tahun_selesai` year(4) NOT NULL,
   `logo` varchar(255) DEFAULT NULL,
   `foto_bersama` varchar(255) DEFAULT NULL,
+  `foto_bersama_depth` varchar(255) DEFAULT NULL,
   `deskripsi` text DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),

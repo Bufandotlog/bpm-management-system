@@ -130,11 +130,11 @@ async function createRelightingRenderer(container, imageUrl, depthUrl) {
     smoothDepthMap.needsUpdate = true;
     const smoothDepthNode = texture(smoothDepthMap);
 
-    const uDisplacementScale = uniform(4);
-    const uNormalScale = uniform(3);
-    const uDetailScale = uniform(3);
-    const uShadowIntensity = uniform(0.86);
-    const uShadowSoftness = uniform(0.092);
+    const uDisplacementScale = uniform(5.2);
+    const uNormalScale = uniform(4.3);
+    const uDetailScale = uniform(4.1);
+    const uShadowIntensity = uniform(0.96);
+    const uShadowSoftness = uniform(0.076);
 
     const coverScaleNode = Fn(() => {
         const viewAspect = screenSize.x.div(screenSize.y).toVar();
@@ -294,11 +294,15 @@ async function createRelightingRenderer(container, imageUrl, depthUrl) {
     const camera = new OrthographicCamera();
     camera.position.set(0, 0, 5);
 
-    const pointLight = new PointLight('#e1ded1', 2.35, 0, 1);
-    pointLight.position.set(1.2, 0.8, 0.9);
+    const pointLight = new PointLight('#f3efe7', 2.9, 0, 1);
+    pointLight.position.set(1.5, 0.9, 1.1);
     const lightPositionNode = uniform(pointLight.position.clone());
-    const ambientLight = new AmbientLight('#ffffff', 0.3);
+    const ambientLight = new AmbientLight('#edf3ff', 0.26);
     scene.add(pointLight, ambientLight);
+
+    if (renderer.toneMappingExposure !== undefined) {
+        renderer.toneMappingExposure = 1.12;
+    }
 
     const vUv = coverUv();
     const depth = depthNode.sample(vUv).r;

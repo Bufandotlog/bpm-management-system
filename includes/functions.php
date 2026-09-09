@@ -1018,8 +1018,21 @@ function uploadFile($file, $folder = 'umum') {
         }
     }
 
-    // Jika menggunakan Object Storage, unggah ke S3 dan hapus lokal
-    if (($_ENV['STORAGE_METHOD'] ?? 'local') === 's3') {
+    $storageMethod = strtolower((string) ($_ENV['STORAGE_METHOD'] ?? 'local'));
+    $isDevelopment = defined('APP_ENV') && APP_ENV === 'development';
+    $s3Ready = $storageMethod === 's3' && class_exists('Aws\\S3\\S3Client');
+
+    if ($storageMethod === 's3' && !$s3Ready) {
+        if (!$isDevelopment) {
+            $_SESSION['error'] = 'Object Storage tidak tersedia.';
+            error_log('uploadFile: STORAGE_METHOD=s3 tetapi AWS SDK tidak tersedia di luar development.');
+            @unlink($destination);
+            return false;
+        }
+        error_log('uploadFile: STORAGE_METHOD=s3 tetapi AWS SDK tidak tersedia; fallback ke storage lokal di development.');
+    }
+
+    if ($storageMethod === 's3' && $s3Ready) {
         $mimeType = $is_image ? 'image/webp' : ($file['type'] ?? 'application/octet-stream');
         if (uploadToS3($destination, $relativePath, $mimeType)) {
             if (file_exists($destination)) {
@@ -1027,10 +1040,7 @@ function uploadFile($file, $folder = 'umum') {
             }
             return $relativePath;
         } else {
-            // Jika upload S3 gagal, hapus file lokal dan return false
-            // if (file_exists($destination)) {
-            //     @unlink($destination);
-            // }
+            @unlink($destination);
             return false;
         }
     }
@@ -1044,8 +1054,11 @@ function deleteFile($filePath) {
     $filePath = str_replace(['../', '..\\', './', '.\\'], '', $filePath);
     $filePath = ltrim(str_replace('uploads/', '', $filePath), '/\\');
 
+    $storageMethod = strtolower((string) ($_ENV['STORAGE_METHOD'] ?? 'local'));
+    $isDevelopment = defined('APP_ENV') && APP_ENV === 'development';
+
     // Hapus dari Object Storage jika aktif
-    if (($_ENV['STORAGE_METHOD'] ?? 'local') === 's3') {
+    if ($storageMethod === 's3' && class_exists('Aws\\S3\\S3Client')) {
         try {
             $s3 = getS3Client();
             $bucket = $_ENV['S3_BUCKET'] ?? '';
@@ -1059,6 +1072,11 @@ function deleteFile($filePath) {
             error_log("deleteFile (S3) Error: " . $e->getMessage());
             return false;
         }
+    }
+
+    if ($storageMethod === 's3' && !$isDevelopment) {
+        error_log('deleteFile: STORAGE_METHOD=s3 tetapi AWS SDK tidak tersedia di luar development.');
+        return false;
     }
 
     $fullPath   = rtrim(UPLOAD_PATH, '/\\') . DIRECTORY_SEPARATOR . $filePath;
@@ -2498,4 +2516,3 @@ function sendFcmNotification($targetUserIds, string $title, string $body, array 
         return false;
     }
 }
-

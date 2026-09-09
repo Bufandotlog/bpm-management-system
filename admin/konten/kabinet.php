@@ -10,6 +10,68 @@
 
 require_once __DIR__ . '/../core/header.php';
 
+function validateKabinetDepthUpload($file): bool {
+    if (!is_array($file) || !isset($file['tmp_name'])) {
+        $_SESSION['error'] = 'Depth map tidak valid.';
+        return false;
+    }
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $errorMessages = [
+            UPLOAD_ERR_INI_SIZE   => 'Ukuran depth map melebihi batas server',
+            UPLOAD_ERR_FORM_SIZE  => 'Ukuran depth map melebihi batas form',
+            UPLOAD_ERR_PARTIAL    => 'Depth map hanya terupload sebagian',
+            UPLOAD_ERR_NO_FILE    => 'Tidak ada depth map yang dipilih',
+            UPLOAD_ERR_NO_TMP_DIR => 'Folder sementara upload tidak tersedia',
+            UPLOAD_ERR_CANT_WRITE => 'Gagal menulis depth map ke disk',
+            UPLOAD_ERR_EXTENSION  => 'Upload depth map dihentikan oleh ekstensi PHP',
+        ];
+        $_SESSION['error'] = $errorMessages[$file['error']] ?? 'Upload depth map gagal.';
+        return false;
+    }
+
+    if (!is_uploaded_file($file['tmp_name'])) {
+        $_SESSION['error'] = 'Depth map tidak berasal dari form upload yang valid.';
+        return false;
+    }
+
+    if ($file['size'] > MAX_FILE_SIZE) {
+        $_SESSION['error'] = 'Ukuran depth map terlalu besar.';
+        return false;
+    }
+
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
+    if (!in_array($ext, $allowedExt, true)) {
+        $_SESSION['error'] = 'Depth map hanya boleh berupa JPG, PNG, atau WebP.';
+        return false;
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime  = $finfo ? finfo_file($finfo, $file['tmp_name']) : null;
+    if ($finfo) finfo_close($finfo);
+
+    $allowedMime = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!in_array($mime, $allowedMime, true)) {
+        $_SESSION['error'] = 'Tipe MIME depth map tidak valid.';
+        return false;
+    }
+
+    $imageInfo = @getimagesize($file['tmp_name']);
+    if ($imageInfo === false) {
+        $_SESSION['error'] = 'Depth map bukan file gambar yang valid.';
+        return false;
+    }
+
+    $allowedTypes = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP];
+    if (!in_array($imageInfo[2], $allowedTypes, true)) {
+        $_SESSION['error'] = 'Depth map harus berupa JPEG, PNG, atau WebP.';
+        return false;
+    }
+
+    return true;
+}
+
 $periode_aktif = dbFetchOne("SELECT * FROM periode_kepengurusan WHERE is_active = 1");
 $kabinet       = dbFetchOne("SELECT * FROM kabinet WHERE id = 1");
 
@@ -30,10 +92,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirect('admin/konten/kabinet.php', 'Logo berhasil dihapus!', 'success');
         exit();
     }
-    if ($_POST['action'] === 'delete_foto' && !empty($kabinet['foto_bersama'])) {
-        deleteFile($kabinet['foto_bersama']);
-        dbQuery("UPDATE kabinet SET foto_bersama = NULL WHERE id = 1");
-        redirect('admin/konten/kabinet.php', 'Foto bersama berhasil dihapus!', 'success');
+    if ($_POST['action'] === 'delete_foto') {
+        $fotoPath = $kabinet['foto_bersama'] ?? '';
+        if (empty($fotoPath) || deleteFile($fotoPath)) {
+            dbQuery("UPDATE kabinet SET foto_bersama = NULL WHERE id = 1");
+            redirect('admin/konten/kabinet.php', 'Foto bersama berhasil dihapus!', 'success');
+        }
+        redirect('admin/konten/kabinet.php', 'Foto bersama gagal dihapus.', 'error');
+        exit();
+    }
+    if ($_POST['action'] === 'delete_depth') {
+        $depthPath = $kabinet['foto_bersama_depth'] ?? '';
+        if (empty($depthPath) || deleteFile($depthPath)) {
+            dbQuery("UPDATE kabinet SET foto_bersama_depth = NULL WHERE id = 1");
+            redirect('admin/konten/kabinet.php', 'Depth map relighting berhasil dihapus!', 'success');
+        }
+        redirect('admin/konten/kabinet.php', 'Depth map relighting gagal dihapus.', 'error');
         exit();
     }
 }
@@ -83,38 +157,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
         exit();
     }
 
-    $logo         = $kabinet['logo']         ?? '';
-    $foto_bersama = $kabinet['foto_bersama'] ?? '';
+    $logo               = $kabinet['logo'] ?? '';
+    $foto_bersama       = $kabinet['foto_bersama'] ?? '';
+    $foto_bersama_depth = $kabinet['foto_bersama_depth'] ?? '';
+
+    $old_logo               = $logo;
+    $old_foto_bersama       = $foto_bersama;
+    $old_foto_bersama_depth = $foto_bersama_depth;
+
+    $new_logo               = $logo;
+    $new_foto_bersama       = $foto_bersama;
+    $new_foto_bersama_depth = $foto_bersama_depth;
 
     // Hapus via checkbox (hapus saat simpan)
     if (!empty($_POST['hapus_logo'])) {
-        if (!empty($logo)) deleteFile($logo);
-        $logo = '';
+        $new_logo = '';
     }
     if (!empty($_POST['hapus_foto'])) {
-        if (!empty($foto_bersama)) deleteFile($foto_bersama);
-        $foto_bersama = '';
+        $new_foto_bersama = '';
+    }
+    if (!empty($_POST['hapus_depth'])) {
+        $new_foto_bersama_depth = '';
     }
 
     // Upload baru
     if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
         $upload = uploadFile($_FILES['logo'], 'kabinet');
-        if ($upload) { if (!empty($logo)) deleteFile($logo); $logo = $upload; }
+        if ($upload) { $new_logo = $upload; }
     }
     if (isset($_FILES['foto_bersama']) && $_FILES['foto_bersama']['error'] === UPLOAD_ERR_OK) {
         $upload = uploadFile($_FILES['foto_bersama'], 'kabinet');
-        if ($upload) { if (!empty($foto_bersama)) deleteFile($foto_bersama); $foto_bersama = $upload; }
+        if ($upload) { $new_foto_bersama = $upload; }
+    }
+    if (isset($_FILES['foto_bersama_depth']) && $_FILES['foto_bersama_depth']['error'] === UPLOAD_ERR_OK) {
+        if (!validateKabinetDepthUpload($_FILES['foto_bersama_depth'])) {
+            redirect('admin/konten/kabinet.php', $_SESSION['error'] ?? 'Depth map tidak valid.', 'error');
+            exit();
+        }
+        $upload = uploadFile($_FILES['foto_bersama_depth'], 'kabinet');
+        if ($upload) { $new_foto_bersama_depth = $upload; }
     }
 
     $result = dbQuery(
-        "UPDATE kabinet SET nama=?, arti=?, tahun_mulai=?, tahun_selesai=?, logo=?, foto_bersama=?, deskripsi=? WHERE id=1",
-        [$nama, $arti, $tahun_mulai, $tahun_selesai, $logo, $foto_bersama, $deskripsi],
-        "ssiisss"
+        "UPDATE kabinet SET nama=?, arti=?, tahun_mulai=?, tahun_selesai=?, logo=?, foto_bersama=?, foto_bersama_depth=?, deskripsi=? WHERE id=1",
+        [$nama, $arti, $tahun_mulai, $tahun_selesai, $new_logo, $new_foto_bersama, $new_foto_bersama_depth, $deskripsi],
+        "ssiissss"
     );
 
     if ($result !== false) {
+        foreach ([$old_logo, $old_foto_bersama, $old_foto_bersama_depth] as $oldValue) {
+            if (!empty($oldValue) && !in_array($oldValue, [$new_logo, $new_foto_bersama, $new_foto_bersama_depth], true)) {
+                deleteFile($oldValue);
+            }
+        }
         auditLog('UPDATE', 'kabinet', 1, 'Edit data kabinet: ' . $nama);
     }
+
     redirect('admin/konten/kabinet.php',
         $result !== false ? 'Data kabinet berhasil diperbarui!' : 'Gagal memperbarui data!',
         $result !== false ? 'success' : 'error'
@@ -163,6 +261,15 @@ $beda_selesai = $periode_aktif && $periode_aktif['tahun_selesai'] != ($kabinet['
       onsubmit="return confirm('Yakin ingin menghapus foto bersama sekarang?')">
     <?php echo csrfField(); ?>
     <input type="hidden" name="action" value="delete_foto">
+</form>
+<?php endif; ?>
+
+<?php /* Form hapus depth map relighting — di LUAR form utama */ ?>
+<?php if (!empty($kabinet['foto_bersama_depth'])): ?>
+<form method="POST" id="formHapusDepth"
+      onsubmit="return confirm('Yakin ingin menghapus depth map relighting sekarang?')">
+    <?php echo csrfField(); ?>
+    <input type="hidden" name="action" value="delete_depth">
 </form>
 <?php endif; ?>
 
@@ -295,6 +402,45 @@ $beda_selesai = $periode_aktif && $periode_aktif['tahun_selesai'] != ($kabinet['
         </div>
     </div>
 
+    <!-- Depth Map Relighting -->
+    <div class="form-section">
+        <h2><i class="fas fa-layer-group"></i> Depth Map Relighting (Opsional)</h2>
+        <div class="form-group">
+
+            <?php if (!empty($kabinet['foto_bersama_depth'])): ?>
+            <div class="current-image" id="depth-container">
+                <span class="current-image-label">Preview</span>
+                <img src="<?php echo uploadUrl($kabinet['foto_bersama_depth']); ?>" alt="Depth Map Relighting">
+                <div class="image-info">
+                    <small><?php echo htmlspecialchars(basename($kabinet['foto_bersama_depth']), ENT_QUOTES, 'UTF-8'); ?></small>
+                </div>
+                <p class="image-label">Depth map saat ini</p>
+                <div class="image-actions">
+                    <button type="submit" form="formHapusDepth" class="btn-delete-direct">
+                        <i class="fas fa-trash"></i> Hapus Sekarang
+                    </button>
+                    <button type="button" class="btn-delete-form" onclick="tandaiHapus('depth')">
+                        <i class="fas fa-clock"></i> Hapus Saat Simpan
+                    </button>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <input type="hidden" name="hapus_depth" id="hapus_depth" value="">
+
+            <label for="inputDepth">Upload Depth Map Relighting Baru</label>
+            <input type="file" id="inputDepth" name="foto_bersama_depth"
+                   accept="image/jpeg,image/png,image/webp"
+                   onchange="previewFile(this, 'depth-preview')">
+            <small>Format: JPG, PNG, WebP. Depth map harus sesuai dengan Foto Bersama agar efek relighting pada Hero aktif.</small>
+
+            <div class="new-file-preview" id="depth-preview">
+                <img id="depth-preview-img" alt="Preview depth map baru">
+                <small>Preview depth map baru</small>
+            </div>
+        </div>
+    </div>
+
     <!-- Deskripsi -->
     <div class="form-section">
         <h2><i class="fas fa-align-left"></i> Deskripsi Kabinet</h2>
@@ -339,7 +485,12 @@ function previewFile(input, wrapId) {
 }
 
 function tandaiHapus(tipe) {
-    const label = tipe === 'logo' ? 'logo' : 'foto bersama';
+    const labels = {
+        logo: 'logo',
+        foto: 'foto bersama',
+        depth: 'depth map relighting'
+    };
+    const label = labels[tipe] || tipe;
     if (!confirm('Tandai ' + label + ' untuk dihapus saat form disimpan?')) return;
     document.getElementById('hapus_' + tipe).value = '1';
     const container = document.getElementById(tipe + '-container');
