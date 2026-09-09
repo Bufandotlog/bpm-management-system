@@ -28,6 +28,7 @@ $requestHost = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
 $requestHostname = (string) (parse_url('http://' . $requestHost, PHP_URL_HOST) ?? '');
 $localHosts = ['localhost', '127.0.0.1', '::1'];
 $isLocalHost = in_array($requestHostname, $localHosts, true);
+
 if ($requestHostname !== '' && !$isLocalHost
     && $requestHost !== strtolower($canonicalHost)) {
     $scheme = (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
@@ -36,6 +37,7 @@ if ($requestHostname !== '' && !$isLocalHost
     header('Location: ' . $redirectTo, true, 301);
     exit;
 }
+
 $isHttpsRequest = (($_SERVER['HTTPS'] ?? '') === 'on')
     || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 $sessionCookie = [
@@ -45,10 +47,12 @@ $sessionCookie = [
     'httponly' => true,
     'samesite' => 'Lax'
 ];
+
 if (!$isLocalHost) {
     $sessionCookie['domain'] = '.bembudiutomo.my.id';
 }
-session_set_cookie_params($sessionCookie);// Pakai @ agar tidak fatal di shared hosting yang restrict ini_set
+
+session_set_cookie_params($sessionCookie); // Pakai @ agar tidak fatal di shared hosting yang restrict ini_set
     @ini_set('session.use_strict_mode', 1);
     @ini_set('session.gc_maxlifetime', 1800);
 
