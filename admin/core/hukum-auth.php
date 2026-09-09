@@ -1,32 +1,9 @@
 <?php
 /**
- * admin/core/hukum-auth.php
- * Helper otentikasi & otorisasi KHUSUS untuk Modul Produk Hukum (Fase 1).
+ * Authentication and authorization contract for the hukum module.
  *
- * Tujuan:   Memisahkan logic role-check hukum dari auth-check.php
- *           yang dipakai modul lain. Tidak mengganggu sesi/admin lain.
- *
- * Role yang relevan untuk modul hukum:
- *   - superadmin         : semua permission
- *   - ketua_umum_bpm     : buka/tutup meja kerja, finalisasi staging
- *   - komisi_i           : CRUD pasal, submit staging, rekomendasi perubahan
- *   - admin (kompat)     : hanya read (untuk review internal)
- *
- * Permission string yang dipakai:
- *   - view:hukum
- *   - create:hukum-dokumen
- *   - edit:hukum-dokumen
- *   - delete:hukum-dokumen
- *   - create:hukum-pasal
- *   - edit:hukum-pasal
- *   - delete:hukum-pasal
- *   - create:hukum-meja-kerja
- *   - close:hukum-meja-kerja
- *   - submit:hukum-staging
- *   - approve:hukum-staging
- *   - public-commit:hukum
- *
- * @return void  — calls exit() on auth failure
+ * The application session remains the single source of truth:
+ * admin_id, admin_role, admin_name, admin_username, and admin_periode_id.
  */
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -34,139 +11,304 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/hukum-actor-context.php';
 
-function hukum_require_login(): void {
-    if (!isLoggedIn()) {
-        http_response_code(401);
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false,
-            'code'    => 'UNAUTHENTICATED',
-            'message' => 'Sesi habis. Silakan login ulang.'
-        ]);
-        exit;
-    }
+function hukum_current_user_id(): int
+{
+    return hukum_authenticated_actor()?->id ?? 0;
 }
 
-/**
- * Matriks permission per role.
- *  - key  : role di users.role
- *  - value: daftar permission string
- */
-function hukum_role_permissions(): array {
-    return [
-        'superadmin' => [
-            'view:hukum', 'create:hukum-dokumen', 'edit:hukum-dokumen', 'delete:hukum-dokumen',
-            'create:hukum-pasal', 'edit:hukum-pasal', 'delete:hukum-pasal',
-            'create:hukum-meja-kerja', 'close:hukum-meja-kerja',
-            'submit:hukum-staging', 'approve:hukum-staging', 'public-commit:hukum',
-        ],
-        'ketua_umum_bpm' => [
-            'view:hukum', 'create:hukum-dokumen', 'edit:hukum-dokumen', 'delete:hukum-dokumen',
-            'create:hukum-pasal', 'edit:hukum-pasal', 'delete:hukum-pasal',
-            'create:hukum-meja-kerja', 'close:hukum-meja-kerja',
-            'submit:hukum-staging', 'approve:hukum-staging', 'public-commit:hukum',
-        ],
-        'komisi_i' => [
-            'view:hukum',
-            'create:hukum-pasal', 'edit:hukum-pasal', 'delete:hukum-pasal',
-            'create:hukum-meja-kerja', 'close:hukum-meja-kerja',
-            'submit:hukum-staging', 'public-commit:hukum',
-        ],
-        'admin' => [
-            'view:hukum',
-        ],
-        'sekretaris' => [
-            'view:hukum',
-        ],
-        'kominfo' => [
-            'view:hukum',
-        ],
-        'anggota' => [
-            'view:hukum',
-        ],
+function hukum_current_user_role(): string
+{
+    return hukum_authenticated_actor()?->technicalRole ?? '';
+}
+
+function hukum_current_user_periode_id(): int
+{
+    return hukum_authenticated_actor()?->periodId ?? 0;
+}
+
+function hukum_current_user(): array
+{
+    $actor = hukum_authenticated_actor();
+    return $actor === null ? [
+        'id' => 0,
+        'role' => '',
+        'name' => '',
+        'username' => '',
+        'periode_id' => 0,
+        'can_access_all' => false,
+    ] : [
+        'id' => $actor->id,
+        'role' => $actor->technicalRole,
+        'name' => $actor->displayName,
+        'username' => $actor->username,
+        'periode_id' => $actor->periodId,
+        'can_access_all' => $actor->canAccessAll,
     ];
 }
 
-function hukum_current_role(): string {
-    return $_SESSION['admin_role'] ?? '';
+function hukum_period_for_document(int $documentId): ?int
+{
+    $row = dbFetchOne(
+        'SELECT periode_id FROM hukum_dokumen WHERE id = ? LIMIT 1',
+        [$documentId]
+    );
+
+    return $row !== null && isset($row['periode_id']) ? (int) $row['periode_id'] : null;
 }
 
-function hukum_has_permission(string $perm): bool {
-    $role = hukum_current_role();
-    $matrix = hukum_role_permissions();
-    return in_array($perm, $matrix[$role] ?? [], true);
+function hukum_business_membership_for_user(int $userId, int $periodeId, string $jabatan): bool
+{
+    if ($userId <= 0 || $periodeId <= 0) {
+        return false;
+    }
+
+    $row = dbFetchOne(
+        "SELECT id FROM hukum_keanggotaan
+         WHERE user_id = ?
+           AND periode_id = ?
+           AND jabatan = ?
+           AND aktif = 1
+           AND (selesai_pada IS NULL OR selesai_pada >= CURDATE())
+         LIMIT 1",
+        [$userId, $periodeId, $jabatan]
+    );
+
+    return $row !== null;
 }
 
-/**
- * Wajibkan permission tertentu — keluar dengan 403 jika tidak punya.
- */
-function hukum_require_permission(string $perm): void {
-    hukum_require_login();
-    if (!hukum_has_permission($perm)) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode([
+function hukum_is_komisi_i(int $userId = 0, ?int $periodeId = null, ?int $documentId = null): bool
+{
+    if ($userId <= 0) {
+        $userId = hukum_current_user_id();
+    }
+
+    if ($documentId !== null && $documentId > 0) {
+        $periodeId = hukum_period_for_document($documentId) ?? $periodeId;
+    }
+
+    if ($periodeId === null) {
+        $periodeId = hukum_current_user_periode_id();
+    }
+
+    if ($periodeId <= 0) {
+        return false;
+    }
+
+    return hukum_business_membership_for_user($userId, (int) $periodeId, 'komisi_i');
+}
+
+function hukum_is_ketua_umum(int $userId = 0, ?int $periodeId = null, ?int $documentId = null): bool
+{
+    if ($userId <= 0) {
+        $userId = hukum_current_user_id();
+    }
+
+    if ($documentId !== null && $documentId > 0) {
+        $periodeId = hukum_period_for_document($documentId) ?? $periodeId;
+    }
+
+    if ($periodeId === null) {
+        $periodeId = hukum_current_user_periode_id();
+    }
+
+    if ($periodeId <= 0) {
+        return false;
+    }
+
+    return hukum_business_membership_for_user($userId, (int) $periodeId, 'ketua_umum');
+}
+
+function hukum_technical_role_is_admin(?string $role = null): bool
+{
+    $role = strtolower(trim((string) ($role ?? hukum_current_user_role())));
+
+    return in_array($role, ['admin', 'superadmin', 'ketua_umum_bpm'], true);
+}
+
+function hukum_can_review_staging(int $documentId, ?int $userId = null): bool
+{
+    if ($documentId <= 0) {
+        return false;
+    }
+
+    if ($userId === null || $userId <= 0) {
+        $userId = hukum_current_user_id();
+    }
+
+    $periodeId = hukum_period_for_document($documentId);
+    if ($periodeId === null || $periodeId <= 0) {
+        return false;
+    }
+
+    $currentRole = strtolower(hukum_current_user_role());
+    $technicalAdmin = hukum_technical_role_is_admin($currentRole);
+
+    if (hukum_is_komisi_i($userId, $periodeId) && in_array($currentRole, ['komisi_i', 'admin', 'superadmin'], true)) {
+        return true;
+    }
+
+    if (hukum_is_ketua_umum($userId, $periodeId) && $technicalAdmin) {
+        return true;
+    }
+
+    return false;
+}
+
+function hukum_can_commit_as(int $documentId, string $peran, ?int $userId = null): bool
+{
+    $peran = strtolower(trim($peran));
+    if (!in_array($peran, ['komisi_i', 'ketua_umum'], true)) {
+        return false;
+    }
+
+    if ($userId === null || $userId <= 0) {
+        $userId = hukum_current_user_id();
+    }
+
+    $periodeId = hukum_period_for_document($documentId);
+    if ($periodeId === null || $periodeId <= 0) {
+        return false;
+    }
+
+    $currentRole = strtolower(hukum_current_user_role());
+    $technicalAdmin = hukum_technical_role_is_admin($currentRole);
+
+    if ($peran === 'komisi_i') {
+        return hukum_is_komisi_i($userId, $periodeId) && in_array($currentRole, ['komisi_i', 'admin'], true);
+    }
+
+    if ($peran === 'ketua_umum') {
+        return hukum_is_ketua_umum($userId, $periodeId) && $technicalAdmin;
+    }
+
+    return false;
+}
+
+function hukum_role_permissions(): array
+{
+    return [
+        'superadmin' => ['*'],
+        'ketua_umum_bpm' => [
+            'hukum.view',
+            'hukum.document.create',
+            'hukum.document.update',
+            'hukum.document.delete',
+            'hukum.pasal.create',
+            'hukum.pasal.update',
+            'hukum.pasal.delete',
+            'hukum.workspace.create',
+            'hukum.staging.review',
+            'hukum.commit.create',
+            'hukum.commit.approve',
+            'hukum.audit.view',
+        ],
+        'komisi_i' => [
+            'hukum.view',
+            'hukum.document.create',
+            'hukum.document.update',
+            'hukum.pasal.create',
+            'hukum.pasal.update',
+            'hukum.pasal.delete',
+            'hukum.workspace.create',
+            'hukum.workspace.submit',
+            'hukum.audit.view',
+        ],
+        'admin' => ['hukum.view', 'hukum.audit.view'],
+        'sekretaris' => ['hukum.view', 'hukum.audit.view'],
+        'kominfo' => ['hukum.view'],
+        'anggota' => ['hukum.view'],
+    ];
+}
+
+function hukum_has_permission(string $permission): bool
+{
+    $actor = hukum_authenticated_actor();
+    if ($actor === null) {
+        return false;
+    }
+
+    $user = hukum_current_user();
+    if ($user['can_access_all'] || $user['role'] === 'superadmin') {
+        return true;
+    }
+
+    $permissions = hukum_role_permissions()[$user['role']] ?? [];
+    return in_array($permission, $permissions, true);
+}
+
+function hukum_json_response(array $payload, int $status = 200): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function hukum_require_login(): void
+{
+    if (hukum_authenticated_actor() === null) {
+        hukum_json_response([
             'success' => false,
-            'code'    => 'FORBIDDEN',
-            'message' => "Anda tidak punya izin: {$perm}",
-            'role'    => hukum_current_role(),
-        ]);
-        exit;
+            'code' => 'UNAUTHENTICATED',
+            'message' => 'Sesi habis. Silakan login ulang.',
+        ], 401);
     }
 }
 
-/**
- * Wajibkan salah satu dari beberapa role.
- */
-function hukum_require_any_role(array $roles): void {
+function hukum_require_permission(string $permission): void
+{
     hukum_require_login();
-    $current = hukum_current_role();
-    if (!in_array($current, $roles, true)) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode([
+
+    if (!hukum_has_permission($permission)) {
+        hukum_json_response([
             'success' => false,
-            'code'    => 'FORBIDDEN',
-            'message' => 'Role Anda tidak diizinkan untuk aksi ini.',
-            'role'    => $current,
-            'allowed' => $roles,
-        ]);
-        exit;
+            'code' => 'FORBIDDEN',
+            'message' => 'Anda tidak memiliki izin untuk aksi ini.',
+        ], 403);
     }
 }
 
-/**
- * Wajib CSRF untuk semua POST/PUT/DELETE.
- * Asumsi: csrfToken() / csrfVerify() sudah tersedia di functions.php.
- */
-function hukum_verify_csrf(): void {
-    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+function hukum_require_csrf(): void
+{
+    $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
         return;
     }
+
     $token = $_SERVER['HTTP_X_CSRF_TOKEN']
-          ?? $_POST['csrf_token']
-          ?? null;
+        ?? $_POST['csrf_token']
+        ?? null;
+
     if (!csrfVerify($token)) {
-        http_response_code(419);
-        header('Content-Type: application/json');
-        echo json_encode([
+        hukum_json_response([
             'success' => false,
-            'code'    => 'CSRF_INVALID',
-            'message' => 'Token CSRF tidak valid atau kadaluarsa.'
-        ]);
-        exit;
+            'code' => 'CSRF_INVALID',
+            'message' => 'Token CSRF tidak valid atau kadaluarsa.',
+        ], 419);
     }
 }
 
-function hukum_current_user_id(): int {
-    return (int) ($_SESSION['admin_id'] ?? 0);
-}
+function hukum_require_document_period(int $periodeId): void
+{
+    hukum_require_login();
 
-function hukum_json_response(array $payload, int $status = 200): void {
-    http_response_code($status);
-    header('Content-Type: application/json');
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
-    exit;
+    $user = hukum_current_user();
+    if ($periodeId <= 0) {
+        hukum_json_response([
+            'success' => false,
+            'code' => 'INVALID_PERIOD',
+            'message' => 'Periode dokumen tidak valid.',
+        ], 400);
+    }
+
+    if (!$user['can_access_all'] && $user['role'] !== 'superadmin'
+        && $user['periode_id'] !== $periodeId) {
+        hukum_json_response([
+            'success' => false,
+            'code' => 'PERIOD_FORBIDDEN',
+            'message' => 'Anda tidak memiliki akses ke periode dokumen ini.',
+        ], 403);
+    }
 }
