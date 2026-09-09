@@ -366,7 +366,17 @@ async function createRelightingRenderer(container, imageUrl, depthUrl) {
 }
 
 export function initRelighting() {
-    if (!document.body.classList.contains('page-index')) {
+    const relightingPages = [
+        'page-index',
+        'page-berita',
+        'page-hukum',
+        'page-hukum-detail',
+        'page-kepengurusan',
+        'page-detail-menteri',
+        'page-arsip',
+        'page-kontak',
+    ];
+    if (!relightingPages.some((pageClass) => document.body.classList.contains(pageClass))) {
         return null;
     }
 
