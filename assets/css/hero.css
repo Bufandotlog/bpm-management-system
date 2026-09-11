@@ -139,6 +139,10 @@
     line-height: 0.94;
 }
 
+.hero-title-line:first-child {
+    font-size: 65%;
+}
+
 .hero-title .biru {
     display: block;
     color: var(--biru-primary) !important;

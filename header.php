@@ -118,7 +118,7 @@ $isHomePage = ($current_page == 'index.php');
         <?php if ($isHomePage): ?>
         <div class="hero-content">
             <h1 class="hero-title">
-                <span class="hero-title-line">KABINET</span>
+                <span class="hero-title-line">BADAN PERWAKILAN</span>
                 <span class="hero-title-line biru"><?php echo htmlspecialchars($kabinet_nama); ?></span>
             </h1>
             <p class="hero-sub">

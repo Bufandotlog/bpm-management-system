@@ -78,7 +78,7 @@ $berita_terbaru = dbFetchAll("SELECT * FROM berita ORDER BY tanggal DESC LIMIT 3
             <?php endif; ?>
         </div>
         <div class="sambutan-text">
-            <h2>Sambutan<br><span class="text-merah">Presiden Mahasiswa</span></h2>
+            <h2>Sambutan<br><span class="text-merah">Ketua BPM</span></h2>
             <div class="jabatan">
                 <?php echo htmlspecialchars($ketua['nama'] ?? 'Dede Anggi Muhyidin'); ?> • 
                 Ketua BPM 
@@ -97,7 +97,7 @@ $berita_terbaru = dbFetchAll("SELECT * FROM berita ORDER BY tanggal DESC LIMIT 3
             
             <div class="ttd">
                 <strong><?php echo htmlspecialchars($ketua['nama'] ?? 'Dede Anggi Muhyidin'); ?></strong><br>
-                Presiden Mahasiswa 
+                Ketua Badan Perwakilan Mahasiswa
                 <?php 
                 if ($periode_aktif) {
                     echo htmlspecialchars($periode_aktif['nama']) . ' ' . $periode_aktif['tahun_mulai'];

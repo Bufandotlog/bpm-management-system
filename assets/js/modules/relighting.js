@@ -294,10 +294,10 @@ async function createRelightingRenderer(container, imageUrl, depthUrl) {
     const camera = new OrthographicCamera();
     camera.position.set(0, 0, 5);
 
-    const pointLight = new PointLight('#f3efe7', 2.9, 0, 1);
+    const pointLight = new PointLight('#f2bd55', 2.9, 3.2, 0.9);
     pointLight.position.set(1.5, 0.9, 1.1);
     const lightPositionNode = uniform(pointLight.position.clone());
-    const ambientLight = new AmbientLight('#edf3ff', 0.26);
+    const ambientLight = new AmbientLight('#8f7442', 0.22);
     scene.add(pointLight, ambientLight);
 
     if (renderer.toneMappingExposure !== undefined) {
