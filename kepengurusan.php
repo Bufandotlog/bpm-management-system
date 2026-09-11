@@ -112,6 +112,24 @@ if (!$periode_terpilih && !empty($semua_periode)) {
     $periode_terpilih = $semua_periode[0];
 }
 
+// Gallery cards are scoped to the same public period as the page.
+$gallery_cards = dbFetchAll(
+    "SELECT id, image_path, title, subtitle
+     FROM gallery_cards
+     WHERE periode_id = ?
+     ORDER BY sort_order ASC, id ASC",
+    [$selected_periode],
+    "i"
+);
+$gallery_runtime_data = array_map(static function (array $card): array {
+    return [
+        'id' => (int) $card['id'],
+        'image' => uploadUrl($card['image_path']),
+        'title' => (string) $card['title'],
+        'subtitle' => (string) $card['subtitle'],
+    ];
+}, $gallery_cards);
+
 // ===========================================
 // AMBIL DATA BPH UNTUK PERIODE TERPILIH
 // ===========================================
@@ -205,6 +223,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
 
 <?php $css_dropdown_ver = file_exists(__DIR__ . '/assets/css/kepengurusan-dropdown.css') ? filemtime(__DIR__ . '/assets/css/kepengurusan-dropdown.css') : '1'; ?>
 <link rel="stylesheet" href="<?php echo baseUrl('assets/css/kepengurusan-dropdown.css'); ?>?v=<?php echo $css_dropdown_ver; ?>">
+<link rel="stylesheet" href="<?php echo assetUrl('css/depth-gallery.css'); ?>">
 
 <!-- ========================================= -->
 <!-- HERO CAPTION                              -->
@@ -327,6 +346,14 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
 <div class="kepengurusan-content-wrapper">
     <div class="kepengurusan-container">
 
+        <!-- ===== CODEDROPS DEPTH GALLERY (STATIC FIXTURE) ===== -->
+        <section class="kepengurusan-depth-gallery" data-depth-gallery aria-labelledby="depth-gallery-title">
+            <div class="depth-gallery-viewport" data-depth-gallery-viewport>
+                <canvas class="depth-gallery-canvas" data-depth-gallery-canvas aria-hidden="true"></canvas>
+                <h2 id="depth-gallery-title" class="visually-hidden">Galeri atmosferik</h2>
+            </div>
+        </section>
+
         <!-- ===== BPH PRESENTATION LAYER ===== -->
         <section class="bph-section kepengurusan-bph" data-group="bph" aria-label="Badan Pengurus Harian">
 
@@ -422,8 +449,6 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
             <?php endif; ?>
         </section>
 
-        <div class="section-divider"><span>KOMISI</span></div>
-
         <section class="commission-section kepengurusan-komisi" data-group="kementerian" aria-labelledby="commission-title">
             <h2 id="commission-title" class="visually-hidden">Komisi</h2>
             <?php if (empty($kementerian_list)): ?>
@@ -458,5 +483,10 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
 
     </div>
 </div>
+
+<script>
+window.__DEPTH_GALLERY_CARDS__ = <?php echo json_encode($gallery_runtime_data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+</script>
+<script type="module" src="<?php echo assetUrl('js/depth-gallery-dist/depth-gallery.js'); ?>" defer></script>
 
 <?php include 'footer.php'; ?>

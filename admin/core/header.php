@@ -669,7 +669,8 @@ if (isset($page_css)) {
             'kepengurusan.php', 'kepengurusan-edit.php', 'kepengurusan-hapus.php',
             'kabinet.php', 'visi-misi.php', 'kontak.php',
             'upload-struktur.php', 'upload-struktur-hapus.php',
-            'kementerian-anggota.php', 'kementerian-edit.php', 'kementerian-hapus.php', 'pendaftaran.php'
+            'kementerian-anggota.php', 'kementerian-edit.php', 'kementerian-hapus.php', 'pendaftaran.php',
+            'galeri.php'
         ];
         $is_info_bpm_active = in_array($current_page, $info_bpm_pages);
         
@@ -834,6 +835,9 @@ if (isset($page_css)) {
                     </a>
                     <a href="<?php echo baseUrl('admin/konten/kepengurusan.php'); ?>" class="<?php echo in_array($current_page, ['kepengurusan.php', 'kepengurusan-edit.php', 'kepengurusan-hapus.php', 'kementerian-anggota.php', 'kementerian-edit.php', 'kementerian-hapus.php']) ? 'active' : ''; ?>">
                         <i class="fas fa-users"></i><span>Kepengurusan</span>
+                    </a>
+                    <a href="<?php echo baseUrl('admin/konten/galeri.php'); ?>" class="<?php echo $current_page === 'galeri.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-images"></i><span>Galeri</span>
                     </a>
                     <a href="<?php echo baseUrl('admin/konten/kabinet.php'); ?>" class="<?php echo $current_page === 'kabinet.php' ? 'active' : ''; ?>">
                         <i class="fas fa-crown"></i><span>Kabinet</span>
