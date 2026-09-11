@@ -312,7 +312,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
             <?php else: ?>
                 Kabinet Astawidya
             <?php endif; ?>
-            yang terdiri dari Badan Pengurus Harian (BPH) dan jajaran kementerian,
+            yang terdiri dari Badan Pengurus Harian (BPH) dan jajaran Komisi,
             bekerja bersama untuk mewujudkan visi dan misi kabinet.
         </p>
 
@@ -329,9 +329,8 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
 <div class="kepengurusan-content-wrapper">
     <div class="kepengurusan-container">
 
-        <!-- ===== BADAN PENGURUS HARIAN ===== -->
-        <div class="bph-section">
-            <h2 class="section-title-bph">BADAN PENGURUS HARIAN</h2>
+        <!-- ===== BPH PRESENTATION LAYER ===== -->
+        <section class="bph-section kepengurusan-bph" data-group="bph" aria-label="Badan Pengurus Harian">
 
             <?php if (!$ketua && !$wakil && !$sekum && !$bendum): ?>
             <div class="empty-state">
@@ -344,7 +343,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
                 <!-- Ketua -->
                 <?php if ($ketua): ?>
                 <a href="detail-menteri.php?type=bph&id=<?php echo $ketua['id']; ?>&periode=<?php echo $selected_periode; ?>"
-                   class="org-card leader-card">
+                   class="org-card organization-card leader-card">
                     <div class="card-photo-container">
                         <!-- ✅ FIX: uploadUrl() + onerror fallback -->
                         <img src="<?php echo fotoUrl($ketua['foto']); ?>"
@@ -362,7 +361,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
                 <!-- Wakil Ketua -->
                 <?php if ($wakil): ?>
                 <a href="detail-menteri.php?type=bph&id=<?php echo $wakil['id']; ?>&periode=<?php echo $selected_periode; ?>"
-                   class="org-card vice-card">
+                   class="org-card organization-card vice-card">
                     <div class="card-photo-container">
                         <img src="<?php echo fotoUrl($wakil['foto']); ?>"
                              alt="<?php echo htmlspecialchars($wakil['nama']); ?>"
@@ -379,7 +378,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
                 <!-- Sekretaris Umum -->
                 <?php if ($sekum): ?>
                 <a href="detail-menteri.php?type=bph&id=<?php echo $sekum['id']; ?>&periode=<?php echo $selected_periode; ?>"
-                   class="org-card dept-card logo-card">
+                   class="org-card organization-card dept-card logo-card">
                     <div class="card-logo-container">
                         <img src="<?php echo fotoUrl($sekum['logo'], 'images/default-logo.png'); ?>"
                              alt="Logo Sekretaris Umum"
@@ -402,7 +401,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
                 <!-- Bendahara Umum -->
                 <?php if ($bendum): ?>
                 <a href="detail-menteri.php?type=bph&id=<?php echo $bendum['id']; ?>&periode=<?php echo $selected_periode; ?>"
-                   class="org-card dept-card logo-card">
+                   class="org-card organization-card dept-card logo-card">
                     <div class="card-logo-container">
                         <img src="<?php echo fotoUrl($bendum['logo'], 'images/default-logo.png'); ?>"
                              alt="Logo Bendahara Umum"
@@ -424,56 +423,41 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
 
             </div>
             <?php endif; ?>
-        </div>
+        </section>
 
-        <!-- ===== PEMISAH ===== -->
-        <div class="section-divider"><span>KEMENTERIAN</span></div>
-
-        <!-- ===== KEMENTERIAN ===== -->
-        <?php if (!empty($kementerian_list)): ?>
-        <div class="menteri-section">
-            <div class="menteri-grid">
-                <?php foreach ($kementerian_list as $menteri):
-                    $nama_anggota = array_column($menteri['anggota'], 'nama');
-                    $preview      = array_slice($nama_anggota, 0, 2);
-                    $sisa         = count($nama_anggota) - 2;
-                ?>
-                <a href="detail-menteri.php?type=kementerian&id=<?php echo $menteri['id']; ?>&periode=<?php echo $selected_periode; ?>"
-                   class="org-card menteri-card logo-card">
-                    <div class="card-logo-container">
-                        <img src="<?php echo fotoUrl($menteri['logo'], 'images/default-logo.png'); ?>"
-                             alt="Logo <?php echo htmlspecialchars($menteri['nama']); ?>"
-                             class="org-logo"
+        <!-- ===== KOMISI PRESENTATION LAYER (internal data: kementerian) ===== -->
+        <section class="commission-section kepengurusan-komisi" data-group="kementerian" aria-label="Komisi">
+            <?php if (empty($kementerian_list)): ?>
+            <div class="empty-state">
+                <i class="fas fa-sitemap"></i>
+                <p>Belum ada data Komisi untuk periode ini.</p>
+            </div>
+            <?php else: ?>
+            <div class="commission-grid">
+                <?php foreach ($kementerian_list as $komisi): ?>
+                <a class="org-card organization-card commission-card"
+                   href="detail-menteri.php?type=kementerian&id=<?php echo (int)$komisi['id']; ?>&periode=<?php echo $selected_periode; ?>"
+                   data-commission-id="<?php echo (int)$komisi['id']; ?>"
+                   data-period-id="<?php echo $selected_periode; ?>">
+                    <div class="commission-card__content">
+                        <?php if (!empty($komisi['logo'])): ?>
+                        <img class="commission-card__logo"
+                             src="<?php echo uploadUrl($komisi['logo']); ?>"
+                             alt="Logo <?php echo htmlspecialchars($komisi['nama']); ?>"
                              loading="lazy"
                              onerror="this.src='<?php echo assetUrl('images/default-logo.png'); ?>'">
-                    </div>
-                    <div class="org-card-info">
-                        <h3><?php echo htmlspecialchars($menteri['nama']); ?></h3>
-                        <p class="org-jabatan"><?php echo count($menteri['anggota']); ?> Anggota</p>
-                        <?php if (!empty($preview)): ?>
-                        <div class="org-preview">
-                            <?php
-                            echo htmlspecialchars(implode(', ', $preview));
-                            if ($sisa > 0) echo ' &amp; ' . $sisa . ' lainnya';
-                            ?>
-                        </div>
                         <?php endif; ?>
+                        <span class="commission-card__eyebrow">Komisi</span>
+                        <h2 class="commission-card__title"><?php echo htmlspecialchars($komisi['nama']); ?></h2>
+                        <span class="commission-card__action">Lihat detail</span>
                     </div>
                 </a>
                 <?php endforeach; ?>
             </div>
-        </div>
-
-        <?php else: ?>
-        <div class="empty-state">
-            <i class="fas fa-building"></i>
-            <p>Belum ada data kementerian untuk periode ini.</p>
-        </div>
-        <?php endif; ?>
+            <?php endif; ?>
+        </section>
 
     </div>
 </div>
-
-<script src="<?php echo baseUrl('assets/js/kepengurusan-dropdown.js'); ?>"></script>
 
 <?php include 'footer.php'; ?>

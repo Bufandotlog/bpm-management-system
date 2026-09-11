@@ -149,8 +149,8 @@ $periode_info = htmlspecialchars(
         </div>
         <div class="stat-content">
             <div class="stat-value"><?php echo $total_kementerian; ?></div>
-            <div class="stat-label">Kementerian</div>
-            <div class="stat-detail">Total menteri</div>
+            <div class="stat-label">Komisi</div>
+            <div class="stat-detail">Total data aktif</div>
         </div>
     </div>
     <div class="stat-card">
@@ -159,7 +159,7 @@ $periode_info = htmlspecialchars(
         </div>
         <div class="stat-content">
             <div class="stat-value"><?php echo $total_anggota_kementerian; ?></div>
-            <div class="stat-label">Anggota Kementerian</div>
+            <div class="stat-label">Anggota Komisi</div>
             <div class="stat-detail">Total seluruh anggota</div>
         </div>
     </div>
@@ -172,7 +172,7 @@ $periode_info = htmlspecialchars(
         <span class="badge"><?php echo $total_bph_terisi; ?>/4</span>
     </button>
     <button class="tab-btn" onclick="openTab('kementerian')">
-        <i class="fas fa-building"></i> Kementerian
+        <i class="fas fa-building"></i> Komisi
         <span class="badge"><?php echo $total_kementerian; ?></span>
     </button>
     <a href="upload-struktur.php" class="btn btn-primary">
@@ -300,20 +300,20 @@ $periode_info = htmlspecialchars(
     </div>
 </div>
 
-<!-- ===== TAB KEMENTERIAN ===== -->
-<div id="kementerian" class="tab-content">
+<!-- ===== TAB KOMISI ===== -->
+<div id="kementerian" class="tab-content active">
     <div class="header-actions">
         <a href="kementerian-edit.php" class="btn-primary">
-            <i class="fas fa-plus"></i> Tambah Kementerian Baru
+            <i class="fas fa-plus"></i> Tambah Komisi Baru
         </a>
     </div>
 
     <?php if (empty($kementerian)): ?>
         <div class="empty-state">
             <i class="fas fa-building"></i>
-            <p>Belum ada kementerian</p>
+            <p>Belum ada Komisi</p>
             <a href="kementerian-edit.php" class="btn-primary">
-                <i class="fas fa-plus"></i> Tambah Kementerian Pertama
+                <i class="fas fa-plus"></i> Tambah Komisi Pertama
             </a>
         </div>
     <?php else: ?>
@@ -354,7 +354,7 @@ $periode_info = htmlspecialchars(
                     </a>
                     <?php /* Hapus via POST + CSRF — bukan GET link */ ?>
                     <form method="POST" style="display:inline"
-                          onsubmit="return confirm('Yakin ingin menghapus kementerian ini? Semua anggota juga akan ikut terhapus.')">
+                          onsubmit="return confirm('Yakin ingin menghapus Komisi ini? Semua anggota juga akan ikut terhapus.')">
                         <?php echo csrfField(); ?>
                         <input type="hidden" name="hapus_kementerian_id" value="<?php echo $kid; ?>">
                         <button type="submit" class="btn-delete">
