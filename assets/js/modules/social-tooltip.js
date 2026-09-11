@@ -19,7 +19,7 @@ export function initSocialTooltip() {
                 bottom: -30px;
                 left: 50%;
                 transform: translateX(-50%);
-                background: #1e3a8a;
+                background: var(--biru-gelap);
                 color: white;
                 padding: 4px 8px;
                 border-radius: 4px;

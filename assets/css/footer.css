@@ -60,7 +60,7 @@ footer {
     color: var(--biru-secondary);
     transition: all 0.3s ease;
     position: relative;
-    border: 1px solid rgba(74, 144, 226, 0.3);
+    border: 1px solid rgba(184, 50, 75, 0.3);
 }
 
 .social-links a:hover {
@@ -68,7 +68,7 @@ footer {
     color: var(--bg-dark);
     transform: translateY(-5px);
     border-color: var(--biru-primary);
-    box-shadow: 0 5px 15px rgba(74, 144, 226, 0.4);
+    box-shadow: 0 5px 15px rgba(184, 50, 75, 0.4);
 }
 
 .copyright {
@@ -87,7 +87,7 @@ footer {
     right: 30px;
     width: 50px;
     height: 50px;
-    background: rgba(74, 144, 226, 0.2);
+    background: rgba(184, 50, 75, 0.2);
     backdrop-filter: blur(5px);
     border: 1px solid var(--biru-primary);
     border-radius: 50%;
@@ -104,7 +104,7 @@ footer {
     background: var(--biru-primary);
     color: white;
     transform: scale(1.1) translateY(-5px);
-    box-shadow: 0 5px 20px rgba(74, 144, 226, 0.4);
+    box-shadow: 0 5px 20px rgba(184, 50, 75, 0.4);
 }
 
 /* Responsive */

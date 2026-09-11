@@ -17,7 +17,7 @@ export function initBackToTop() {
             right: 30px;
             width: 50px;
             height: 50px;
-            background: #1e3a8a;
+            background: var(--biru-gelap);
             color: white;
             border-radius: 50%;
             display: flex;

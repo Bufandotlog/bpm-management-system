@@ -16,7 +16,7 @@
     -webkit-backdrop-filter: blur(8px);
     border-radius: 20px;
     overflow: hidden;
-    border: 1px solid rgba(74, 144, 226, 0.2);
+    border: 1px solid rgba(184, 50, 75, 0.2);
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.6s ease, transform 0.6s ease, 
@@ -33,7 +33,7 @@
     border-color: var(--biru-primary);
     background: rgba(17, 17, 17, 0.9);
     backdrop-filter: blur(12px);
-    box-shadow: 0 15px 40px rgba(74, 144, 226, 0.2);
+    box-shadow: 0 15px 40px rgba(184, 50, 75, 0.2);
 }
 
 .card-image {
@@ -98,7 +98,7 @@
 .btn {
     display: inline-block;
     padding: 0.9rem 1.8rem;
-    background: rgba(74, 144, 226, 0.1);
+    background: rgba(184, 50, 75, 0.1);
     color: var(--text-light);
     text-decoration: none;
     border: 2px solid var(--biru-primary);
@@ -114,7 +114,7 @@
     background: var(--biru-primary);
     color: var(--bg-dark);
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(74, 144, 226, 0.4);
+    box-shadow: 0 5px 15px rgba(184, 50, 75, 0.4);
 }
 
 .btn-small {
@@ -135,7 +135,7 @@
     -webkit-backdrop-filter: blur(8px);
     border-radius: 20px;
     overflow: hidden;
-    border: 1px solid rgba(74, 144, 226, 0.2);
+    border: 1px solid rgba(184, 50, 75, 0.2);
     transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
     display: flex;
     flex-direction: column;
@@ -151,7 +151,7 @@
     border-color: var(--biru-primary);
     background: rgba(17, 17, 17, 0.9);
     backdrop-filter: blur(12px);
-    box-shadow: 0 15px 40px rgba(74, 144, 226, 0.2);
+    box-shadow: 0 15px 40px rgba(184, 50, 75, 0.2);
 }
 
 .home-news-image {

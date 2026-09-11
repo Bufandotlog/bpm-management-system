@@ -144,7 +144,7 @@
     color: var(--biru-primary) !important;
     font-weight: 900;
     letter-spacing: -0.055em;
-    text-shadow: 0 0 24px rgba(74, 144, 226, 0.35), 0 5px 18px rgba(0, 0, 0, 0.72);
+    text-shadow: 0 0 24px rgba(184, 50, 75, 0.35), 0 5px 18px rgba(0, 0, 0, 0.72);
 }
 
 /* Subtitle styling */

@@ -63,7 +63,7 @@ $isHomePage = ($current_page == 'index.php');
     <link rel="manifest" href="<?php echo baseUrl('assets/images/favicon/site.webmanifest'); ?>">
     
     <!-- Theme Color -->
-    <meta name="theme-color" content="#4A90E2">
+    <meta name="theme-color" content="#B8324B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     
     <!-- CSS - Gunakan assetUrl() -->
