@@ -1,11 +1,11 @@
 /* ========== VARIABLES ========== */
 :root {
-    --biru-primary: #4A90E2;      /* Biru terang utama */
-    --biru-secondary: #6BA5E8;    /* Biru lebih muda */
-    --biru-soft: #8BB9F0;         /* Biru sangat soft */
-    --biru-pudar: #A9CCF5;        /* Biru pudar */
-    --biru-gelap: #1A2F4A;        /* Biru gelap untuk gradient */
-    --biru-transparan: rgba(74, 144, 226, 0.15);
+    --biru-primary: #B8324B;
+    --biru-secondary: #B8324B;
+    --biru-soft: #B8324B;
+    --biru-pudar: #B8324B;
+    --biru-gelap: #B8324B;
+    --biru-transparan: rgba(184, 50, 75, 0.15);
     
     --text-light: #fff;
     --text-dark: #333;

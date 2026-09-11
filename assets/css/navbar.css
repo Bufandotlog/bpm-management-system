@@ -12,7 +12,7 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     z-index: 1000;
-    border-bottom: 1px solid rgba(74, 144, 226, 0.2);
+    border-bottom: 1px solid rgba(184, 50, 75, 0.2);
 }
 
 .nav-container {
@@ -109,7 +109,7 @@
         background: rgba(0, 0, 0, 0.3) !important;
         backdrop-filter: blur(20px) !important;
         -webkit-backdrop-filter: blur(20px) !important;
-        border-bottom: 1px solid rgba(74, 144, 226, 0.3) !important;
+        border-bottom: 1px solid rgba(184, 50, 75, 0.3) !important;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 
         /* Layout */
@@ -142,7 +142,7 @@
 
     .nav-menu.active a:hover,
     .nav-menu.active li.active a {
-        background: rgba(74, 144, 226, 0.15);
+        background: rgba(184, 50, 75, 0.15);
         color: var(--biru-secondary) !important;
     }
 
