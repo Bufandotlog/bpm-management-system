@@ -202,11 +202,51 @@
 /* ===== WRAPPER UNTUK KONTEN SETELAH HERO ===== */
 .kepengurusan-content-wrapper {
     position: relative;
+    isolation: isolate;
     z-index: 10;
     background: transparent;
     margin-top: 100vh;
     min-height: 100vh;
     padding-top: 2rem;
+}
+
+.kepengurusan-content-wrapper::before,
+.kepengurusan-content-wrapper::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 50%;
+    filter: blur(64px);
+    opacity: 0.12;
+    animation: kepengurusanAmbientDrift 30s ease-in-out infinite alternate;
+}
+
+.kepengurusan-content-wrapper::before {
+    top: 8rem;
+    left: -12rem;
+    width: 34rem;
+    height: 34rem;
+    background: radial-gradient(circle, rgba(48, 111, 190, 0.72), transparent 68%);
+}
+
+.kepengurusan-content-wrapper::after {
+    top: 34rem;
+    right: -14rem;
+    width: 38rem;
+    height: 38rem;
+    background: radial-gradient(circle, rgba(73, 117, 181, 0.55), transparent 70%);
+    animation-delay: -12s;
+}
+
+.kepengurusan-container {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes kepengurusanAmbientDrift {
+    from { transform: translate3d(-2%, -1%, 0) scale(0.98); }
+    to { transform: translate3d(3%, 2%, 0) scale(1.03); }
 }
 
 /* ✅ DIUBAH: Responsive untuk wrapper - tambah margin-top lebih besar di mobile agar tidak menindih hero */
@@ -437,41 +477,9 @@
 
 /* ===== BPH SECTION ===== */
 .bph-section {
-    margin-bottom: 4rem;
-}
-
-/* ===== PEMISAH (KEMENTERIAN) ===== */
-.section-divider {
-    margin: 4rem 0;
-    text-align: center;
+    --group-accent: rgba(92, 153, 224, 0.7);
+    margin-bottom: 5rem;
     position: relative;
-}
-
-.section-divider span {
-    background: #111;
-    padding: 0.5rem 2rem;
-    color: var(--biru-secondary);
-    font-size: 1.8rem;
-    font-weight: 600;
-    letter-spacing: 4px;
-    position: relative;
-    z-index: 2;
-    border: 1px solid var(--biru-primary);
-    border-radius: 40px;
-    box-shadow: 0 0 20px rgba(74, 144, 226, 0.3);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-.section-divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--biru-primary), var(--biru-soft), var(--biru-primary), transparent);
-    transform: translateY(-50%);
-    z-index: 1;
 }
 
 /* ===== GRID SYSTEM - FLEXBOX CENTER UNTUK SEMUA ===== */
@@ -505,7 +513,9 @@
 
 /* ===== COMMISSION PRESENTATION LAYER ===== */
 .commission-section {
+    --group-accent: rgba(74, 144, 226, 0.82);
     margin-top: 2rem;
+    position: relative;
     width: 100%;
 }
 
@@ -529,14 +539,19 @@
 }
 
 .commission-card {
+    --card-accent: var(--group-accent);
     display: flex;
     align-items: stretch;
     min-height: 220px;
     width: auto;
     max-width: none;
     flex: initial;
-    cursor: default;
+    cursor: pointer;
 }
+
+.commission-card:nth-child(1) { --card-accent: rgba(66, 177, 211, 0.9); }
+.commission-card:nth-child(2) { --card-accent: rgba(125, 105, 194, 0.9); }
+.commission-card:nth-child(3) { --card-accent: rgba(64, 164, 151, 0.9); }
 
 .commission-card__content {
     display: flex;
@@ -549,7 +564,14 @@
     text-align: center;
 }
 
-.commission-card__eyebrow {
+.commission-card__logo {
+    width: 4rem;
+    height: 4rem;
+    object-fit: contain;
+}
+
+.commission-card__eyebrow,
+.commission-card__action {
     color: var(--text-soft);
     font-size: 0.72rem;
     font-weight: 600;
@@ -564,13 +586,105 @@
     letter-spacing: 0.04em;
 }
 
+.commission-card__action {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+}
+
+.organization-card,
+.commission-card {
+    --pointer-x: 50%;
+    --pointer-y: 50%;
+    --glow-x: 50%;
+    --glow-y: 50%;
+    --rotate-x: 0deg;
+    --rotate-y: 0deg;
+    position: relative;
+    isolation: isolate;
+    transform-style: preserve-3d;
+    perspective: 1200px;
+    overflow: hidden;
+    will-change: transform, box-shadow;
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.25s ease,
+                box-shadow 0.25s ease,
+                background 0.25s ease;
+}
+
+.organization-card::before,
+.commission-card::before {
+    content: '';
+    position: absolute;
+    inset: -18%;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        circle at var(--glow-x) var(--glow-y),
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(122, 181, 255, 0.24) 12%,
+        rgba(122, 181, 255, 0.1) 22%,
+        transparent 44%
+    );
+    opacity: 0.95;
+    mix-blend-mode: screen;
+}
+
+.organization-card::after,
+.commission-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 38%, rgba(98, 171, 255, 0.14) 100%);
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.08), inset -1px -1px 0 rgba(10, 20, 35, 0.34);
+}
+
+.organization-card .org-card-info,
+.commission-card__content {
+    position: relative;
+    z-index: 1;
+    transform: translate3d(calc((var(--pointer-x) - 50%) * 0.1), calc((var(--pointer-y) - 50%) * 0.1), 26px);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.commission-card {
+    background: linear-gradient(135deg, rgba(12, 18, 30, 0.92), rgba(10, 19, 30, 0.78));
+    border: 1px solid rgba(128, 175, 255, 0.26);
+    box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.commission-card__logo {
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.22));
+    transition: transform 0.35s ease, filter 0.35s ease;
+    transform: translateZ(18px);
+}
+
+.commission-card__title {
+    text-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+}
+
+.commission-card.visible:hover,
+.commission-card:hover {
+    transform: perspective(1200px) rotateY(var(--rotate-y)) rotateX(var(--rotate-x)) translateY(-8px) scale(1.01) !important;
+    border-color: var(--card-accent);
+    box-shadow: 0 24px 42px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(115, 184, 255, 0.24), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.commission-card:hover .commission-card__logo,
+.commission-card.visible:hover .commission-card__logo {
+    transform: translateZ(22px) scale(1.04);
+    filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.3));
+}
 /* ===== CARD STYLES - ✅ DIUBAH: Transparan blur glass morphism ===== */
 .org-card {
+    --card-accent: rgba(74, 144, 226, 0.65);
     display: block;
     text-decoration: none;
     color: var(--text-light);
+    position: relative;
 
-    /* ✅ DIUBAH: dari solid gelap ke transparan blur */
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -578,40 +692,66 @@
     border-radius: 15px;
     overflow: hidden;
 
-    /* ✅ DIUBAH: border lebih terlihat untuk efek glass */
     border: 1px solid rgba(74, 144, 226, 0.25);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3),
                 inset 0 1px 0 rgba(255, 255, 255, 0.08);
     
-    /* Ukuran card tetap */
     width: var(--card-max-width);
     max-width: 100%;
     flex: 0 0 var(--card-max-width);
     
-    /* ANIMASI INITIAL STATE */
     opacity: 0;
     transform: translateY(30px);
     transition: opacity var(--transition-smooth), 
                 transform var(--transition-smooth), 
                 border-color var(--transition-fast), 
-                box-shadow var(--transition-fast);
+                box-shadow var(--transition-fast),
+                background-color var(--transition-fast);
 }
 
-/* VISIBLE STATE - saat card muncul */
+.organization-card::before,
+.org-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--glow-x) var(--glow-y), rgba(255, 255, 255, 0.42), rgba(122, 181, 255, 0.14) 18%, transparent 40%);
+    opacity: 0.14;
+    transition: opacity var(--transition-fast);
+}
+
+.org-card > * {
+    position: relative;
+    z-index: 1;
+}
+
 .org-card.visible {
     opacity: 1;
     transform: translateY(0);
 }
 
-/* ✅ DIUBAH: Hover state card - lebih menonjol pada glass */
+.organization-card.visible:hover,
+.organization-card:hover,
 .org-card.visible:hover,
 .org-card:hover {
-    transform: translateY(-8px);
-    border-color: var(--biru-primary);
+    transform: perspective(1200px) rotateY(var(--rotate-y)) rotateX(var(--rotate-x)) translateY(-8px) scale(1.01) !important;
+    border-color: var(--card-accent);
     background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 15px 30px rgba(74, 144, 226, 0.35),
-                0 0 0 1px rgba(74, 144, 226, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.36),
+                0 0 0 1px rgba(74, 144, 226, 0.24),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12),
+                0 0 18px rgba(74, 144, 226, 0.08);
+}
+
+.organization-card:hover::before,
+.org-card:hover::before {
+    opacity: 0.18;
+}
+
+.org-card:focus-visible {
+    outline: 2px solid var(--biru-soft);
+    outline-offset: 4px;
 }
 
 /* STAGGER EFFECT */
@@ -645,6 +785,7 @@
     width: 100%;
     height: 220px;
     overflow: hidden;
+    transform: translateZ(12px);
 }
 
 .leader-card .card-photo-container img,
@@ -652,11 +793,13 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s ease;
+    transition: transform 0.5s ease, filter 0.35s ease;
+    transform: scale(1.02) translateZ(18px);
 }
 
 .org-card:hover .card-photo-container img {
-    transform: scale(1.1);
+    transform: scale(1.08) translateZ(22px);
+    filter: saturate(1.05) brightness(1.04);
 }
 
 /* Logo Cards - ✅ DIUBAH: full cover 1:1 seperti foto, tidak mengambang */
@@ -667,6 +810,7 @@
     overflow: hidden;
     padding: 0; /* Hapus padding agar logo full */
     background: none; /* Hapus background, biarkan logo yang mengisi */
+    transform: translateZ(12px);
 }
 
 .org-logo {
@@ -674,12 +818,14 @@
     height: 100%;
     object-fit: cover; /* Cover agar logo penuh memenuhi container seperti foto */
     object-position: center;
-    transition: transform 0.5s ease; /* Samakan durasi dengan foto */
+    transition: transform 0.5s ease, filter 0.35s ease; /* Samakan durasi dengan foto */
     display: block;
+    transform: scale(1.02) translateZ(18px);
 }
 
 .org-card:hover .org-logo {
-    transform: scale(1.1);
+    transform: scale(1.08) translateZ(22px);
+    filter: brightness(1.04) saturate(1.06);
 }
 
 /* ===== CARD INFO ===== */
@@ -822,11 +968,6 @@
         font-size: 1.8rem;
     }
     
-    .section-divider span {
-        font-size: 1.5rem;
-        padding: 0.4rem 1.5rem;
-    }
-    
     :root {
         --card-min-width: 200px;
         --card-max-width: 260px;
@@ -885,12 +1026,6 @@
         font-size: 1.5rem;
     }
     
-    .section-divider span {
-        font-size: 1.2rem;
-        padding: 0.3rem 1rem;
-        letter-spacing: 2px;
-    }
-    
     :root {
         --card-min-width: 100%;
         --card-max-width: 300px;
@@ -910,6 +1045,59 @@
     .bph-grid .org-card.visible,
     .menteri-grid .org-card.visible {
         transition-delay: 0.1s !important;
+    }
+}
+
+@media (max-width: 992px) {
+    .commission-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .commission-grid .commission-card {
+        flex: initial;
+        width: auto;
+    }
+}
+
+@media (max-width: 600px) {
+    .commission-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (hover: none) {
+    .commission-card::before {
+        opacity: 0.45;
+    }
+
+    .commission-card,
+    .commission-card:hover,
+    .commission-card.visible:hover {
+        transform: none !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kepengurusan-content-wrapper::before,
+    .kepengurusan-content-wrapper::after {
+        animation: none;
+    }
+
+    .org-card,
+    .org-card:hover,
+    .org-card.visible:hover,
+    .commission-card,
+    .commission-card:hover,
+    .commission-card.visible:hover {
+        transition-duration: 0.01ms;
+        transform: none !important;
+    }
+
+    .org-card:hover .card-photo-container img,
+    .org-card:hover .org-logo,
+    .commission-card:hover .commission-card__content,
+    .commission-card:hover .commission-card__logo {
+        transform: none;
     }
 }
 

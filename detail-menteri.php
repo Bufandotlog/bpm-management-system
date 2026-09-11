@@ -1,5 +1,5 @@
 <?php
-// detail-menteri.php - Halaman Detail Universal (BPH & Kementerian)
+// detail-menteri.php - Halaman Detail Universal (BPH, Kementerian & Komisi)
 // VERSI: 2.2 - FIX: $active_periode undefined → ambil dari $_GET dengan fallback DB
 
 include 'header.php';
@@ -10,7 +10,7 @@ include 'header.php';
 $type = $_GET['type'] ?? '';
 $id   = (int)($_GET['id'] ?? 0);
 
-if (!$id || !in_array($type, ['bph', 'kementerian'])) {
+if (!$id || !in_array($type, ['bph', 'kementerian'], true)) {
     header('Location: kepengurusan.php');
     exit;
 }
@@ -34,32 +34,30 @@ if (!$periode_check) {
     exit;
 }
 
+$periode_data = dbFetchOne(
+    "SELECT nama, tahun_mulai, tahun_selesai FROM periode_kepengurusan WHERE id = ?",
+    [$periode_id],
+    "i"
+);
+
 // ===========================================
-// AMBIL DATA PARENT (BPH / KEMENTERIAN)
+// AMBIL DATA PARENT SECARA EKSPLISIT PER ENTITY
 // ===========================================
-$parent        = null;
-$anggota_table = '';
-$foreign_key   = '';
+$parent = null;
+$entity_label = '';
 
 if ($type === 'bph') {
-    // Pastikan parent BPH cocok dengan periode_id yang valid
     $parent = dbFetchOne(
         "SELECT * FROM struktur_bph WHERE id = ? AND periode_id = ?",
         [$id, $periode_id], "ii"
     );
-
-    $anggota_table = 'anggota_bph';
-    $foreign_key   = 'bph_id';
-
+    $entity_label = 'BPH';
 } else {
-    // Pastikan parent kementerian cocok dengan periode_id yang valid
     $parent = dbFetchOne(
         "SELECT * FROM kementerian WHERE id = ? AND periode_id = ?",
         [$id, $periode_id], "ii"
     );
-
-    $anggota_table = 'anggota_kementerian';
-    $foreign_key   = 'kementerian_id';
+    $entity_label = 'Komisi';
 }
 
 if (!$parent) {
@@ -81,13 +79,21 @@ if (!$periode_id && !empty($parent['periode_id'])) {
 }
 
 // ===========================================
-// AMBIL ANGGOTA (Hanya field non-sensitif untuk keamanan data / PII protection)
+// AMBIL ANGGOTA DENGAN QUERY ENTITY EXPLICIT
 // ===========================================
-$anggota_list = dbFetchAll(
-    "SELECT nama, jabatan, foto FROM {$anggota_table}
-     WHERE {$foreign_key} = ? AND periode_id = ? ORDER BY urutan",
-    [$parent['id'], $periode_id], "ii"
-);
+if ($type === 'bph') {
+    $anggota_list = dbFetchAll(
+        "SELECT nama, jabatan, foto FROM anggota_bph
+         WHERE bph_id = ? AND periode_id = ? ORDER BY urutan ASC, id ASC",
+        [$parent['id'], $periode_id], "ii"
+    );
+} else {
+    $anggota_list = dbFetchAll(
+        "SELECT nama, jabatan, foto FROM anggota_kementerian
+         WHERE kementerian_id = ? AND periode_id = ? ORDER BY urutan ASC, id ASC",
+        [$parent['id'], $periode_id], "ii"
+    );
+}
 
 // ===========================================
 // TENTUKAN TIPE HEADER
@@ -130,7 +136,9 @@ if (!empty($parent['fungsi'])) {
 // JUDUL HALAMAN
 // ===========================================
 $judul_halaman = htmlspecialchars($parent['nama'] ?? 'Detail');
-$tahun_label   = date('Y') . '/' . (date('Y') + 1);
+$tahun_label   = ((int)($periode_data['tahun_mulai'] ?? 0))
+    . '/' . ((int)($periode_data['tahun_selesai'] ?? 0));
+$periode_nama = htmlspecialchars($periode_data['nama'] ?? 'Periode Kepengurusan');
 ?>
 
 <!-- =========================================== -->
@@ -146,7 +154,7 @@ $tahun_label   = date('Y') . '/' . (date('Y') + 1);
     </div>
     <div class="header-text">
         <h1><?php echo $judul_halaman; ?></h1>
-        <p>Kabinet Astawidya <?php echo $tahun_label; ?></p>
+        <p><?php echo htmlspecialchars($entity_label); ?> · <?php echo $periode_nama; ?> (<?php echo $tahun_label; ?>)</p>
     </div>
 </div>
 
@@ -160,7 +168,7 @@ $tahun_label   = date('Y') . '/' . (date('Y') + 1);
     </div>
     <div class="header-text">
         <h1><?php echo $judul_halaman; ?></h1>
-        <p>Kabinet Astawidya <?php echo $tahun_label; ?></p>
+        <p><?php echo htmlspecialchars($entity_label); ?> · <?php echo $periode_nama; ?> (<?php echo $tahun_label; ?>)</p>
     </div>
 </div>
 
@@ -168,7 +176,7 @@ $tahun_label   = date('Y') . '/' . (date('Y') + 1);
 <div class="detail-header text-header">
     <div class="header-text">
         <h1><?php echo $judul_halaman; ?></h1>
-        <p>Kabinet Astawidya <?php echo $tahun_label; ?></p>
+        <p><?php echo htmlspecialchars($entity_label); ?> · <?php echo $periode_nama; ?> (<?php echo $tahun_label; ?>)</p>
     </div>
 </div>
 <?php endif; ?>
