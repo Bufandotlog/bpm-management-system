@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS `gallery_cards` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `periode_id` int(11) NOT NULL,
   `sort_order` int(11) NOT NULL DEFAULT 0,
-  `image_path` varchar(500) NOT NULL,
+  `image_path` varchar(500) DEFAULT NULL,
   `title` varchar(255) NOT NULL,
   `subtitle` varchar(500) NOT NULL DEFAULT '',
   `created_by` int(11) DEFAULT NULL,

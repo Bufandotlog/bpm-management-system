@@ -122,20 +122,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $imagePath = $existing['image_path'];
         if ($newImage) {
-            if (!empty($existing['image_path']) && !deleteFile($existing['image_path'])) {
+            dbBeginTransaction();
+            try {
+                dbQuery(
+                    'UPDATE gallery_cards
+                     SET image_path = ?, title = ?, subtitle = ?, updated_by = ?
+                     WHERE id = ? AND periode_id = ?',
+                    [$newImage, $title, $subtitle, $adminId, $cardId, $operationPeriodId],
+                    'sssiii'
+                );
+                dbCommit();
+            } catch (Throwable $error) {
+                dbRollback();
                 deleteFile($newImage);
-                redirect($redirectUrl, 'Foto lama gagal dihapus sehingga perubahan dibatalkan.', 'error');
+                error_log('Gallery replace failed: ' . $error->getMessage());
+                redirect($redirectUrl, 'Perubahan card gagal disimpan.', 'error');
+            }
+
+            if (!empty($existing['image_path']) && !deleteFile($existing['image_path'])) {
+                error_log('Gallery replace cleanup failed: ' . $existing['image_path']);
             }
             $imagePath = $newImage;
+        } else {
+            dbQuery(
+                'UPDATE gallery_cards
+                 SET image_path = ?, title = ?, subtitle = ?, updated_by = ?
+                 WHERE id = ? AND periode_id = ?',
+                [$imagePath, $title, $subtitle, $adminId, $cardId, $operationPeriodId],
+                'sssiii'
+            );
         }
-        dbQuery(
-            'UPDATE gallery_cards
-             SET image_path = ?, title = ?, subtitle = ?, updated_by = ?
-             WHERE id = ? AND periode_id = ?',
-            [$imagePath, $title, $subtitle, $adminId, $cardId, $operationPeriodId],
-            'sssiii'
+        auditLog(
+            'UPDATE',
+            'gallery_cards',
+            $cardId,
+            $newImage ? 'Ganti foto card galeri' : 'Ubah card galeri'
         );
-        auditLog('UPDATE', 'gallery_cards', $cardId, 'Ubah card galeri');
         redirect($redirectUrl, 'Card berhasil diperbarui.', 'success');
     }
 
@@ -150,12 +172,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             http_response_code(403);
             exit('403 Forbidden');
         }
-        if (!empty($card['image_path']) && !deleteFile($card['image_path'])) {
-            redirect($redirectUrl, 'Foto card gagal dihapus sehingga card tidak dihapus.', 'error');
+
+        dbBeginTransaction();
+        try {
+            dbQuery('DELETE FROM gallery_cards WHERE id = ? AND periode_id = ?', [$cardId, $operationPeriodId], 'ii');
+            dbCommit();
+        } catch (Throwable $error) {
+            dbRollback();
+            error_log('Gallery card deletion failed: ' . $error->getMessage());
+            redirect($redirectUrl, 'Card gagal dihapus.', 'error');
         }
-        dbQuery('DELETE FROM gallery_cards WHERE id = ? AND periode_id = ?', [$cardId, $operationPeriodId], 'ii');
+
+        if (!empty($card['image_path']) && !deleteFile($card['image_path'])) {
+            error_log('Gallery card cleanup failed: ' . $card['image_path']);
+        }
         auditLog('DELETE', 'gallery_cards', $cardId, 'Hapus card galeri');
         redirect($redirectUrl, 'Card berhasil dihapus permanen.', 'success');
+    }
+
+    if ($action === 'delete_photo') {
+        $cardId = (int) ($_POST['card_id'] ?? 0);
+        $card = dbFetchOne(
+            'SELECT id, image_path FROM gallery_cards WHERE id = ? AND periode_id = ? LIMIT 1',
+            [$cardId, $operationPeriodId],
+            'ii'
+        );
+        if (!$card) {
+            http_response_code(403);
+            exit('403 Forbidden');
+        }
+        if (empty($card['image_path'])) {
+            redirect($redirectUrl, 'Card ini tidak memiliki foto.', 'error');
+        }
+
+        dbBeginTransaction();
+        try {
+            dbQuery(
+                'UPDATE gallery_cards SET image_path = NULL, updated_by = ? WHERE id = ? AND periode_id = ?',
+                [$adminId, $cardId, $operationPeriodId],
+                'iii'
+            );
+            dbCommit();
+        } catch (Throwable $error) {
+            dbRollback();
+            error_log('Gallery photo deletion failed: ' . $error->getMessage());
+            redirect($redirectUrl, 'Foto gagal dihapus; card tetap dipertahankan.', 'error');
+        }
+
+        if (!deleteFile($card['image_path'])) {
+            error_log('Gallery photo cleanup failed: ' . $card['image_path']);
+        }
+
+        auditLog('UPDATE', 'gallery_cards', $cardId, 'Hapus foto card galeri');
+        redirect($redirectUrl, 'Foto berhasil dihapus; card tetap tersedia.', 'success');
     }
 
     if ($action === 'reorder') {
@@ -269,7 +338,11 @@ $page_title = 'Galeri';
     <?php foreach ($cards as $card): ?>
         <article class="gallery-card-item" data-card-id="<?php echo (int) $card['id']; ?>">
             <div class="gallery-card-preview">
-                <img src="<?php echo htmlspecialchars(uploadUrl($card['image_path']), ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8'); ?>">
+                <?php if (!empty($card['image_path'])): ?>
+                    <img src="<?php echo htmlspecialchars(uploadUrl($card['image_path']), ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8'); ?>">
+                <?php else: ?>
+                    <span class="gallery-card-no-image">Tanpa foto</span>
+                <?php endif; ?>
                 <span class="gallery-card-order">#<?php echo (int) $card['sort_order'] + 1; ?></span>
             </div>
             <div class="gallery-card-body">
@@ -294,6 +367,15 @@ $page_title = 'Galeri';
                 <input type="hidden" name="period_id" value="<?php echo $scopedPeriodId; ?>">
                 <button class="gallery-button gallery-button-danger" type="submit" onclick="return confirm('Hapus card dan file secara permanen?')"><i class="fas fa-trash"></i> Hapus permanen</button>
             </form>
+            <?php if (!empty($card['image_path'])): ?>
+            <form method="post" class="gallery-delete-form">
+                <?php echo csrfField(); ?>
+                <input type="hidden" name="action" value="delete_photo">
+                <input type="hidden" name="card_id" value="<?php echo (int) $card['id']; ?>">
+                <input type="hidden" name="period_id" value="<?php echo $scopedPeriodId; ?>">
+                <button class="gallery-button gallery-button-danger" type="submit" onclick="return confirm('Hapus foto saja dan pertahankan card?')"><i class="fas fa-image"></i> Hapus foto</button>
+            </form>
+            <?php endif; ?>
         </div>
         </article>
     <?php endforeach; ?>

@@ -487,6 +487,6 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
 <script>
 window.__DEPTH_GALLERY_CARDS__ = <?php echo json_encode($gallery_runtime_data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script type="module" src="<?php echo assetUrl('js/depth-gallery-dist/depth-gallery.js'); ?>" defer></script>
+<script type="module" src="<?php echo assetUrl('js/depth-gallery-dist/depth-gallery-entry.js'); ?>" defer></script>
 
 <?php include 'footer.php'; ?>
