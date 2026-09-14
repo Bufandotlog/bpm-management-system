@@ -132,10 +132,9 @@ function initOrganizationChart() {
         const rect = chart.getBoundingClientRect();
         const available = Math.max(chart.offsetHeight - window.innerHeight, 1);
         const value = clamp(-rect.top / available);
-        const progressRect = progress.getBoundingClientRect();
         if (value >= 1 && !progress.classList.contains('is-complete')) {
             progress.classList.add('is-complete');
-            progress.style.top = `${progressRect.top - rect.top}px`;
+            progress.style.top = '0';
         } else if (value < 0.98 && progress.classList.contains('is-complete')) {
             progress.classList.remove('is-complete');
             progress.style.top = '';
