@@ -354,6 +354,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
             </div>
         </section>
 
+        <div class="static-org-chart-wrapper">
         <!-- ===== BPH PRESENTATION LAYER ===== -->
         <section class="bph-section kepengurusan-bph" data-group="bph" aria-label="Badan Pengurus Harian">
 
@@ -363,13 +364,13 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
                 <p>Belum ada data BPH untuk periode ini.</p>
             </div>
             <?php else: ?>
-            <div class="bph-grid">
-
+            <div class="bph-grid static-org-chart">
                 <!-- Ketua -->
                 <?php if ($ketua): ?>
                 <a href="detail-menteri.php?type=bph&id=<?php echo $ketua['id']; ?>&periode=<?php echo $selected_periode; ?>"
                    class="org-card organization-card leader-card">
                     <div class="card-photo-container">
+                        <i class="fas fa-user org-person-icon" aria-hidden="true"></i>
                         <img src="<?php echo fotoUrl($ketua['foto']); ?>"
                              alt="<?php echo htmlspecialchars($ketua['nama']); ?>"
                              loading="lazy"
@@ -404,6 +405,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
                 <a href="detail-menteri.php?type=bph&id=<?php echo $sekum['id']; ?>&periode=<?php echo $selected_periode; ?>"
                    class="org-card organization-card dept-card logo-card">
                     <div class="card-logo-container">
+                        <i class="fas fa-user org-person-icon" aria-hidden="true"></i>
                         <img src="<?php echo fotoUrl($sekum['logo'], 'images/default-logo.png'); ?>"
                              alt="Logo Sekretaris"
                              class="org-logo"
@@ -427,6 +429,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
                 <a href="detail-menteri.php?type=bph&id=<?php echo $bendum['id']; ?>&periode=<?php echo $selected_periode; ?>"
                    class="org-card organization-card dept-card logo-card">
                     <div class="card-logo-container">
+                        <i class="fas fa-user org-person-icon" aria-hidden="true"></i>
                         <img src="<?php echo fotoUrl($bendum['logo'], 'images/default-logo.png'); ?>"
                              alt="Logo Bendahara Umum"
                              class="org-logo"
@@ -457,7 +460,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
                 <p>Belum ada data Komisi untuk periode ini.</p>
             </div>
             <?php else: ?>
-            <div class="commission-grid">
+            <div class="commission-grid static-commission-chart">
                 <?php foreach ($kementerian_list as $komisi): ?>
                 <a class="org-card organization-card commission-card"
                    href="detail-menteri.php?type=kementerian&id=<?php echo (int)$komisi['id']; ?>&periode=<?php echo $selected_periode; ?>"
@@ -481,6 +484,7 @@ function fotoUrl($filename, $fallback = 'images/default-avatar.jpg') {
             <?php endif; ?>
         </section>
 
+        </div>
     </div>
 </div>
 

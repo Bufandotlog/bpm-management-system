@@ -16,6 +16,7 @@ import { initBeritaCaptionFade } from './modules/berita-caption.js';
 import { initKepengurusanCaptionFade } from './modules/kepengurusan-caption.js';
 import { initKepengurusanDropdown } from './modules/kepengurusan-dropdown.js'; // BARU: Import dropdown module
 import { initRelighting } from './modules/relighting.js';
+import { initOrganizationChart } from './modules/organization-chart.js';
 
 import * as utilities from './modules/utilities.js';
 
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initSocialTooltip();
     initFormValidation();
     initBackToTop();
+    initOrganizationChart();
     initCardAnimation();
     initHeroParallax();
     initScrollReveal();

@@ -778,10 +778,10 @@
     transform: translateY(0);
 }
 
-.organization-card.visible:hover,
-.organization-card:hover,
-.org-card.visible:hover,
-.org-card:hover {
+.organization-card:not(.organization-chart-card).visible:hover,
+.organization-card:not(.organization-chart-card):hover,
+.org-card:not(.organization-chart-card).visible:hover,
+.org-card:not(.organization-chart-card):hover {
     transform: perspective(1200px) rotateY(var(--rotate-y)) rotateX(var(--rotate-x)) translateY(-8px) scale(1.01) !important;
     border-color: var(--card-accent);
     background: rgba(255, 255, 255, 0.08);
@@ -799,6 +799,214 @@
 .org-card:focus-visible {
     outline: 2px solid var(--biru-soft);
     outline-offset: 4px;
+}
+
+/* ===== STATIC DESKTOP ORG CHART ===== */
+.kepengurusan-bph .bph-grid.static-org-chart,
+.kepengurusan-komisi .commission-grid.static-commission-chart {
+    position: relative;
+    z-index: 1;
+}
+
+.kepengurusan-bph .bph-grid.static-org-chart {
+    position: relative;
+    width: min(1100px, 100%);
+    height: 550px;
+    margin: 0 auto;
+}
+
+.kepengurusan-bph .bph-grid.static-org-chart .chart-line {
+    position: absolute;
+    display: block;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.kepengurusan-bph .bph-grid.static-org-chart .chart-line-center {
+    left: 50%;
+    top: 215px;
+    width: 2px;
+    height: 150px;
+    transform: translateX(-50%);
+}
+
+.kepengurusan-bph .bph-grid.static-org-chart .chart-line-left {
+    left: 50%;
+    top: 320px;
+    width: 25%;
+    height: 2px;
+    transform: translateX(-100%);
+}
+
+.kepengurusan-bph .bph-grid.static-org-chart .chart-line-right {
+    left: 58%;
+    top: 120px;
+    width: 20%;
+    height: 2px;
+}
+
+.kepengurusan-bph .leader-card,
+.kepengurusan-bph .dept-card {
+    position: absolute;
+    z-index: 1;
+}
+
+.kepengurusan-bph .leader-card {
+    top: 0;
+    left: 50%;
+    width: min(430px, 52vw);
+    transform: translateX(-50%);
+}
+
+.kepengurusan-bph .dept-card:nth-of-type(1) {
+    top: 0;
+    right: 9%;
+    width: min(360px, 34vw);
+}
+
+.kepengurusan-bph .dept-card:nth-of-type(2) {
+    top: 240px;
+    left: 50%;
+    width: min(360px, 34vw);
+    transform: translateX(-50%);
+}
+
+.kepengurusan-bph .dept-card .card-logo-container,
+.kepengurusan-bph .leader-card .card-photo-container {
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    margin: 0 auto 0.8rem;
+    overflow: hidden;
+    border: 2px solid rgba(255, 110, 146, 0.95);
+    background: rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kepengurusan-bph .dept-card .card-logo-container img,
+.kepengurusan-bph .leader-card .card-photo-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.kepengurusan-bph .org-card-info {
+    padding: 1.15rem 1.1rem 1.1rem;
+    background: rgba(7, 21, 33, 0.78);
+}
+
+.kepengurusan-bph .org-card-info h3 {
+    font-size: clamp(2.1rem, 2.2vw, 3.1rem);
+    margin-bottom: 0.12rem;
+    color: #ff6d8b;
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+.kepengurusan-bph .org-jabatan {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.96);
+    margin-bottom: 0.7rem;
+}
+
+.kepengurusan-bph .org-preview {
+    margin-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    padding-top: 0.5rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.kepengurusan-komisi .commission-grid.static-commission-chart {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+    width: min(980px, 100%);
+    margin: 0 auto;
+    padding-top: 0.35rem;
+}
+
+.kepengurusan-komisi .commission-grid.static-commission-chart .chart-line {
+    position: absolute;
+    display: block;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.kepengurusan-komisi .commission-grid.static-commission-chart .chart-line-lower-center {
+    left: 50%;
+    top: -120px;
+    width: 2px;
+    height: 110px;
+    transform: translateX(-50%);
+}
+
+.kepengurusan-komisi .commission-grid.static-commission-chart .chart-line-lower-left {
+    left: 50%;
+    top: -12px;
+    width: 23%;
+    height: 2px;
+    transform: translateX(-100%);
+}
+
+.kepengurusan-komisi .commission-grid.static-commission-chart .chart-line-lower-right {
+    left: 58.5%;
+    top: -12px;
+    width: 23%;
+    height: 2px;
+}
+
+.kepengurusan-komisi .commission-card {
+    width: min(270px, 100%);
+    max-width: 270px;
+    min-height: 200px;
+    justify-self: center;
+    z-index: 1;
+}
+
+.kepengurusan-komisi .commission-card__content {
+    padding: 1.6rem 0.9rem 1.2rem;
+    gap: 0.7rem;
+}
+
+.kepengurusan-komisi .commission-card__eyebrow {
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.kepengurusan-komisi .commission-card__title {
+    font-size: clamp(1.8rem, 2vw, 2.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+}
+
+.kepengurusan-komisi .commission-card__action {
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+}
+
+.kepengurusan-bph .org-card,
+.kepengurusan-komisi .org-card {
+    background: rgba(12, 23, 34, 0.85);
+    border: 2px solid rgba(255, 84, 123, 0.9);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+}
+
+.kepengurusan-bph .org-card::before,
+.kepengurusan-komisi .org-card::before {
+    opacity: 0.12;
 }
 
 /* STAGGER EFFECT */
@@ -1207,5 +1415,502 @@
     .page-kepengurusan .caption-image-container {
         max-width: 90%;
         margin: 1.5rem auto 1rem;
+    }
+}
+
+/* ===== STATIC ORGANIZATIONAL CHART REFERENCE LAYOUT ===== */
+.static-org-chart-wrapper {
+    --chart-accent: #ef4658;
+    --chart-line: #8b97ad;
+    width: min(100%, 960px);
+    margin: 0 auto;
+}
+
+.static-org-chart-wrapper .bph-section,
+.static-org-chart-wrapper .commission-section {
+    width: 100%;
+    margin: 0;
+}
+
+.static-org-chart-wrapper .bph-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 220px 220px;
+    grid-template-areas:
+        "leader leader"
+        "secretary treasurer";
+    gap: 5.5rem 2rem;
+    width: min(100%, 700px);
+    max-width: none;
+    min-height: 400px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.static-org-chart-wrapper .bph-grid .leader-card {
+    grid-area: leader;
+    justify-self: center;
+    width: 280px;
+    height: 100%;
+    top: auto;
+    left: auto;
+    right: auto;
+    margin: 0;
+    transform: none;
+}
+
+.static-org-chart-wrapper .bph-grid .dept-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 280px;
+    height: 100%;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    transform: none;
+}
+
+.static-org-chart-wrapper .bph-grid .dept-card:not(:last-child) {
+    grid-area: secretary;
+}
+
+.static-org-chart-wrapper .bph-grid .dept-card:last-child {
+    grid-area: treasurer;
+}
+
+.static-org-chart-wrapper .bph-grid .vice-card {
+    display: none;
+}
+
+.static-org-chart-wrapper .bph-grid .chart-line {
+    display: none;
+    background: var(--chart-line);
+    box-shadow: none;
+    z-index: 0;
+}
+
+.static-org-chart-wrapper .bph-grid .chart-line-center {
+    top: 100%;
+    left: 50%;
+    width: 1px;
+    height: 4.5rem;
+    transform: translateX(-50%);
+}
+
+.static-org-chart-wrapper .bph-grid .chart-line-left,
+.static-org-chart-wrapper .bph-grid .chart-line-right {
+    top: calc(100% + 4.5rem);
+    width: calc(50% - 1.5rem);
+    height: 1px;
+}
+
+.static-org-chart-wrapper .bph-grid .chart-line-left {
+    left: 0;
+}
+
+.static-org-chart-wrapper .bph-grid .chart-line-right {
+    right: 0;
+}
+
+.static-org-chart-wrapper .org-card {
+    position: relative;
+    z-index: 1;
+    opacity: 1;
+    transform: none;
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    border: 1.5px solid var(--chart-accent);
+    border-radius: 1rem;
+    background: #0d1522;
+    box-shadow: 0 18px 40px -20px rgba(239, 70, 88, 0.5);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition: box-shadow 180ms ease;
+}
+
+.static-org-chart-wrapper .org-card:hover {
+    box-shadow: 0 0 0 1.5px var(--chart-accent), 0 18px 40px -20px rgba(239, 70, 88, 0.7);
+}
+
+.static-org-chart-wrapper .card-photo-container,
+.static-org-chart-wrapper .card-logo-container {
+    width: 3rem;
+    height: 3rem;
+    margin: 1.5rem auto 0;
+    border: 2px solid var(--chart-accent);
+    border-radius: 50%;
+    background: transparent;
+}
+
+.static-org-chart-wrapper .card-photo-container img,
+.static-org-chart-wrapper .card-logo-container img {
+    display: none;
+}
+
+.static-org-chart-wrapper .org-person-icon {
+    display: block;
+    color: #e2e8f0;
+    font-size: 1.35rem;
+    line-height: 3rem;
+    text-align: center;
+}
+
+.static-org-chart-wrapper .org-card-info {
+    padding: 0.7rem 1.5rem 1.35rem;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.static-org-chart-wrapper .org-card-info h3 {
+    margin: 0;
+    color: var(--chart-accent);
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.static-org-chart-wrapper .org-jabatan {
+    margin: 0.2rem 0 0;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+}
+
+.static-org-chart-wrapper .org-preview {
+    margin: 0.65rem 0 0;
+    padding: 0.55rem 0 0;
+    border-top: 1px solid rgba(139, 151, 173, 0.3);
+    color: #94a3b8;
+    font-size: 0.75rem;
+}
+
+.static-org-chart-wrapper .commission-section {
+    position: relative;
+    padding-top: 7rem;
+}
+
+.static-org-chart-wrapper .commission-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+    width: 100%;
+    margin: 0;
+}
+
+.static-org-chart-wrapper .commission-grid .chart-line-lower-center {
+    position: absolute;
+    top: -7rem;
+    left: 50%;
+    width: 1px;
+    height: 4.5rem;
+    background: var(--chart-line);
+    transform: translateX(-50%);
+}
+
+.static-org-chart-wrapper .commission-grid .chart-line-lower-left,
+.static-org-chart-wrapper .commission-grid .chart-line-lower-right {
+    position: absolute;
+    top: -2.5rem;
+    width: calc(50% - 1.5rem);
+    height: 1px;
+    background: var(--chart-line);
+}
+
+.static-org-chart-wrapper .commission-grid .chart-line-lower-left {
+    left: 0;
+}
+
+.static-org-chart-wrapper .commission-grid .chart-line-lower-right {
+    right: 0;
+}
+
+.static-org-chart-wrapper .commission-card {
+    min-height: 190px;
+    max-width: none;
+    border: 1.5px solid var(--chart-accent);
+    border-radius: 1rem;
+    background: #0d1522;
+}
+
+.static-org-chart-wrapper .commission-card__content {
+    justify-content: center;
+    padding: 1.6rem 1.25rem;
+    gap: 1rem;
+}
+
+.static-org-chart-wrapper .commission-card__eyebrow {
+    color: #94a3b8;
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+}
+
+.static-org-chart-wrapper .commission-card__title {
+    color: #f1f5f9;
+    font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+    line-height: 1.15;
+}
+
+.static-org-chart-wrapper .commission-card__action {
+    color: var(--chart-accent);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+}
+
+@media (max-width: 700px) {
+    .static-org-chart-wrapper .bph-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+        grid-template-areas:
+            "leader"
+            "secretary"
+            "treasurer";
+        gap: 1.5rem;
+        min-height: 0;
+    }
+
+    .static-org-chart-wrapper .bph-grid .chart-line,
+    .static-org-chart-wrapper .commission-grid .chart-line {
+        display: none;
+    }
+
+    .static-org-chart-wrapper .commission-section {
+        padding-top: 2rem;
+    }
+
+    .static-org-chart-wrapper .commission-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .static-org-chart-wrapper .bph-grid .leader-card,
+    .static-org-chart-wrapper .bph-grid .dept-card {
+        width: 100%;
+        height: auto;
+    }
+}
+
+@media (min-width: 701px) {
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-center {
+        top: 190px !important;
+        height: 4.5rem !important;
+    }
+
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-left,
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-right {
+        top: 262px !important;
+        width: calc(50% - 1.5rem) !important;
+        height: 1px !important;
+    }
+
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-left {
+        left: 0 !important;
+        right: auto !important;
+    }
+
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-right {
+        left: auto !important;
+        right: 0 !important;
+    }
+
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-left::after,
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-right::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        width: 1px;
+        height: 4.5rem;
+        background: var(--chart-line);
+    }
+
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-left::after {
+        right: 0;
+    }
+
+    .static-org-chart-wrapper .kepengurusan-bph .bph-grid .chart-line-right::after {
+        left: 0;
+    }
+
+    .static-org-chart-wrapper .kepengurusan-komisi .commission-grid .chart-line-lower-center {
+        top: -7rem !important;
+        height: 4.5rem !important;
+    }
+
+    .static-org-chart-wrapper .kepengurusan-komisi .commission-grid .chart-line-lower-left,
+    .static-org-chart-wrapper .kepengurusan-komisi .commission-grid .chart-line-lower-right {
+        top: -2.5rem !important;
+        height: 1px !important;
+    }
+}
+
+/* ===== REFERENCE-MATCHED SCROLL CHART ===== */
+.organization-chart-stage {
+    --chart-header-offset: 6.5rem;
+    position: relative;
+    min-height: 300vh;
+    width: 100%;
+}
+
+.organization-chart-progress {
+    position: sticky;
+    top: var(--chart-header-offset);
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    height: 2rem;
+    color: #475569;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+}
+
+.organization-chart-progress b {
+    color: #334155;
+    font-weight: 700;
+}
+
+.organization-chart-progress span {
+    transition: color 180ms ease;
+}
+
+.organization-chart-progress span.is-active {
+    color: var(--chart-accent, #ef4658);
+}
+
+.organization-chart-progress.is-complete {
+    position: absolute;
+    width: 100%;
+}
+
+.organization-chart-canvas {
+    position: sticky;
+    top: calc(var(--chart-header-offset) + 3rem);
+    display: flex;
+    justify-content: center;
+    min-height: calc(100vh - 6rem);
+    padding: 0 1rem 3rem;
+}
+
+.organization-chart-connectors {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.organization-chart-canvas .chart-line {
+    display: none;
+}
+
+.organization-chart-canvas > .static-org-chart-wrapper {
+    position: relative;
+    z-index: 1;
+    align-self: flex-start;
+    width: min(100%, 960px);
+    padding-top: 1rem;
+}
+
+.organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .bph-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 220px 220px;
+    grid-template-areas:
+        "leader leader"
+        "secretary treasurer";
+    width: min(100%, 700px);
+    height: auto;
+    min-height: 400px;
+    margin: 0 auto;
+    padding: 0;
+    gap: 5.5rem 2rem;
+}
+
+.organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .leader-card,
+.organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .dept-card {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: 280px;
+    height: 220px;
+    margin: 0;
+    transform: none;
+    justify-self: center;
+}
+
+.organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .leader-card {
+    justify-self: center;
+}
+
+.organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .dept-card:not(:last-child) {
+    grid-area: secretary;
+}
+
+.organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .dept-card:last-child {
+    grid-area: treasurer;
+}
+
+.organization-chart-canvas .static-org-chart-wrapper .bph-grid {
+    gap: 5.5rem 2rem;
+    min-height: 400px;
+}
+
+.organization-chart-canvas .static-org-chart-wrapper .commission-section {
+    padding-top: 5rem;
+}
+
+.organization-chart-canvas .static-org-chart-wrapper .commission-grid {
+    gap: 1.5rem;
+}
+
+.organization-chart-canvas .static-org-card {
+    will-change: transform, opacity;
+}
+
+@media (max-width: 700px) {
+    .organization-chart-stage {
+        --chart-header-offset: 5.5rem;
+        min-height: auto;
+    }
+
+    .organization-chart-progress,
+    .organization-chart-canvas {
+        position: relative;
+        top: auto;
+    }
+
+    .organization-chart-canvas {
+        min-height: auto;
+    }
+
+    .organization-chart-connectors {
+        display: none;
+    }
+
+    .organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .bph-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+        grid-template-areas:
+            "leader"
+            "secretary"
+            "treasurer";
+        width: 100%;
+        min-height: 0;
+    }
+
+    .organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .leader-card,
+    .organization-chart-canvas .static-org-chart-wrapper .kepengurusan-bph .dept-card {
+        width: 100%;
+        height: auto;
     }
 }
