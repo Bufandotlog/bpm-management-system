@@ -91,15 +91,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Simpan / update setiap baris — batasi max 100 anggota
-    $user_ids = array_slice($_POST['user_id'] ?? [], 0, 100);
+    $user_ids = $_POST['user_id'] ?? [];
+    $nama_manual = $_POST['nama'] ?? [];
+    $row_count = min(max(count($user_ids), count($nama_manual)), 100);
 
-    foreach ($user_ids as $index => $user_id) {
+    for ($index = 0; $index < $row_count; $index++) {
+        $user_id = $user_ids[$index] ?? '';
         $user_id = !empty($user_id) ? (int)$user_id : null;
-        
-        if (!$user_id) continue;
-        
-        $u = dbFetchOne("SELECT nama FROM users WHERE id = ?", [$user_id], "i");
-        $nama = $u['nama'] ?? '';
+
+        $nama = sanitizeText($nama_manual[$index] ?? '', 100);
+        if ($user_id) {
+            $u = dbFetchOne("SELECT nama FROM users WHERE id = ?", [$user_id], "i");
+            $nama = sanitizeText($u['nama'] ?? '', 100);
+        }
 
         if (empty($nama)) continue;
 
@@ -136,18 +140,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($anggota_id > 0) {
-            dbQuery(
-                "UPDATE anggota_kementerian SET user_id=?, nama=?, jabatan=?, foto=?, urutan=? WHERE id=? AND kementerian_id=?",
-                [$user_id, $nama, $jabatan, $foto, $index, $anggota_id, $kementerian_id],
-                "isssiii"
-            );
+            if ($user_id) {
+                dbQuery(
+                    "UPDATE anggota_kementerian SET user_id=?, nama=?, jabatan=?, foto=?, urutan=? WHERE id=? AND kementerian_id=?",
+                    [$user_id, $nama, $jabatan, $foto, $index, $anggota_id, $kementerian_id],
+                    "isssiii"
+                );
+            } else {
+                dbQuery(
+                    "UPDATE anggota_kementerian SET user_id=NULL, nama=?, jabatan=?, foto=?, urutan=? WHERE id=? AND kementerian_id=?",
+                    [$nama, $jabatan, $foto, $index, $anggota_id, $kementerian_id],
+                    "sssiii"
+                );
+            }
         } else {
-            dbQuery(
-                "INSERT INTO anggota_kementerian (periode_id, created_by, kementerian_id, user_id, nama, jabatan, foto, urutan)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                [$kementerian['periode_id'], $_SESSION['admin_id'], $kementerian_id, $user_id, $nama, $jabatan, $foto, $index],
-                "iiiisssi"
-            );
+            if ($user_id) {
+                dbQuery(
+                    "INSERT INTO anggota_kementerian (periode_id, created_by, kementerian_id, user_id, nama, jabatan, foto, urutan)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [$kementerian['periode_id'], $_SESSION['admin_id'], $kementerian_id, $user_id, $nama, $jabatan, $foto, $index],
+                    "iiiisssi"
+                );
+            } else {
+                dbQuery(
+                    "INSERT INTO anggota_kementerian (periode_id, created_by, kementerian_id, user_id, nama, jabatan, foto, urutan)
+                     VALUES (?, ?, ?, NULL, ?, ?, ?, ?)",
+                    [$kementerian['periode_id'], $_SESSION['admin_id'], $kementerian_id, $nama, $jabatan, $foto, $index],
+                    "iiisssi"
+                );
+            }
         }
     }
 
@@ -202,6 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div class="anggota-fields">
+                    <input type="text" name="nama[]" class="form-control" placeholder="Nama anggota..." value="<?php echo htmlspecialchars($a['nama']); ?>" required style="margin-bottom:10px;">
                     <div class="tpl-picker" style="margin-bottom:10px;">
                         <?php 
                             $akun_nama = '';
@@ -213,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         ?>
                         <i class="fas fa-search tpl-search-icon"></i>
-                        <input type="text" class="tpl-search-input form-control tpl-display-input" placeholder="Cari atau pilih anggota..." value="<?php echo htmlspecialchars($akun_nama); ?>" autocomplete="off" onfocus="showTplAnggota(this)" onkeyup="filterTplAnggota(this)">
+                        <input type="text" class="tpl-search-input form-control tpl-display-input" placeholder="Cari akun..." value="<?php echo htmlspecialchars($akun_nama); ?>" autocomplete="off" onfocus="showTplAnggota(this)" onkeyup="filterTplAnggota(this)">
                         <input type="hidden" name="user_id[]" class="tpl-hidden-input" value="<?php echo htmlspecialchars($a['user_id']); ?>">
                         <div class="tpl-results">
                             <div class="tpl-item" onclick='selectTplAnggota(this, "", "")'>
@@ -276,9 +298,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="preview-placeholder"><i class="fas fa-user"></i></div>
                 </div>
                 <div class="anggota-fields">
+                    <input type="text" name="nama[]" class="form-control" placeholder="Nama anggota..." required style="margin-bottom:10px;">
                     <select name="user_id[]" class="form-control" style="margin-bottom:10px;">
-                        <option value="">-- Pilih Akun Terdaftar --</option>
-                        <?php foreach($list_akun as $akun): 
+                        <option value="">-- Atau pilih akun terdaftar --</option>
+                        <?php foreach($list_akun as $akun):
                             if (in_array($akun['id'], $digunakan)) continue;
                         ?>
                             <option value="<?php echo $akun['id']; ?>" data-nama="<?php echo htmlspecialchars($akun['nama'], ENT_QUOTES, 'UTF-8'); ?>">
@@ -353,9 +376,10 @@ function tambahAnggota() {
             `<div class="preview-placeholder"><i class="fas fa-user"></i></div>` +
         `</div>` +
         `<div class="anggota-fields">` +
+            `<input type="text" name="nama[]" class="form-control" placeholder="Nama anggota..." required style="margin-bottom:10px;">` +
             `<div class="tpl-picker" style="margin-bottom:10px;">` +
                 `<i class="fas fa-search tpl-search-icon"></i>` +
-                `<input type="text" class="tpl-search-input form-control tpl-display-input" placeholder="Cari atau pilih anggota..." value="" autocomplete="off" onfocus="showTplAnggota(this)" onkeyup="filterTplAnggota(this)">` +
+                `<input type="text" class="tpl-search-input form-control tpl-display-input" placeholder="Cari akun..." value="" autocomplete="off" onfocus="showTplAnggota(this)" onkeyup="filterTplAnggota(this)">` +
                 `<input type="hidden" name="user_id[]" class="tpl-hidden-input" value="">` +
                 `<div class="tpl-results">${akunOptions}</div>` +
             `</div>` +
@@ -389,6 +413,12 @@ function hapusAnggotaItem(btn) {
 
 
 document.addEventListener('change', function (e) {
+    if (e.target.name === 'user_id[]' && e.target.tagName === 'SELECT') {
+        const item = e.target.closest('.anggota-item');
+        const manualName = item ? item.querySelector('input[name="nama[]"]') : null;
+        if (manualName) manualName.required = !e.target.value;
+    }
+
     if (e.target.name === 'delete_ids[]') {
         const item = e.target.closest('.anggota-item');
         if (item) {
@@ -483,6 +513,8 @@ function selectTplAnggota(item, id, name) {
     const picker = item.closest('.tpl-picker');
     picker.querySelector('.tpl-hidden-input').value = id;
     picker.querySelector('.tpl-display-input').value = name;
+    const nameInput = picker.closest('.anggota-item').querySelector('input[name="nama[]"]');
+    if (id && nameInput) nameInput.value = name;
     picker.querySelector('.tpl-results').style.display = 'none';
     _resetPickerCards();
 }
