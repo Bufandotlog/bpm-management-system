@@ -7,6 +7,9 @@ export function initHukumCaptionFade() {
     const heroCaption = document.querySelector('.page-hukum .hero-caption');
     if (!heroCaption) return;
 
+    history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+
     function updateCaptionFade() {
         const scrollY = window.scrollY;
         const captionOpacity = scrollY > 20
@@ -29,4 +32,8 @@ export function initHukumCaptionFade() {
 
     window.addEventListener('scroll', updateCaptionFade);
     updateCaptionFade();
+    requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        updateCaptionFade();
+    });
 }
