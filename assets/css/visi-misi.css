@@ -44,6 +44,27 @@
     transition: all 0.3s ease;
 }
 
+/* Animasi scroll-linked: card masuk dari sisi berlawanan lalu keluar ke arahnya masing-masing. */
+.visi-misi-scroll-animated .visi,
+.visi-misi-scroll-animated .misi {
+    --entry-offset: calc((1 - var(--visi-entry, 0)) * 100%);
+    --exit-offset: calc(var(--visi-exit, 0) * 100%);
+    will-change: transform, opacity;
+    opacity: var(--visi-entry, 0);
+    transition: opacity 0.3s ease-out;
+    transform-origin: center center;
+}
+
+.visi-misi-scroll-animated .visi {
+    transform: translate3d(calc((var(--entry-offset) * -1 + var(--exit-offset)) * 0.85), 0, 0);
+}
+
+.visi-misi-scroll-animated .misi {
+    --entry-offset: calc((1 - var(--misi-entry, 0)) * 100%);
+    --exit-offset: calc(var(--misi-exit, 0) * 100%);
+    transform: translate3d(calc((var(--entry-offset) - var(--exit-offset)) * 0.85), 0, 0);
+}
+
 /* Efek glass berbeda untuk visi dan misi - more subtle */
 .visi {
     background: linear-gradient(145deg, rgba(15, 30, 45, 0.4), rgba(10, 25, 40, 0.4));
@@ -69,6 +90,33 @@
     backdrop-filter: blur(10px);
     transform: translateY(-3px);
     box-shadow: 0 15px 30px rgba(184, 50, 75, 0.2);
+}
+
+.visi-misi-scroll-animated .visi:hover,
+.visi-misi-scroll-animated .misi:hover {
+    transform: translate3d(
+        calc(
+            (
+                (var(--entry-offset) * -1 + var(--exit-offset))
+                * 0.85
+            )
+        ),
+        -3px,
+        0
+    );
+}
+
+.visi-misi-scroll-animated .misi:hover {
+    transform: translate3d(
+        calc(
+            (
+                (var(--entry-offset) - var(--exit-offset))
+                * 0.85
+            )
+        ),
+        -3px,
+        0
+    );
 }
 
 .visi h3, .misi h3 {

@@ -19,6 +19,7 @@ import { initKepengurusanDropdown } from './modules/kepengurusan-dropdown.js'; /
 import { initRelighting } from './modules/relighting.js';
 import { initOrganizationChart } from './modules/organization-chart.js';
 import { initSambutanCardTilt } from './modules/sambutan-card-tilt.js';
+import { initVisionMissionAnimation } from './modules/vision-mission-animation.js';
 
 import * as utilities from './modules/utilities.js';
 
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initBackToTop();
     initOrganizationChart();
     initSambutanCardTilt();
+    initVisionMissionAnimation();
     initCardAnimation();
     initHeroParallax();
     initScrollReveal();

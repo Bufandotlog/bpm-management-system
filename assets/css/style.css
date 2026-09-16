@@ -212,8 +212,9 @@ footer {
         align-items: center;
         box-sizing: border-box;
         position: relative;
-        /* overflow: hidden; DIGANTI auto supaya bisa scroll di dalam section */
+        /* Keep vertical scrolling without exposing the animated cards horizontally. */
         overflow-y: auto;
+        overflow-x: hidden;
         margin-top: 0 !important;
         margin-bottom: 0 !important;
         padding: 90px 2rem 40px !important; /* Spacing for fixed header and layout margin */
@@ -231,6 +232,7 @@ footer {
         flex-direction: column;
         justify-content: center;
         width: 100%;
+        overflow-x: hidden;
     }
     
     /* Focus active state (FIX: netral, section selalu terlihat) */
@@ -269,4 +271,3 @@ footer {
         display: none !important;
     }
 }
-
