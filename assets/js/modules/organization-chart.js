@@ -127,6 +127,105 @@ function initOrganizationChart() {
         return particle;
     });
 
+    const highlightRoutes = {
+        leader: paths.map((_, index) => index),
+        secretary: [0, 1, 3],
+        treasurer: [0, 2, 4],
+        commission0: [0, 5, 6, 8],
+        commission1: [0, 5, 9],
+        commission2: [0, 5, 7, 10]
+    };
+    const highlightParticles = highlightRoutes.secretary.map(() => {
+        const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        particle.setAttribute('r', '4');
+        particle.setAttribute('fill', ACCENT);
+        particle.classList.add('bph-path-particle');
+        particle.style.opacity = '0';
+        svg.appendChild(particle);
+        return particle;
+    });
+    let highlightAnimationFrame = 0;
+    let highlightAnimationStartedAt = 0;
+    let activeHighlightRoute = null;
+
+    const animateHighlightPath = (timestamp) => {
+        if (!activeHighlightRoute) {
+            highlightAnimationFrame = 0;
+            highlightParticles.forEach((particle) => {
+                particle.style.opacity = '0';
+            });
+            return;
+        }
+
+        if (!highlightAnimationStartedAt) highlightAnimationStartedAt = timestamp;
+        const animationDuration = activeHighlightRoute === 'leader' ? 3600 : 1800;
+        const progress = ((timestamp - highlightAnimationStartedAt) % animationDuration) / animationDuration;
+        const route = highlightRoutes[activeHighlightRoute].map((index) => ({
+            path: paths[index],
+            length: Number(paths[index].dataset.length)
+        }));
+        const routeLength = route.reduce((total, segment) => total + segment.length, 0);
+
+        highlightParticles.forEach((particle, particleIndex) => {
+            let distance = (progress * routeLength + (particleIndex * routeLength) / highlightParticles.length) % routeLength;
+            let point = null;
+
+            for (const segment of route) {
+                if (distance <= segment.length) {
+                    point = segment.path.getPointAtLength(distance);
+                    break;
+                }
+                distance -= segment.length;
+            }
+
+            if (!point) {
+                const finalSegment = route[route.length - 1];
+                point = finalSegment.path.getPointAtLength(finalSegment.length);
+            }
+
+            particle.style.opacity = '1';
+            particle.setAttribute('cx', `${point.x}`);
+            particle.setAttribute('cy', `${point.y}`);
+        });
+        highlightAnimationFrame = requestAnimationFrame(animateHighlightPath);
+    };
+
+    const setBphPathHighlight = (role) => {
+        activeHighlightRoute = role;
+        leader.classList.toggle('is-bph-highlight', Boolean(role));
+        departments.forEach((card, index) => {
+            const departmentRole = index === 0 ? 'secretary' : 'treasurer';
+            card.classList.toggle('is-bph-highlight', role === 'leader' || role === departmentRole);
+        });
+        commissions.forEach((card, index) => {
+            card.classList.toggle('is-bph-highlight', role === 'leader' || role === `commission${index}`);
+        });
+        paths.forEach((path) => path.classList.remove('is-bph-highlight'));
+        if (role) {
+            highlightRoutes[role].forEach((index) => {
+                paths[index].classList.add('is-bph-highlight');
+            });
+        }
+        if (role && !highlightAnimationFrame) {
+            highlightAnimationStartedAt = 0;
+            highlightAnimationFrame = requestAnimationFrame(animateHighlightPath);
+        }
+    };
+
+    const bindBphHighlight = (card, role) => {
+        card.addEventListener('pointerenter', () => setBphPathHighlight(role));
+        card.addEventListener('pointerleave', () => setBphPathHighlight(null));
+        card.addEventListener('focus', () => setBphPathHighlight(role));
+        card.addEventListener('blur', () => setBphPathHighlight(null));
+    };
+
+    bindBphHighlight(leader, 'leader');
+    bindBphHighlight(departments[0], 'secretary');
+    bindBphHighlight(departments[1], 'treasurer');
+    commissions.forEach((card, index) => {
+        bindBphHighlight(card, `commission${index}`);
+    });
+
     const update = () => {
         if (!geometry) measure();
         const rect = chart.getBoundingClientRect();

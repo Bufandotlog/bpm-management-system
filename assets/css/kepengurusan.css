@@ -1815,6 +1815,32 @@
     pointer-events: none;
 }
 
+.organization-chart-connectors path {
+    transition: stroke 0.25s ease,
+                filter 0.25s ease,
+                stroke-width 0.25s ease;
+}
+
+.organization-chart-connectors path.is-bph-highlight {
+    stroke: #ef4658 !important;
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 4px rgba(239, 70, 88, 0.95))
+            drop-shadow(0 0 10px rgba(239, 70, 88, 0.75));
+}
+
+.organization-chart-connectors .bph-path-particle {
+    filter: drop-shadow(0 0 4px rgba(239, 70, 88, 1))
+            drop-shadow(0 0 10px rgba(239, 70, 88, 0.9));
+    pointer-events: none;
+}
+
+.static-org-chart-wrapper .organization-chart-card.is-bph-highlight {
+    border-color: #ef4658;
+    box-shadow: 0 0 0 2px rgba(239, 70, 88, 0.85),
+                0 0 22px rgba(239, 70, 88, 0.72),
+                0 18px 40px -20px rgba(239, 70, 88, 0.85);
+}
+
 .organization-chart-canvas .chart-line {
     display: none;
 }
