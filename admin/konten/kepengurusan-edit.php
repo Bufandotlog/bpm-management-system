@@ -112,20 +112,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action_hapus'])) {
     $foto    = $data['foto'] ?? '';
     $logo    = $data['logo'] ?? '';
 
-    if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+    if (isset($_FILES['foto']) && !empty($_FILES['foto']['name'])) {
         $upload_foto = uploadFile($_FILES['foto'], 'struktur');
-        if ($upload_foto) {
-            if (!empty($foto)) deleteFile($foto);
-            $foto = $upload_foto;
+        if (!$upload_foto) {
+            $uploadError = $_SESSION['error'] ?? 'Upload foto gagal.';
+            unset($_SESSION['error']);
+            redirect(
+                'admin/konten/kepengurusan-edit.php?posisi=' . urlencode($posisi),
+                $uploadError,
+                'error'
+            );
+            exit();
         }
+        if (!empty($foto)) deleteFile($foto);
+        $foto = $upload_foto;
     }
 
-    if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+    if (isset($_FILES['logo']) && !empty($_FILES['logo']['name'])) {
         $upload_logo = uploadFile($_FILES['logo'], 'struktur');
-        if ($upload_logo) {
-            if (!empty($logo)) deleteFile($logo);
-            $logo = $upload_logo;
+        if (!$upload_logo) {
+            $uploadError = $_SESSION['error'] ?? 'Upload logo gagal.';
+            unset($_SESSION['error']);
+            redirect(
+                'admin/konten/kepengurusan-edit.php?posisi=' . urlencode($posisi),
+                $uploadError,
+                'error'
+            );
+            exit();
         }
+        if (!empty($logo)) deleteFile($logo);
+        $logo = $upload_logo;
     }
 
     if ($posisi === 'ketua') {
@@ -207,10 +223,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action_hapus'])) {
                         'size'     => $_FILES['anggota_foto']['size'][$index],
                     ];
                     $upload_result = uploadFile($file, 'struktur');
-                    if ($upload_result) {
-                        if (!empty($foto_anggota)) deleteFile($foto_anggota);
-                        $foto_anggota = $upload_result;
+                    if (!$upload_result) {
+                        throw new RuntimeException($_SESSION['error'] ?? 'Upload foto anggota gagal.');
                     }
+                    if (!empty($foto_anggota)) deleteFile($foto_anggota);
+                    $foto_anggota = $upload_result;
                 }
 
                 if ($anggota_id > 0) {

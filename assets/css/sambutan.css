@@ -45,6 +45,14 @@
     position: relative;
     border-radius: 30px;
     overflow: hidden;
+    isolation: isolate;
+    perspective: 1200px;
+    transform-style: preserve-3d;
+    transform-origin: center center;
+    will-change: transform, box-shadow;
+    --sambutan-tilt-x: 0deg;
+    --sambutan-tilt-y: 0deg;
+    background: #190d23;
     
     /* Border tetap ada agar foto terlihat */
     border: 3px solid rgba(184, 50, 75, 0.5);
@@ -54,6 +62,43 @@
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+.sambutan-foto::before,
+.sambutan-foto::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    transform-style: preserve-3d;
+}
+
+/* The layered edge and moving highlight create the Scroll King card depth. */
+.sambutan-foto::before {
+    z-index: 0;
+    inset: 0;
+    background:
+        repeating-linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.04) 0 8px,
+            rgba(184, 50, 75, 0.4) 8px 16px
+        );
+    box-shadow: inset 0 0 0 6px rgba(184, 50, 75, 0.28);
+    transform: translateZ(-1px);
+}
+
+.sambutan-foto::after {
+    z-index: 2;
+    clip-path: inset(0);
+    animation: sambutan-card-shine 2.4s ease-in-out infinite alternate;
+    background: linear-gradient(
+        115deg,
+        transparent 25%,
+        rgba(255, 255, 255, 0.45) 48%,
+        transparent 65%
+    );
+    transform: translateX(-130%) skewX(-12deg);
+}
+
 .sambutan-foto:hover {
     border-color: rgba(184, 50, 75, 0.8);
     box-shadow: 0 25px 40px -10px rgba(184, 50, 75, 0.3);
@@ -61,13 +106,60 @@
 
 .sambutan-foto img {
     width: 100%;
+    aspect-ratio: 4 / 5;
     height: auto;
+    object-fit: cover;
     display: block;
+    position: relative;
+    z-index: 1;
+    border-radius: inherit;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    will-change: transform;
+    transform: translateZ(14px);
     transition: transform 0.5s ease;
 }
 
 .sambutan-foto:hover img {
-    transform: scale(1.05);
+    transform: translateZ(14px) scale(1.05);
+}
+
+@supports (animation-timeline: view()) {
+    .sambutan-foto {
+        animation: sambutan-card-scroll linear both;
+        animation-timeline: view(block 15% 80%);
+    }
+
+}
+
+@keyframes sambutan-card-scroll {
+    0% {
+        transform: rotateX(calc(9deg + var(--sambutan-tilt-x))) rotateY(calc(18deg + var(--sambutan-tilt-y))) rotateZ(-2deg) translateY(1.5rem);
+        box-shadow: 0 28px 35px -12px rgba(25, 13, 35, 0.8);
+    }
+
+    50% {
+        transform: rotateX(var(--sambutan-tilt-x)) rotateY(var(--sambutan-tilt-y)) rotateZ(0) translateY(0);
+        box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.7);
+    }
+
+    100% {
+        transform: rotateX(calc(-7deg + var(--sambutan-tilt-x))) rotateY(calc(-16deg + var(--sambutan-tilt-y))) rotateZ(2deg) translateY(-1rem);
+        box-shadow: 0 28px 35px -12px rgba(25, 13, 35, 0.8);
+    }
+}
+
+@keyframes sambutan-card-shine {
+    to {
+        transform: translateX(130%) skewX(-12deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sambutan-foto,
+    .sambutan-foto::after {
+        animation: none;
+    }
 }
 
 .sambutan-text h2 {

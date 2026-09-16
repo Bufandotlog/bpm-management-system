@@ -17,6 +17,7 @@ import { initKepengurusanCaptionFade } from './modules/kepengurusan-caption.js';
 import { initKepengurusanDropdown } from './modules/kepengurusan-dropdown.js'; // BARU: Import dropdown module
 import { initRelighting } from './modules/relighting.js';
 import { initOrganizationChart } from './modules/organization-chart.js';
+import { initSambutanCardTilt } from './modules/sambutan-card-tilt.js';
 
 import * as utilities from './modules/utilities.js';
 
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initFormValidation();
     initBackToTop();
     initOrganizationChart();
+    initSambutanCardTilt();
     initCardAnimation();
     initHeroParallax();
     initScrollReveal();
