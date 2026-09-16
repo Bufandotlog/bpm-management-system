@@ -45,18 +45,26 @@ $isHomePage = ($current_page == 'index.php');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo SITE_NAME . (!empty($page_title) ? " - $page_title" : ""); ?></title>
+
+    <?php
+        $favicon_ico_ver = file_exists(__DIR__ . '/assets/images/favicon/favicon.ico') ? filemtime(__DIR__ . '/assets/images/favicon/favicon.ico') : '1';
+        $favicon_32_ver  = file_exists(__DIR__ . '/assets/images/favicon/favicon-32x32.png') ? filemtime(__DIR__ . '/assets/images/favicon/favicon-32x32.png') : '1';
+        $favicon_16_ver  = file_exists(__DIR__ . '/assets/images/favicon/favicon-16x16.png') ? filemtime(__DIR__ . '/assets/images/favicon/favicon-16x16.png') : '1';
+        $favicon_apple_ver = file_exists(__DIR__ . '/assets/images/favicon/apple-touch-icon.png') ? filemtime(__DIR__ . '/assets/images/favicon/apple-touch-icon.png') : '1';
+        $favicon_manifest_ver = file_exists(__DIR__ . '/assets/images/favicon/site.webmanifest') ? filemtime(__DIR__ . '/assets/images/favicon/site.webmanifest') : '1';
+    ?>
     
     <!-- ===== FAVICON ===== -->
     <!-- ICO/PNG untuk berbagai browser dan ukuran tab -->
-    <link rel="icon" type="image/x-icon" href="<?php echo baseUrl('assets/images/favicon/favicon.ico'); ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo baseUrl('assets/images/favicon/favicon-32x32.png'); ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo baseUrl('assets/images/favicon/favicon-16x16.png'); ?>">
+    <link rel="icon" type="image/x-icon" href="<?php echo baseUrl('assets/images/favicon/favicon.ico'); ?>?v=<?php echo $favicon_ico_ver; ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo baseUrl('assets/images/favicon/favicon-32x32.png'); ?>?v=<?php echo $favicon_32_ver; ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo baseUrl('assets/images/favicon/favicon-16x16.png'); ?>?v=<?php echo $favicon_16_ver; ?>">
     
     <!-- Apple Touch Icon untuk iOS -->
-    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo baseUrl('assets/images/favicon/apple-touch-icon.png'); ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo baseUrl('assets/images/favicon/apple-touch-icon.png'); ?>?v=<?php echo $favicon_apple_ver; ?>">
     
     <!-- Manifest untuk PWA -->
-    <link rel="manifest" href="<?php echo baseUrl('assets/images/favicon/site.webmanifest'); ?>">
+    <link rel="manifest" href="<?php echo baseUrl('assets/images/favicon/site.webmanifest'); ?>?v=<?php echo $favicon_manifest_ver; ?>">
     
     <!-- Theme Color -->
     <meta name="theme-color" content="#B8324B">

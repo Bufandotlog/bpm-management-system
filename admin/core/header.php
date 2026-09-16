@@ -311,11 +311,19 @@ if (isset($page_css)) {
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <link rel="icon" type="image/x-icon" href="<?php echo baseUrl('assets/images/favicon/favicon.ico'); ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo baseUrl('assets/images/favicon/favicon-32x32.png'); ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo baseUrl('assets/images/favicon/favicon-16x16.png'); ?>">
-    <link rel="apple-touch-icon" sizes="180x180"    href="<?php echo baseUrl('assets/images/favicon/apple-touch-icon.png'); ?>">
-    <link rel="manifest" href="<?php echo baseUrl('assets/images/favicon/site.webmanifest'); ?>">
+    <?php
+        $admin_favicon_ico_ver = file_exists(__DIR__ . '/../../assets/images/favicon/favicon.ico') ? filemtime(__DIR__ . '/../../assets/images/favicon/favicon.ico') : '1';
+        $admin_favicon_32_ver = file_exists(__DIR__ . '/../../assets/images/favicon/favicon-32x32.png') ? filemtime(__DIR__ . '/../../assets/images/favicon/favicon-32x32.png') : '1';
+        $admin_favicon_16_ver = file_exists(__DIR__ . '/../../assets/images/favicon/favicon-16x16.png') ? filemtime(__DIR__ . '/../../assets/images/favicon/favicon-16x16.png') : '1';
+        $admin_favicon_apple_ver = file_exists(__DIR__ . '/../../assets/images/favicon/apple-touch-icon.png') ? filemtime(__DIR__ . '/../../assets/images/favicon/apple-touch-icon.png') : '1';
+        $admin_favicon_manifest_ver = file_exists(__DIR__ . '/../../assets/images/favicon/site.webmanifest') ? filemtime(__DIR__ . '/../../assets/images/favicon/site.webmanifest') : '1';
+    ?>
+
+    <link rel="icon" type="image/x-icon" href="<?php echo baseUrl('assets/images/favicon/favicon.ico'); ?>?v=<?php echo $admin_favicon_ico_ver; ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo baseUrl('assets/images/favicon/favicon-32x32.png'); ?>?v=<?php echo $admin_favicon_32_ver; ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo baseUrl('assets/images/favicon/favicon-16x16.png'); ?>?v=<?php echo $admin_favicon_16_ver; ?>">
+    <link rel="apple-touch-icon" sizes="180x180"    href="<?php echo baseUrl('assets/images/favicon/apple-touch-icon.png'); ?>?v=<?php echo $admin_favicon_apple_ver; ?>">
+    <link rel="manifest" href="<?php echo baseUrl('assets/images/favicon/site.webmanifest'); ?>?v=<?php echo $admin_favicon_manifest_ver; ?>">
     <meta name="theme-color" content="#4A90E2">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
