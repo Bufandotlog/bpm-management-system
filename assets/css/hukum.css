@@ -1,28 +1,105 @@
+.page-hukum,
+.page-hukum-detail {
+    --hukum-black: #111111;
+    --hukum-black-soft: #1b1b1b;
+    --hukum-red: #b8324b;
+    --hukum-yellow: #f4c542;
+    --hukum-white: #f8f8f8;
+}
+
+/* Layout remains unchanged; only the page palette is themed here. */
 .hukum-public-content { padding: 2rem 0 4rem; }
+.page-hukum-detail .hukum-public-detail { padding-top: 6rem; }
+.page-hukum-detail .hukum-public-back { margin-bottom: 2rem; }
 .hukum-public-filters { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin-bottom:2rem; }
-.hukum-public-filters label { display:flex; flex-direction:column; gap:5px; color:#666; font-size:.85rem; flex:1 1 180px; }
-.hukum-public-filters input, .hukum-public-filters select { border:1px solid #ddd; border-radius:6px; padding:10px; background:#fff; color:#222; }
+.hukum-public-filters label { display:flex; flex-direction:column; gap:5px; color:var(--hukum-white); font-size:.85rem; flex:1 1 180px; }
+.hukum-public-filters input, .hukum-public-filters select { border:1px solid rgba(244,197,66,.45); border-radius:6px; padding:10px; background:var(--hukum-black); color:var(--hukum-white); }
 .hukum-public-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; }
-.hukum-public-card, .hukum-document-header, .hukum-chapter { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:22px; box-shadow:0 5px 18px rgba(0,0,0,.04); }
-.hukum-public-card h2, .hukum-document-header h1, .hukum-chapter h2 { color:#243b53; margin:10px 0; }
-.hukum-public-card p, .hukum-document-header p { color:#5f6c7b; line-height:1.65; }
-.hukum-public-card-top { display:flex; justify-content:space-between; gap:10px; color:#778; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
-.hukum-public-badge { color:#8b6d12; font-weight:700; }
-.hukum-public-muted { color:#7b8794; }
-.hukum-public-empty { text-align:center; padding:4rem 1rem; color:#7b8794; }
-.hukum-public-empty i { font-size:3rem; margin-bottom:1rem; }
-.hukum-public-back { display:inline-block; margin:2rem 0 1rem; color:#356ca5; }
+.hukum-public-card, .hukum-document-header, .hukum-chapter { background:var(--hukum-black-soft); border:1px solid rgba(184,50,75,.55); border-radius:10px; padding:22px; box-shadow:0 5px 18px rgba(0,0,0,.3); }
+.hukum-public-card h2, .hukum-document-header h1, .hukum-chapter h2 { color:var(--hukum-white); margin:10px 0; }
+.hukum-public-card p, .hukum-document-header p { color:rgba(248,248,248,.76); line-height:1.65; }
+.hukum-public-card-top { display:flex; justify-content:space-between; gap:10px; color:rgba(248,248,248,.62); font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
+.hukum-public-badge { color:var(--hukum-yellow); font-weight:700; }
+.hukum-public-muted { color:rgba(248,248,248,.6); }
+.hukum-public-empty { text-align:center; padding:4rem 1rem; color:rgba(248,248,248,.68); }
+.hukum-public-empty i { color:var(--hukum-yellow); font-size:3rem; margin-bottom:1rem; }
+.hukum-public-back { display:inline-block; margin:2rem 0 1rem; color:var(--hukum-yellow); }
 .hukum-document-header { margin-bottom:20px; }
 .hukum-chapter { margin:18px 0; }
-.hukum-pasal { border-top:1px solid #edf0f2; padding:16px 0; line-height:1.7; }
-.hukum-pasal h3 { color:#334e68; margin:0 0 8px; }
+.hukum-pasal { border-top:1px solid rgba(248,248,248,.14); padding:16px 0; line-height:1.7; }
+.hukum-pasal h3 { color:var(--hukum-yellow); margin:0 0 8px; }
 .hukum-pasal ul { margin:8px 0; padding-left:22px; }
 .hukum-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin:18px 0 24px; }
 .hukum-diff-table { display:grid; gap:12px; }
-.hukum-diff-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; border:1px solid #e9edf2; border-radius:8px; padding:12px 14px; background:#f9fbfd; }
+.hukum-diff-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; border:1px solid rgba(184,50,75,.45); border-radius:8px; padding:12px 14px; background:rgba(17,17,17,.72); }
 .hukum-status-tag { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
-.status-added { background:#eafaf0; color:#1d6c3f; }
-.status-removed { background:#fdeceb; color:#9f2d2d; }
-.status-modified { background:#fff3d6; color:#8a6719; }
-.status-unchanged { background:#edf3ff; color:#355d9d; }
-@media (max-width:700px) { .hukum-public-card, .hukum-document-header, .hukum-chapter { padding:16px; } }
+.status-added { background:rgba(244,197,66,.18); color:var(--hukum-yellow); }
+.status-removed { background:rgba(184,50,75,.22); color:#ff8fa2; }
+.status-modified { background:rgba(244,197,66,.18); color:var(--hukum-yellow); }
+.status-unchanged { background:rgba(248,248,248,.1); color:var(--hukum-white); }
+
+.page-hukum .hero-caption {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+    pointer-events: none;
+    background: transparent;
+    z-index: 5;
+}
+
+.page-hukum .caption-content {
+    max-width: 900px;
+    margin: 0 auto;
+    pointer-events: auto;
+    text-align: center;
+}
+
+.page-hukum .caption-title {
+    margin-bottom: 1.5rem;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: 1px;
+    color: var(--hukum-white);
+    text-shadow: 0 5px 20px rgba(0,0,0,.8);
+}
+
+.page-hukum .hukum-public-content {
+    margin-top: 100vh;
+}
+
+.page-hukum .caption-title { color:var(--hukum-white); }
+.page-hukum .caption-title span { color:var(--hukum-red); }
+.page-hukum .caption-narasi { color:var(--hukum-white); }
+
+.page-hukum .hukum-public-card:hover,
+.page-hukum-detail .hukum-public-card:hover { border-color:var(--hukum-yellow); }
+.page-hukum .hukum-public-card .btn-small,
+.page-hukum-detail .hukum-public-detail a {
+    border: 2px solid var(--hukum-red);
+    border-radius: 25px;
+    padding: .5rem 1.2rem;
+    background: var(--hukum-red);
+    color: var(--hukum-white);
+    text-decoration: none;
+    display: inline-block;
+    transition: all .3s ease;
+}
+.page-hukum-detail .hukum-public-detail a {
+    margin: 0;
+}
+.page-hukum .hukum-public-card .btn-small,
+.page-hukum-detail .hukum-public-card .btn-small { background:var(--hukum-red); border-color:var(--hukum-red); color:var(--hukum-white); }
+.page-hukum .hukum-public-card .btn-small:hover,
+.page-hukum-detail .hukum-public-detail a:hover { background:var(--hukum-yellow); border-color:var(--hukum-yellow); color:var(--hukum-black); }
+
+@media (max-width:700px) {
+    .hukum-public-card, .hukum-document-header, .hukum-chapter { padding:16px; }
+}
