@@ -67,12 +67,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action_hapus_logo'])
     $slug      = $base_slug . '-' . $active_periode;
 
     $logo = $kementerian['logo'] ?? '';
-    if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+    if (isset($_FILES['logo']) && $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
         $uploadResult = uploadFile($_FILES['logo'], 'struktur');
-        if ($uploadResult) {
-            if (!empty($logo)) deleteFile($logo);
-            $logo = $uploadResult;
+        if (!$uploadResult) {
+            $uploadError = $_SESSION['error'] ?? 'Gagal mengupload logo.';
+            unset($_SESSION['error']);
+            redirect(
+                'admin/konten/kementerian-edit.php' . ($id ? "?id={$id}" : ''),
+                $uploadError,
+                'error'
+            );
+            exit();
         }
+
+        if (!empty($logo)) deleteFile($logo);
+        $logo = $uploadResult;
     }
 
     $tugas = array_values(array_filter(

@@ -6,7 +6,8 @@
 function getDepthCards() {
     return document.querySelectorAll(
         '.bph-grid .org-card:not(.static-org-card):not(.organization-chart-card), ' +
-        '.commission-card:not(.static-org-card):not(.organization-chart-card)'
+        '.commission-card, ' +
+        '.organization-chart-card'
     );
 }
 
