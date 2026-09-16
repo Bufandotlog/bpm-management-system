@@ -14,6 +14,7 @@ import { initScrollReveal } from './modules/scroll-reveal.js?v=2.0.1';
 import { initTypingAnimation } from './modules/typing-animation.js';
 import { initBeritaCaptionFade } from './modules/berita-caption.js';
 import { initKepengurusanCaptionFade } from './modules/kepengurusan-caption.js';
+import { initHukumCaptionFade } from './modules/hukum-caption.js';
 import { initKepengurusanDropdown } from './modules/kepengurusan-dropdown.js'; // BARU: Import dropdown module
 import { initRelighting } from './modules/relighting.js';
 import { initOrganizationChart } from './modules/organization-chart.js';
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initTypingAnimation();
     initBeritaCaptionFade();
     initKepengurusanCaptionFade();
+    initHukumCaptionFade();
     initKepengurusanDropdown(); // BARU: Inisialisasi custom dropdown
     initRelighting();
     

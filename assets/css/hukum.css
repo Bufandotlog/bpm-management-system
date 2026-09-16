@@ -1,4 +1,72 @@
-.hukum-public-content { padding: 2rem 0 4rem; }
+.page-hukum .hero-caption {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 5;
+    padding: 1rem;
+    pointer-events: none;
+    background: transparent;
+    transition: opacity 0.2s ease-out;
+    opacity: 1;
+    will-change: opacity, transform;
+}
+
+.page-hukum .caption-content {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.page-hukum .caption-title {
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    font-weight: 800;
+    line-height: 1.2;
+    color: #fff;
+    margin: 0 0 1.5rem;
+    letter-spacing: 1px;
+    text-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
+    animation: hukumTitleGlow 3s ease-in-out infinite alternate;
+}
+
+.page-hukum .caption-title span {
+    color: var(--biru-primary) !important;
+    font-weight: 900;
+    letter-spacing: -2px;
+    text-shadow: 0 0 20px var(--biru-primary), 0 5px 15px rgba(0, 0, 0, 0.7);
+    display: inline-block;
+}
+
+@keyframes hukumTitleGlow {
+    from {
+        text-shadow: 0 5px 20px rgba(0, 0, 0, 0.8), 0 0 20px var(--biru-primary);
+    }
+    to {
+        text-shadow: 0 5px 30px rgba(0, 0, 0, 0.9), 0 0 40px var(--biru-secondary);
+    }
+}
+
+.page-hukum .caption-narasi {
+    max-width: 800px;
+    color: #fff;
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    line-height: 1.7;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    margin: 1rem auto 2rem;
+    letter-spacing: 0.3px;
+}
+
+.hukum-public-content {
+    position: relative;
+    z-index: 10;
+    margin-top: 100vh;
+    padding: 2rem 0 4rem;
+}
 .hukum-public-filters { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin-bottom:2rem; }
 .hukum-public-filters label { display:flex; flex-direction:column; gap:5px; color:#666; font-size:.85rem; flex:1 1 180px; }
 .hukum-public-filters input, .hukum-public-filters select { border:1px solid #ddd; border-radius:6px; padding:10px; background:#fff; color:#222; }
