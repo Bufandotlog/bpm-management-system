@@ -311,9 +311,9 @@ if (isset($page_css)) {
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <link rel="icon" type="image/svg+xml"  href="<?php echo baseUrl('assets/images/favicon/favicon.svg'); ?>">
-    <link rel="icon" type="image/x-icon"   href="<?php echo baseUrl('assets/images/favicon/favicon.ico'); ?>">
-    <link rel="icon" type="image/png" sizes="96x96" href="<?php echo baseUrl('assets/images/favicon/favicon-96x96.png'); ?>">
+    <link rel="icon" type="image/x-icon" href="<?php echo baseUrl('assets/images/favicon/favicon.ico'); ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo baseUrl('assets/images/favicon/favicon-32x32.png'); ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo baseUrl('assets/images/favicon/favicon-16x16.png'); ?>">
     <link rel="apple-touch-icon" sizes="180x180"    href="<?php echo baseUrl('assets/images/favicon/apple-touch-icon.png'); ?>">
     <link rel="manifest" href="<?php echo baseUrl('assets/images/favicon/site.webmanifest'); ?>">
     <meta name="theme-color" content="#4A90E2">

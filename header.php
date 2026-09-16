@@ -47,14 +47,10 @@ $isHomePage = ($current_page == 'index.php');
     <title><?php echo SITE_NAME . (!empty($page_title) ? " - $page_title" : ""); ?></title>
     
     <!-- ===== FAVICON ===== -->
-    <!-- SVG untuk browser modern -->
-    <link rel="icon" type="image/svg+xml" href="<?php echo baseUrl('assets/images/favicon/favicon.svg'); ?>">
-    
-    <!-- Fallback ICO untuk browser lama -->
+    <!-- ICO/PNG untuk berbagai browser dan ukuran tab -->
     <link rel="icon" type="image/x-icon" href="<?php echo baseUrl('assets/images/favicon/favicon.ico'); ?>">
-    
-    <!-- PNG untuk berbagai ukuran -->
-    <link rel="icon" type="image/png" sizes="96x96" href="<?php echo baseUrl('assets/images/favicon/favicon-96x96.png'); ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo baseUrl('assets/images/favicon/favicon-32x32.png'); ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo baseUrl('assets/images/favicon/favicon-16x16.png'); ?>">
     
     <!-- Apple Touch Icon untuk iOS -->
     <link rel="apple-touch-icon" sizes="180x180" href="<?php echo baseUrl('assets/images/favicon/apple-touch-icon.png'); ?>">
