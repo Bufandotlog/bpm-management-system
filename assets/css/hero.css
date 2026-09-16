@@ -45,12 +45,6 @@
     pointer-events: none;
 }
 
-/* Keep the hero light from competing with the card highlight in the welcome section. */
-.page-index:has(#sambutan.focus-active) .bpm-relighting {
-    opacity: 0;
-    transition: opacity 0.35s ease;
-}
-
 /* Background hero */
 .hero-background {
     position: absolute;
