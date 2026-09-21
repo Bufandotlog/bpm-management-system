@@ -6,7 +6,7 @@
  * Method & aksi:
  *   GET    /api/hukum/relasi-pasal?anak_id=xxx    — ambil semua relasi pasal anak
  *   GET    /api/hukum/relasi-pasal?induk_id=xxx   — ambil relasi pasal induk
- *   POST   /api/hukum/relasi-pasal                — buat relasi baru (hanya admin/ketua_umum_bpm)
+ *   POST   /api/hukum/relasi-pasal                — buat relasi baru (hanya superadmin/admin/komisi_i)
  *   PUT    /api/hukum/relasi-pasal/:id           — update status relasi (setelah divalidasi)
  *   DELETE /api/hukum/relasi-pasal/:id          — hapus relasi (karena blok hard E1)
  *
@@ -24,7 +24,7 @@
 require __DIR__.'/../config/database.php';
 $pdo = getConnection();
 
-// Auth check: hanya admin, komisi_i, atau ketua_umum_bpm
+// Auth check: hanya role teknis hukum final yang berwenang
 $isAuthed = false;
 foreach ([
     'role' => 'guest',
@@ -34,7 +34,7 @@ foreach ([
     if (isset($_SESSION[$key])) { $$key = $_SESSION[$key]; }
 }
 if (!isset($role)) { header('HTTP/1.1 401 Unauthorized'); exit('Unauthorized'); }
-if (!in_array($role, ['admin','komisi_i','ketua_umum_bpm']) && !isset($_GET['public'])) {
+if (!in_array($role, ['superadmin', 'admin', 'komisi_i'], true) && !isset($_GET['public'])) {
     header('HTTP/1.1 403 Forbidden'); exit('Akses ditolak: role tidak diizinkan');
 }
 

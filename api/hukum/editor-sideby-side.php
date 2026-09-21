@@ -23,8 +23,8 @@
 require __DIR__.'/../config/database.php';
 $pdo = getConnection();
 
-// Auth check: hanya admin, ketua_umum_bpm yang bisa edit
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin','ketua_umum_bpm'])) {
+// Auth check: hanya role teknis yang berwenang pada alur hukum normal
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['superadmin', 'admin', 'komisi_i'], true)) {
     header('HTTP/1.1 401 Unauthorized');
     exit('Unauthorized');
 }
@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'draft' => $draft ?: ['id'=>null,'status'=>'draft','hash_konten'=>'','dibuat_oleh'=>0,'dibuat_pada'=>'','catatan'=>''],
             'dokumen_format' => $dokumen ?: ['format_mukadimah'=>'legacy','diperbarui_oleh'=>0,'waktu_pembaruan'=>''],
             'has_difference' => $hasDifference,
-            'can_edit' => in_array($_SESSION['role'], ['admin','ketua_umum_bpm'])
+            'can_edit' => in_array($_SESSION['role'], ['superadmin', 'admin', 'komisi_i'], true)
         ]
     ]);
     exit;
@@ -159,10 +159,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // === POST: aksi REJECT (H-10) ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($data['aksi']) && $data['aksi'] === 'reject') {
-    // hanyalah admin/ketua_umum_bpm
-    if (!in_array($_SESSION['role'], ['admin','ketua_umum_bpm'])) {
+    // hanyalah admin/komisi_i/superadmin sesuai model hukum final
+    if (!in_array($_SESSION['role'], ['superadmin', 'admin', 'komisi_i'], true)) {
         header('HTTP/1.1 403 Forbidden');
-        echo json_encode(['success'=>false,'error'=>'Akses ditolak: hanya admin/ketua_umum_bpm']);
+        echo json_encode(['success'=>false,'error'=>'Akses ditolak: hanya superadmin/admin/komisi_i']);
         exit;
     }
 

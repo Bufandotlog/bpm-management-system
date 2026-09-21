@@ -13,14 +13,16 @@ function hukum_review_resolve_role(int $documentId, ?int $userId = null): ?strin
     }
 
     $role = strtolower((string) hukum_current_user_role());
-    $technicalAdmin = in_array($role, ['admin', 'superadmin', 'ketua_umum_bpm'], true);
+    if ($role === 'superadmin') {
+        return 'admin';
+    }
 
-    if (hukum_is_komisi_i($candidateId, (int) $periodeId) && in_array($role, ['komisi_i', 'admin', 'superadmin'], true)) {
+    if (hukum_is_komisi_i($candidateId, (int) $periodeId) && $role === 'komisi_i') {
         return 'komisi_i';
     }
 
-    if (hukum_is_ketua_umum($candidateId, (int) $periodeId) && $technicalAdmin) {
-        return 'ketua_umum';
+    if ($role === 'admin') {
+        return 'admin';
     }
 
     return null;
@@ -33,23 +35,25 @@ function hukum_review_resolve_role_on(PDO $pdo, int $documentId, int $userId, in
     }
 
     $role = strtolower((string) hukum_current_user_role());
+    if ($role === 'superadmin') {
+        return 'admin';
+    }
+
+    if ($role === 'admin') {
+        return 'admin';
+    }
+
     $membership = $pdo->prepare(
         'SELECT jabatan FROM hukum_keanggotaan
          WHERE user_id = ? AND periode_id = ? AND aktif = 1
-           AND jabatan IN (\'komisi_i\', \'ketua_umum\')
+           AND jabatan = \'komisi_i\'
            AND (selesai_pada IS NULL OR selesai_pada >= CURDATE())'
     );
     $membership->execute([$userId, $periodeId]);
-    $roles = [];
-    foreach ($membership->fetchAll(PDO::FETCH_COLUMN) as $membershipRole) {
-        $roles[(string) $membershipRole] = true;
-    }
+    $roles = array_fill_keys($membership->fetchAll(PDO::FETCH_COLUMN), true);
 
-    if (isset($roles['komisi_i']) && in_array($role, ['komisi_i', 'admin', 'superadmin'], true)) {
+    if (isset($roles['komisi_i']) && $role === 'komisi_i') {
         return 'komisi_i';
-    }
-    if (isset($roles['ketua_umum']) && hukum_technical_role_is_admin($role)) {
-        return 'ketua_umum';
     }
 
     return null;
@@ -61,12 +65,12 @@ function hukum_review_approval_rows(PDO $pdo, int $stagingId): array
         'SELECT id, staging_id, user_id, peran, status, note, approved_at, rejected_at, created_at
          FROM hukum_staging_approval
          WHERE staging_id = ?
-         ORDER BY CASE peran WHEN \'komisi_i\' THEN 1 WHEN \'ketua_umum\' THEN 2 ELSE 3 END, id ASC'
+         ORDER BY CASE peran WHEN \'komisi_i\' THEN 1 WHEN \'admin\' THEN 2 ELSE 3 END, id ASC'
     );
     $stmt->execute([$stagingId]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $summary = ['komisi_i' => ['status' => 'menunggu', 'user_id' => null, 'note' => null], 'ketua_umum' => ['status' => 'menunggu', 'user_id' => null, 'note' => null], 'approved' => 0, 'total' => 2];
+    $summary = ['komisi_i' => ['status' => 'menunggu', 'user_id' => null, 'note' => null], 'admin' => ['status' => 'menunggu', 'user_id' => null, 'note' => null], 'approved' => 0, 'total' => 2];
     foreach ($rows as $row) {
         $role = (string) ($row['peran'] ?? '');
         if (isset($summary[$role])) {
@@ -198,7 +202,7 @@ function hukum_review_apply_decision(PDO $pdo, int $stagingId, string $decision,
     $approvalRowsStmt->execute([$stagingId]);
     $approvalRows = $approvalRowsStmt->fetchAll(PDO::FETCH_ASSOC);
     $allApproved = true;
-    foreach (['komisi_i', 'ketua_umum'] as $requiredRole) {
+    foreach (['komisi_i', 'admin'] as $requiredRole) {
         $found = false;
         foreach ($approvalRows as $row) {
             if ((string) $row['peran'] === $requiredRole && (string) $row['status'] === 'disetujui') {

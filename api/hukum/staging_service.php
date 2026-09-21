@@ -144,7 +144,7 @@ function hukum_submit_staging(PDO $pdo, int $workspaceId, array $versionIds, ?in
              (staging_id, user_id, peran, status, note, approved_at, rejected_at)
              VALUES (?, ?, ?, \'menunggu\', NULL, NULL, NULL)'
         );
-        foreach (['komisi_i', 'ketua_umum'] as $role) {
+        foreach (['komisi_i', 'admin'] as $role) {
             $approval->execute([$stagingId, $actorId, $role]);
         }
         $link = $pdo->prepare('INSERT INTO hukum_staging_versi (staging_id, pasal_versi_id) VALUES (?, ?)');

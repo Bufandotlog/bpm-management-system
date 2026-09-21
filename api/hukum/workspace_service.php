@@ -64,7 +64,14 @@ function hukum_create_workspace(PDO $pdo, int $documentId, string $judulPerubaha
         throw new RuntimeException('Sesi tidak valid untuk membuat workspace.', 401);
     }
 
-    if (!hukum_can_review_staging($documentId, $actorId) && !hukum_is_komisi_i($actorId, (int) $doc['periode_id']) && !hukum_is_ketua_umum($actorId, (int) $doc['periode_id'])) {
+    $actor = hukum_authenticated_actor();
+    if ($actor === null || !hukum_has_permission('hukum.workspace.create')) {
+        throw new RuntimeException('Anda tidak memiliki izin membuat workspace untuk dokumen ini.', 403);
+    }
+
+    if (!$actor->canAccessAll
+        && $actor->technicalRole !== 'superadmin'
+        && $actor->periodId !== (int) $doc['periode_id']) {
         throw new RuntimeException('Anda tidak berwenang membuat workspace untuk dokumen ini.', 403);
     }
 

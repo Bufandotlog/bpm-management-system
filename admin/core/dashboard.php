@@ -5,7 +5,7 @@
 require_once __DIR__ . '/header.php';
 
 // 1. Context & User Credentials
-$admin_role = $_SESSION['admin_role'] ?? 'anggota';
+$admin_role = normalizeAppRole($_SESSION['admin_role'] ?? 'anggota');
 $periode_id = getUserPeriode();
 $user_id    = $_SESSION['admin_id'] ?? 0;
 
@@ -22,9 +22,10 @@ $active_panitia = dbFetchOne(
 
 $role_labels = [
     'superadmin' => 'Superadmin',
-    'admin'      => 'Admin General',
+    'admin'      => 'Admin Periode',
     'sekretaris' => 'Sekretariat BPM',
     'kominfo'    => 'Kominfo & Media',
+    'komisi_i'   => 'Komisi I Hukum',
     'anggota'    => 'Pengurus BPM'
 ];
 $display_role = $role_labels[$admin_role] ?? 'User';
@@ -62,6 +63,9 @@ switch ($admin_role) {
         break;
     case 'kominfo':
         include __DIR__ . '/views/dashboard-kominfo.php';
+        break;
+    case 'komisi_i':
+        include __DIR__ . '/views/dashboard-admin.php';
         break;
     case 'anggota':
     default:

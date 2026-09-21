@@ -427,10 +427,10 @@ try {
     $db_type = DB_CONNECTION;
     if ($db_type === 'pgsql') {
         dbQuery("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
-        dbQuery("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('superadmin', 'admin', 'kominfo', 'sekretaris', 'anggota'))");
+        dbQuery("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('superadmin', 'admin', 'sekretaris', 'kominfo', 'komisi_i', 'anggota'))");
         dbQuery("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'anggota'");
     } else {
-        dbQuery("ALTER TABLE users MODIFY COLUMN role ENUM('superadmin','admin','kominfo','sekretaris','anggota') NOT NULL DEFAULT 'anggota'");
+        dbQuery("ALTER TABLE users MODIFY COLUMN role ENUM('superadmin','admin','sekretaris','kominfo','komisi_i','anggota') NOT NULL DEFAULT 'anggota'");
     }
 } catch (Exception $e) {
     // Abaikan
@@ -1260,6 +1260,89 @@ function isLoggedIn() {
     }
 
     return true;
+}
+
+function getFinalAppRoles(): array {
+    return ['superadmin', 'admin', 'sekretaris', 'kominfo', 'komisi_i', 'anggota'];
+}
+
+function getLegacyRoleAliases(): array {
+    return [
+        'superadmin' => 'superadmin',
+        'super_admin' => 'superadmin',
+        'super-admin' => 'superadmin',
+        'super admin' => 'superadmin',
+        'admin' => 'admin',
+        'ketua_umum_bpm' => 'admin',
+        'ketua-umum-bpm' => 'admin',
+        'ketua_umum' => 'admin',
+        'ketua umum' => 'admin',
+        'ketua umum bpm' => 'admin',
+        'sekretaris' => 'sekretaris',
+        'sekertaris' => 'sekretaris',
+        'sekertaris_bpm' => 'sekretaris',
+        'kominfo' => 'kominfo',
+        'kom-info' => 'kominfo',
+        'kom info' => 'kominfo',
+        'komisi_i' => 'komisi_i',
+        'komisi-i' => 'komisi_i',
+        'komisi_i_hukum' => 'komisi_i',
+        'komisi 1' => 'komisi_i',
+        'komisi1' => 'komisi_i',
+        'komisi-1' => 'komisi_i',
+        'komisi_1' => 'komisi_i',
+        'anggota' => 'anggota',
+        'member' => 'anggota',
+        'user' => 'anggota',
+        'default' => 'anggota',
+    ];
+}
+
+function normalizeAppRole(?string $role): string {
+    $role = strtolower(trim((string) ($role ?? '')));
+    if ($role === '') {
+        return 'anggota';
+    }
+
+    $role = preg_replace('/[\s\-_]+/', '_', $role);
+    $role = trim((string) $role, '_');
+
+    // Legacy aliases only for backward compatibility with historical data/session values.
+    // They are not separate technical roles in the final model; they map to the canonical
+    // app role used for authorization decisions.
+    $aliases = getLegacyRoleAliases();
+    if (isset($aliases[$role])) {
+        return $aliases[$role];
+    }
+
+    if (preg_match('/^(super|superadmin|super_admin|super-admin)$/', $role) || str_contains($role, 'superadmin')) {
+        return 'superadmin';
+    }
+
+    if (preg_match('/^(ketua|ketua_umum|ketua_umum_bpm)$/', $role) || str_contains($role, 'ketua_umum')) {
+        return 'admin';
+    }
+
+    if (preg_match('/^(komisi|komisi_i|komisi_1|komisi1|komisi-1)$/', $role) || str_contains($role, 'komisi')) {
+        if (str_contains($role, '1') || $role === 'komisi_i' || $role === 'komisi' || $role === 'komisi_1' || $role === 'komisi-1') {
+            return 'komisi_i';
+        }
+    }
+
+    if (in_array($role, ['sekretaris', 'sekertaris', 'sekertaris_bpm'], true)) {
+        return 'sekretaris';
+    }
+
+    if (in_array($role, ['kominfo', 'kom_info', 'kom-info'], true)) {
+        return 'kominfo';
+    }
+
+    return $role;
+}
+
+function isValidAppRole(?string $role): bool {
+    $normalized = normalizeAppRole($role);
+    return in_array($normalized, getFinalAppRoles(), true);
 }
 
 function requireLogin() {

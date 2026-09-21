@@ -101,6 +101,8 @@ function hukum_is_komisi_i(int $userId = 0, ?int $periodeId = null, ?int $docume
 
 function hukum_is_ketua_umum(int $userId = 0, ?int $periodeId = null, ?int $documentId = null): bool
 {
+    // Business-membership metadata, not a technical platform role. This function is kept
+    // because past governance data stores the organizational title as a membership value.
     if ($userId <= 0) {
         $userId = hukum_current_user_id();
     }
@@ -124,7 +126,7 @@ function hukum_technical_role_is_admin(?string $role = null): bool
 {
     $role = strtolower(trim((string) ($role ?? hukum_current_user_role())));
 
-    return in_array($role, ['admin', 'superadmin', 'ketua_umum_bpm'], true);
+    return in_array($role, ['admin'], true);
 }
 
 function hukum_can_review_staging(int $documentId, ?int $userId = null): bool
@@ -142,14 +144,16 @@ function hukum_can_review_staging(int $documentId, ?int $userId = null): bool
         return false;
     }
 
-    $currentRole = strtolower(hukum_current_user_role());
-    $technicalAdmin = hukum_technical_role_is_admin($currentRole);
-
-    if (hukum_is_komisi_i($userId, $periodeId) && in_array($currentRole, ['komisi_i', 'admin', 'superadmin'], true)) {
+    $currentRole = strtolower((string) hukum_current_user_role());
+    if ($currentRole === 'superadmin') {
         return true;
     }
 
-    if (hukum_is_ketua_umum($userId, $periodeId) && $technicalAdmin) {
+    if ($currentRole === 'komisi_i' && hukum_is_komisi_i($userId, $periodeId)) {
+        return true;
+    }
+
+    if ($currentRole === 'admin') {
         return true;
     }
 
@@ -159,7 +163,7 @@ function hukum_can_review_staging(int $documentId, ?int $userId = null): bool
 function hukum_can_commit_as(int $documentId, string $peran, ?int $userId = null): bool
 {
     $peran = strtolower(trim($peran));
-    if (!in_array($peran, ['komisi_i', 'ketua_umum'], true)) {
+    if (!in_array($peran, ['komisi_i', 'admin'], true)) {
         return false;
     }
 
@@ -172,15 +176,17 @@ function hukum_can_commit_as(int $documentId, string $peran, ?int $userId = null
         return false;
     }
 
-    $currentRole = strtolower(hukum_current_user_role());
-    $technicalAdmin = hukum_technical_role_is_admin($currentRole);
-
-    if ($peran === 'komisi_i') {
-        return hukum_is_komisi_i($userId, $periodeId) && in_array($currentRole, ['komisi_i', 'admin'], true);
+    $currentRole = strtolower((string) hukum_current_user_role());
+    if ($currentRole === 'superadmin') {
+        return true;
     }
 
-    if ($peran === 'ketua_umum') {
-        return hukum_is_ketua_umum($userId, $periodeId) && $technicalAdmin;
+    if ($peran === 'komisi_i') {
+        return $currentRole === 'komisi_i' && hukum_is_komisi_i($userId, $periodeId);
+    }
+
+    if ($peran === 'admin') {
+        return $currentRole === 'admin';
     }
 
     return false;
@@ -190,7 +196,7 @@ function hukum_role_permissions(): array
 {
     return [
         'superadmin' => ['*'],
-        'ketua_umum_bpm' => [
+        'admin' => [
             'hukum.view',
             'hukum.document.create',
             'hukum.document.update',
@@ -199,6 +205,7 @@ function hukum_role_permissions(): array
             'hukum.pasal.update',
             'hukum.pasal.delete',
             'hukum.workspace.create',
+            'hukum.workspace.submit',
             'hukum.staging.review',
             'hukum.commit.create',
             'hukum.commit.approve',
@@ -213,9 +220,9 @@ function hukum_role_permissions(): array
             'hukum.pasal.delete',
             'hukum.workspace.create',
             'hukum.workspace.submit',
+            'hukum.staging.review',
             'hukum.audit.view',
         ],
-        'admin' => ['hukum.view', 'hukum.audit.view'],
         'sekretaris' => ['hukum.view', 'hukum.audit.view'],
         'kominfo' => ['hukum.view'],
         'anggota' => ['hukum.view'],

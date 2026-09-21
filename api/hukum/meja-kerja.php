@@ -19,7 +19,7 @@
  *   GET   : view:hukum
  *   POST  : create:hukum-meja-kerja
  *   PUT   : create:hukum-meja-kerja (komisi_i hanya boleh tutup sendiri),
- *           close:hukum-meja-kerja (khusus ketua_umum_bpm/superadmin)
+ *           close:hukum-meja-kerja (khusus admin/superadmin)
  *   DELETE: delete:hukum-dokumen
  */
 require_once __DIR__ . '/../../admin/core/hukum-auth.php';

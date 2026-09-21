@@ -105,7 +105,7 @@ if (!function_exists('hukum_require_service_permission')) {
             'hukum.pasal.update',
         ], true) && (
             hukum_business_membership_for_user(hukum_current_user_id(), $periodId, 'komisi_i')
-            || hukum_business_membership_for_user(hukum_current_user_id(), $periodId, 'ketua_umum')
+            || in_array(strtolower((string) ($actor->technicalRole ?? '')), ['admin', 'superadmin'], true)
         );
         if (!hukum_has_permission($permission) && !$membershipAllowed) {
             throw new RuntimeException('Anda tidak memiliki izin untuk aksi ini.', 403);

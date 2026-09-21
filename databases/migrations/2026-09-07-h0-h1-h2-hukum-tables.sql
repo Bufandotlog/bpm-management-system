@@ -15,7 +15,7 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ============================================================
--- PATCH 1: users.role — tambah 'komisi_i' & 'ketua_umum_bpm'
+-- PATCH 1: users.role — gunakan role teknis canonical
 -- Untuk H-1 (registrasi role baru).
 -- ============================================================
 ALTER TABLE users
@@ -25,8 +25,7 @@ ALTER TABLE users
     'kominfo',
     'sekretaris',
     'anggota',
-    'komisi_i',
-    'ketua_umum_bpm'
+    'komisi_i'
   ) NOT NULL DEFAULT 'anggota';
 
 -- ============================================================

@@ -38,7 +38,7 @@ $actorId = hukum_current_user_id();
 if ($action === 'init_window') {
     $peran = strtolower(trim((string) ($input['peran'] ?? '')));
     if ($peran === '') {
-        $peran = hukum_is_komisi_i($actorId, hukum_current_user_periode_id()) ? 'komisi_i' : 'ketua_umum';
+        $peran = hukum_is_komisi_i($actorId, hukum_current_user_periode_id()) ? 'komisi_i' : 'admin';
     }
     $password = isset($input['password']) ? (string) $input['password'] : null;
     $result = hukum_commit_create_window($pdo, $actorId, $peran, $password !== null && $password !== '' ? $password : null, $_SERVER['HTTP_X_SESSION_ID'] ?? session_id());

@@ -32,7 +32,7 @@ if ($current_page !== 'login.php') {
 }
 
 $admin_name = $_SESSION['admin_name'] ?? 'Admin';
-$admin_role = strtolower($_SESSION['admin_role'] ?? 'kominfo');
+$admin_role = normalizeAppRole($_SESSION['admin_role'] ?? 'kominfo');
 
 $isSuperadmin = $admin_role === 'superadmin'
                 || !empty($_SESSION['admin_can_access_all']);
@@ -899,7 +899,7 @@ if (isset($page_css)) {
             <?php endif; ?>
 
             <?php
-            $hukum_roles = ['superadmin', 'admin', 'sekretaris', 'komisi_i', 'ketua_umum_bpm', 'kominfo', 'anggota'];
+            $hukum_roles = ['superadmin', 'admin', 'sekretaris', 'komisi_i', 'kominfo', 'anggota'];
             $is_hukum_active = in_array($current_page, ['hukum-dashboard.php', 'hukum-editor.php', 'hukum-staging.php'], true);
             ?>
             <?php if (in_array($admin_role, $hukum_roles, true)): ?>

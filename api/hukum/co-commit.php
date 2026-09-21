@@ -9,8 +9,8 @@
  *   GET  ?commit_id=X     — cek status co-commit (untuk countdown UI)
  *
  * Permission:
- *   POST initiate : komisi_i | ketua_umum_bpm
- *   POST approve  : komisi_i | ketua_umum_bpm (role-specific)
+ *   POST initiate : komisi_i | admin
+ *   POST approve  : komisi_i | admin (role-specific)
  *   GET           : view:hukum
  */
 require_once __DIR__ . '/../../admin/core/hukum-auth.php';
@@ -52,8 +52,8 @@ try {
             ], 409);
         }
 
-        // Validasi role: komisi_i atau ketua_umum_bpm
-        if (!in_array($userRole, ['komisi_i', 'ketua_umum_bpm'], true)) {
+        // Validasi role: komisi_i atau admin sesuai model hukum final
+        if (!in_array($userRole, ['komisi_i', 'admin'], true)) {
             hukum_json_response([
                 'success' => false,
                 'message' => 'Role tidak diizinkan untuk co-commit.'
@@ -183,13 +183,13 @@ try {
 
         // Validasi role: user harus salah satu role yang sudah inisiasi
         $isKomisiI = ($userRole === 'komisi_i');
-        $isKetum = ($userRole === 'ketua_umum_bpm');
+        $isAdmin = ($userRole === 'admin');
         $isInitiator = false;
 
         if ($isKomisiI && $window['diinsiasi_oleh_user_id_komisi_i'] === $userId) {
             $isInitiator = true;
         }
-        if ($isKetum && $window['diinsiasi_oleh_user_id_ketum'] === $userId) {
+        if ($isAdmin && $window['diinsiasi_oleh_user_id_ketum'] === $userId) {
             $isInitiator = true;
         }
 

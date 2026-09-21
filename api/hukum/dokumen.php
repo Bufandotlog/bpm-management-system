@@ -125,7 +125,7 @@ try {
         if ($existing['status'] !== 'draf' && !hukum_has_permission('delete:hukum-dokumen')) {
             hukum_json_response([
                 'success' => false,
-                'message' => 'Dokumen sudah dipublikasi. Hanya superadmin/ketua_umum_bpm yang boleh edit.'
+                'message' => 'Dokumen sudah dipublikasi. Hanya superadmin/admin yang boleh edit.'
             ], 403);
         }
 

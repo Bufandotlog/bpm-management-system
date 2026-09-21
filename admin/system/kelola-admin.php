@@ -62,13 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'tamba
         $emailRaw   = sanitizeText($_POST['email'] ?? '', 100);
         $email      = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ? $emailRaw : '';
         
-        $roleInput  = strtolower($_POST['role'] ?? 'kominfo');
-        // Normalisasi ejaan sekretaris
-        if ($roleInput === 'sekertaris' || $roleInput === 'sekretaris') {
-            $role = 'sekretaris';
-        } else {
-            $role = in_array($roleInput, ['kominfo','superadmin','admin']) ? $roleInput : 'kominfo';
-        }
+        $roleInput  = normalizeAppRole($_POST['role'] ?? 'kominfo');
+        $role = isValidAppRole($roleInput) ? $roleInput : 'kominfo';
 
         $periode_id = !empty($_POST['periode_id']) ? (int)$_POST['periode_id'] : null;
 
@@ -319,7 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ubah_
         $error = 'Request tidak valid.';
     } else {
         $id         = (int) ($_POST['id'] ?? 0);
-        $newRole    = in_array($_POST['new_role'] ?? '', ['kominfo','superadmin','sekretaris','admin','anggota']) ? $_POST['new_role'] : 'kominfo';
+        $newRole    = in_array($_POST['new_role'] ?? '', ['kominfo','superadmin','sekretaris','admin','komisi_i','anggota'], true) ? $_POST['new_role'] : 'kominfo';
         $newPeriode = !empty($_POST['new_periode']) ? (int)$_POST['new_periode'] : null;
         
         // Proteksi level akses & periode
@@ -465,12 +460,13 @@ if (isset($_SESSION['flash'])) {
                     <select name="role" class="form-control" id="roleSelect" onchange="togglePeriodeField()">
                         <option value="kominfo" selected>Kominfo (CMS & Media)</option>
                         <option value="sekretaris">Sekretaris</option>
+                        <option value="komisi_i">Komisi I (Hukum)</option>
                         <option value="anggota">Anggota Biasa (Hanya Kepanitiaan)</option>
                         <?php if ($isSuperadmin): ?>
-                            <option value="admin">Admin (CMS, Media & Surat)</option>
+                            <option value="admin">Admin (Periode Aktif)</option>
                             <option value="superadmin">Superadmin</option>
                         <?php else: ?>
-                            <option value="admin">Admin (CMS, Media & Surat)</option>
+                            <option value="admin">Admin (Periode Aktif)</option>
                         <?php endif; ?>
                     </select>
                 </div>
@@ -573,6 +569,10 @@ if (isset($_SESSION['flash'])) {
                                     <?php elseif ($roleVal === 'admin'): ?>
                                         <span class="badge" style="background:#4A90E2;color:white;">
                                             <i class="fas fa-user-shield"></i> Admin
+                                        </span>
+                                    <?php elseif ($roleVal === 'komisi_i'): ?>
+                                        <span class="badge" style="background:#7C3AED;color:white;">
+                                            <i class="fas fa-balance-scale"></i> Komisi I
                                         </span>
                                     <?php elseif ($isRowSekretaris): ?>
                                         <span class="badge" style="background:#2E7D32;color:white;">
@@ -742,8 +742,9 @@ if (isset($_SESSION['flash'])) {
                     <select id="customNewRole" class="form-control" onchange="toggleModalPeriode(this.value)">
                         <option value="kominfo">Kominfo (CMS & Media)</option>
                         <option value="sekretaris">Sekretaris</option>
+                        <option value="komisi_i">Komisi I (Hukum)</option>
                         <option value="anggota">Anggota Biasa (Hanya Kepanitiaan)</option>
-                        <option value="admin">Admin (CMS, Media & Surat)</option>
+                        <option value="admin">Admin (Periode Aktif)</option>
                         <?php if ($isSuperadmin): ?>
                             <option value="superadmin">Superadmin</option>
                         <?php endif; ?>
@@ -848,7 +849,7 @@ function closeConfirmModal() {
 
 function toggleModalPeriode(role) {
     var group = document.getElementById('modalPeriodeGroup');
-    if (role === 'kominfo' || role === 'admin' || role === 'sekretaris' || role === 'anggota') {
+    if (role === 'kominfo' || role === 'admin' || role === 'sekretaris' || role === 'komisi_i' || role === 'anggota') {
         group.style.display = 'block';
     } else {
         group.style.display = 'none';
@@ -926,7 +927,7 @@ document.getElementById('confirmBtn').addEventListener('click', function() {
     if (pendingAction.action === 'ubah_role') {
         roleInput.value = customNewRole.value;
         periodeInput.value = customNewPeriode.value;
-        if ((roleInput.value === 'kominfo' || roleInput.value === 'admin' || roleInput.value === 'sekretaris') && !periodeInput.value) {
+        if ((roleInput.value === 'kominfo' || roleInput.value === 'admin' || roleInput.value === 'sekretaris' || roleInput.value === 'komisi_i' || roleInput.value === 'anggota') && !periodeInput.value) {
             alert('Pilih periode untuk role tersebut!');
             return;
         }
@@ -955,7 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var selectPeriode = document.querySelector('select[name="periode_id"]');
             var periodeId = selectPeriode ? selectPeriode.value : '';
             
-            if ((role === 'kominfo' || role === 'admin' || role === 'sekretaris') && !periodeId) {
+            if ((role === 'kominfo' || role === 'admin' || role === 'sekretaris' || role === 'komisi_i' || role === 'anggota') && !periodeId) {
                 e.preventDefault();
                 alert('Pilih periode untuk role tersebut!');
             }

@@ -54,12 +54,12 @@ async function hukumLoadStaging() {
         const rows = (result.data || []).filter(item => item.status === 'menunggu_review');
         document.getElementById('stagingCount').textContent = rows.length + ' item';
     document.getElementById('stagingBody').innerHTML = rows.length ? rows.map(item => {
-        const summary = item.approval_summary || {progress:'0/2', komisi_i:{status:'menunggu'}, ketua_umum:{status:'menunggu'}};
-        const canAction = hukumCanReview && (summary.komisi_i.status === 'menunggu' || summary.ketua_umum.status === 'menunggu');
+        const summary = item.approval_summary || {progress:'0/2', komisi_i:{status:'menunggu'}, admin:{status:'menunggu'}};
+        const canAction = hukumCanReview && (summary.komisi_i.status === 'menunggu' || summary.admin.status === 'menunggu');
         return `<tr>
         <td>${hukumEscape(item.judul)}</td>
         <td>${hukumEscape(item.judul_perubahan)}</td>
-        <td><span class="hukum-badge">${hukumEscape(summary.progress)}</span><br><small>${hukumEscape(summary.komisi_i.status || 'menunggu')} / ${hukumEscape(summary.ketua_umum.status || 'menunggu')}</small></td>
+        <td><span class="hukum-badge">${hukumEscape(summary.progress)}</span><br><small>${hukumEscape(summary.komisi_i.status || 'menunggu')} / ${hukumEscape(summary.admin.status || 'menunggu')}</small></td>
         <td>${hukumEscape(item.diajukan_at)}</td>
         <td>${hukumCanReview ? `<button class="hukum-btn gold" type="button" ${canAction ? '' : 'disabled'} onclick="hukumReview(${Number(item.id)}, 'approve')">Setujui</button>
             <button class="hukum-btn danger" type="button" ${canAction ? '' : 'disabled'} onclick="hukumReview(${Number(item.id)}, 'reject')">Tolak</button>` : '<span class="hukum-muted">Read-only</span>'}</td>

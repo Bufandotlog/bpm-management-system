@@ -71,7 +71,7 @@ function hukum_commit_user_must_be_business_role(int $userId, int $documentId, s
     }
 
     $peran = strtolower(trim($peran));
-    if (!in_array($peran, ['komisi_i', 'ketua_umum'], true)) {
+    if (!in_array($peran, ['komisi_i', 'admin'], true)) {
         return false;
     }
 
@@ -79,13 +79,26 @@ function hukum_commit_user_must_be_business_role(int $userId, int $documentId, s
         return hukum_is_komisi_i($userId, $periodId);
     }
 
-    return hukum_is_ketua_umum($userId, $periodId);
+    $row = dbFetchOne(
+        'SELECT id FROM users WHERE id = ? AND role IN (\'admin\', \'superadmin\') LIMIT 1',
+        [$userId],
+        'i'
+    );
+    return $row !== null;
 }
 
 function hukum_commit_user_must_be_business_role_on(PDO $pdo, int $userId, int $periodId, string $peran): bool
 {
-    if ($userId <= 0 || $periodId <= 0 || !in_array($peran, ['komisi_i', 'ketua_umum'], true)) {
+    if ($userId <= 0 || $periodId <= 0 || !in_array($peran, ['komisi_i', 'admin'], true)) {
         return false;
+    }
+
+    if ($peran === 'admin') {
+        $stmt = $pdo->prepare(
+            'SELECT id FROM users WHERE id = ? AND role IN (\'admin\', \'superadmin\') LIMIT 1'
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) !== false;
     }
 
     $stmt = $pdo->prepare(
@@ -201,10 +214,10 @@ function hukum_commit_create_window_unlocked(PDO $pdo, int $userId, string $pera
 {
     $sessionId = $sessionId ?? session_id();
     $peran = strtolower(trim($peran));
-    if (!in_array($peran, ['komisi_i', 'ketua_umum'], true)) {
+    if (!in_array($peran, ['komisi_i', 'admin'], true)) {
         throw new RuntimeException('Peran commit tidak valid.', 400);
     }
-    $otherRole = $peran === 'komisi_i' ? 'ketua_umum' : 'komisi_i';
+    $otherRole = $peran === 'komisi_i' ? 'admin' : 'komisi_i';
     $stmt = $pdo->prepare(
         'SELECT id, status FROM hukum_commit_window
          WHERE user_id = ? AND peran = ? AND status IN (\'pending\', \'approved\')
@@ -567,7 +580,7 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
         $documentId = (int) $staging['dokumen_id'];
         $periodId = (int) $staging['periode_id'];
         $role = null;
-        foreach (['komisi_i', 'ketua_umum'] as $candidate) {
+        foreach (['komisi_i', 'admin'] as $candidate) {
             if (hukum_commit_user_must_be_business_role_on($pdo, $actorId, $periodId, $candidate)) {
                 $role = $candidate;
                 break;
@@ -589,7 +602,7 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
                 $approvedRoles[(string) $row['peran']] = (int) $row['user_id'];
             }
         }
-        if (!isset($approvedRoles['komisi_i']) || !isset($approvedRoles['ketua_umum'])) {
+        if (!isset($approvedRoles['komisi_i']) || !isset($approvedRoles['admin'])) {
             throw new RuntimeException('Staging belum memiliki dua persetujuan yang valid.', 409);
         }
 
@@ -600,7 +613,7 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
         hukum_commit_check_cooldown($pdo, $actorId, $sessionId ?? session_id());
 
         $validatedWindows = [];
-        foreach (['komisi_i', 'ketua_umum'] as $requiredRole) {
+        foreach (['komisi_i', 'admin'] as $requiredRole) {
             $memberId = (int) ($approvedRoles[$requiredRole] ?? 0);
             $window = $memberId > 0
                 ? hukum_commit_is_window_approved($pdo, $memberId, $requiredRole)
