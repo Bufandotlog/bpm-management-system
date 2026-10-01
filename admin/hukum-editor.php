@@ -358,17 +358,22 @@ async function createWorkspace() {
         hukumNotice('Pilih dokumen terlebih dahulu.', 'error');
         return;
     }
-    const result = await hukumRequest('workspaces.php', {
-        method: 'POST',
-        body: JSON.stringify({
-            dokumen_id: docId,
-            judul_perubahan: 'Draft konten hukum baru',
-            tujuan: 'Kerja drafting dokumen di admin editor'
-        })
-    });
-    hukumNotice('Workspace dibuat.');
-    state.selectedDocumentId = docId;
-    await hukumLoadDocumentData(docId);
+
+    try {
+        const result = await hukumRequest('workspaces.php', {
+            method: 'POST',
+            body: JSON.stringify({
+                dokumen_id: docId,
+                judul_perubahan: 'Draft konten hukum baru',
+                tujuan: 'Kerja drafting dokumen di admin editor'
+            })
+        });
+        hukumNotice('Workspace dibuat.');
+        state.selectedDocumentId = docId;
+        await hukumLoadDocumentData(docId);
+    } catch (error) {
+        hukumNotice(error.message || 'Workspace gagal dibuat.', 'error');
+    }
 }
 
 async function submitWorkspace() {

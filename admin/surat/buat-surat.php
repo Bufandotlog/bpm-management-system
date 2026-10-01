@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jenis_surat   = $_POST['jenis_surat'] === 'D' ? 'D' : 'L';
         $nomor_urut    = sanitizeText($_POST['nomor_urut'], 10);
         $kode_keg      = strtoupper(str_replace(' ', '', sanitizeText($_POST['kode_kegiatan'], 50)));
-        $nomor_surat   = "{$nomor_urut}/{$jenis_surat}/{$kode_keg}/BEM/{$bulan_romawi}/{$tahun}";
+        $nomor_surat   = "{$nomor_urut}/{$jenis_surat}/{$kode_keg}/BPM/{$bulan_romawi}/{$tahun}";
         $tanggal_dikirim_raw = sanitizeText($_POST['tanggal_dikirim'] ?? '', 50);
         $tanggal_dikirim = null;
         if (!empty($tanggal_dikirim_raw) && $tanggal_dikirim_raw !== 'Belum Di kirim') {
@@ -172,6 +172,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             return $relativePath;
         }
 
+        $use_ttd_bpm_val = (isset($_POST['use_ttd_bpm']) || isset($_POST['use_ttd_presma'])) ? '1' : '0';
+        $use_cap_bpm_val = (isset($_POST['use_cap_bpm']) || isset($_POST['use_cap_presma'])) ? '1' : '0';
+
         $konten_data = [
             'is_edited'               => 1,
             'sapaan_tujuan'           => sanitizeText($_POST['sapaan_tujuan'] ?? '', 50),
@@ -188,13 +191,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'panitia_sekretaris'      => strtoupper(sanitizeText($_POST['panitia_sekretaris'], 100)),
             'panitia_sekretaris_ttd'  => saveSignatureToFile($_POST['panitia_sekretaris_ttd'] ?? '', 'sekretaris'),
             'use_ttd_warek'           => isset($_POST['use_ttd_warek']) ? '1' : '0',
-            'use_ttd_presma'          => isset($_POST['use_ttd_presma']) ? '1' : '0',
+            'use_ttd_presma'          => $use_ttd_bpm_val,
             'use_ttd_sekretaris'      => isset($_POST['use_ttd_sekretaris']) ? '1' : '0',
-            'use_ttd_bpm'             => isset($_POST['use_ttd_bpm']) ? '1' : '0',
+            'use_ttd_bpm'             => $use_ttd_bpm_val,
             'use_cap_panitia'         => isset($_POST['use_cap_panitia']) ? '1' : '0',
             'use_cap_warek'           => isset($_POST['use_cap_warek']) ? '1' : '0',
-            'use_cap_presma'          => isset($_POST['use_cap_presma']) ? '1' : '0',
-            'use_cap_bpm'             => isset($_POST['use_cap_bpm']) ? '1' : '0',
+            'use_cap_presma'          => $use_cap_bpm_val,
+            'use_cap_bpm'             => $use_cap_bpm_val,
             // use_cap_sekretaris removed 2026-09-04: Sekretaris tidak memiliki cap
             'tembusan'                => strip_tags(trim($_POST['tembusan'] ?? ''))
         ];
@@ -1321,7 +1324,7 @@ if ($is_edit || $is_clone) {
             </div>
         </div>
 
-        <!-- CARD 4.5: FORMAT & LAYOUT TANDA TANGAN [FITUR 2026-09-04] -->
+        <!-- CARD 4.5: FORMAT & LAYOUT TANDA TANGAN -->
         <div class="card card-format-ttd">
             <div class="card-header"><i class="fas fa-file-signature"></i> Format &amp; Layout Tanda Tangan</div>
             <div class="card-body">
@@ -1336,7 +1339,7 @@ if ($is_edit || $is_clone) {
                             <div class="format-ttd-content">
                                 <div class="format-ttd-header">
                                     <span class="format-badge badge-1">Format 1</span>
-                                    <span class="format-title">Panitia Pelaksana + Mengetahui Warek III &amp; Ketua BEM</span>
+                                    <span class="format-title">Panitia Pelaksana + Mengetahui Warek III &amp; Ketua BPM</span>
                                 </div>
                                 <div class="format-ttd-details">
                                     <div class="detail-item">
@@ -1345,11 +1348,11 @@ if ($is_edit || $is_clone) {
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label"><i class="fas fa-users"></i> Baris 1 (Atas)</span>
-                                        <span class="detail-val">Ketua Pelaksana &amp; Sekretaris Umum</span>
+                                        <span class="detail-val">Ketua Pelaksana &amp; Sekretaris Pelaksana</span>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label"><i class="fas fa-user-check"></i> Baris 2 (Mengetahui)</span>
-                                        <span class="detail-val">WAREK III &amp; Ketua BEM</span>
+                                        <span class="detail-val">WAREK III &amp; Ketua BPM</span>
                                     </div>
                                 </div>
                             </div>
@@ -1362,20 +1365,20 @@ if ($is_edit || $is_clone) {
                             <div class="format-ttd-content">
                                 <div class="format-ttd-header">
                                     <span class="format-badge badge-2">Format 2</span>
-                                    <span class="format-title">BEM Direct (2 TTD Periode Kepengurusan)</span>
+                                    <span class="format-title">BPM Direct (2 TTD Periode Kepengurusan)</span>
                                 </div>
                                 <div class="format-ttd-details">
                                     <div class="detail-item">
                                         <span class="detail-label"><i class="fas fa-heading"></i> Header Dokumen</span>
-                                        <span class="detail-val">BEM INSTBUNAS MAJALENGKA PERIODE [TAHUN]</span>
+                                        <span class="detail-val">BPM INSTBUNAS MAJALENGKA PERIODE [TAHUN]</span>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label"><i class="fas fa-users"></i> Baris Utama</span>
-                                        <span class="detail-val">Ketua BEM &amp; Sekretaris Umum</span>
+                                        <span class="detail-val">Ketua BPM &amp; Sekretaris BPM</span>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label"><i class="fas fa-info-circle"></i> Catatan Stempel</span>
-                                        <span class="detail-val">Tanpa Panitia / Warek III / BPM</span>
+                                        <span class="detail-val">Tanpa Panitia / Mengetahui Warek III</span>
                                     </div>
                                 </div>
                             </div>
@@ -1388,20 +1391,20 @@ if ($is_edit || $is_clone) {
                             <div class="format-ttd-content">
                                 <div class="format-ttd-header">
                                     <span class="format-badge badge-3">Format 3</span>
-                                    <span class="format-title">Panitia Pelaksana + Mengetahui Warek III &amp; Ketua BPM</span>
+                                    <span class="format-title">BPM Direct Resmi + Mengetahui Warek III</span>
                                 </div>
                                 <div class="format-ttd-details">
                                     <div class="detail-item">
                                         <span class="detail-label"><i class="fas fa-heading"></i> Header Dokumen</span>
-                                        <span class="detail-val">PANITIA PELAKSANA [NAMA KEGIATAN]</span>
+                                        <span class="detail-val">BPM INSTBUNAS MAJALENGKA PERIODE [TAHUN]</span>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label"><i class="fas fa-users"></i> Baris 1 (Atas)</span>
-                                        <span class="detail-val">Ketua BEM &amp; Sekretaris Umum</span>
+                                        <span class="detail-val">Ketua BPM &amp; Sekretaris BPM</span>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label"><i class="fas fa-user-check"></i> Baris 2 (Mengetahui)</span>
-                                        <span class="detail-val">WAREK III &amp; Ketua BPM</span>
+                                        <span class="detail-val">WAREK III Bid. Kemahasiswaan</span>
                                     </div>
                                 </div>
                             </div>
@@ -1497,22 +1500,22 @@ if ($is_edit || $is_clone) {
             <div class="card-header"><i class="fas fa-stamp"></i> Opsi Pengesahan &amp; Stempel</div>
             <div class="card-body">
                 <div class="grid-2">
-                    <!-- TTD PRESMA BEM (Selalu Muncul) -->
+                    <!-- TTD KETUA BPM (Semua Format) -->
                     <div class="switch-container">
-                        <span class="switch-label"><i class="fas fa-user-graduate"></i> Sertakan TTD PRESMA BEM</span>
-                        <label class="switch"><input type="checkbox" name="use_ttd_presma" value="1" <?php echo ($edit_data['use_ttd_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label>
+                        <span class="switch-label"><i class="fas fa-gavel"></i> Sertakan TTD Ketua BPM</span>
+                        <label class="switch"><input type="checkbox" name="use_ttd_bpm" value="1" <?php echo ($edit_data['use_ttd_bpm'] ?? ($edit_data['use_ttd_presma'] ?? '1')) == '1' ? 'checked' : ''; ?>><span class="slider"></span></label>
                     </div>
 
-                    <!-- TTD SEKRETARIS BEM (Format 2 & 3) -->
+                    <!-- TTD SEKRETARIS BPM (Format 2 & 3) -->
                     <div class="switch-container format-2and3-only">
-                        <span class="switch-label"><i class="fas fa-user-edit"></i> Sertakan TTD SEKRETARIS BEM <small style="color:#2ecc71;">(Format 2/3)</small></span>
+                        <span class="switch-label"><i class="fas fa-user-edit"></i> Sertakan TTD Sekretaris BPM <small style="color:#2ecc71;">(Format 2/3)</small></span>
                         <label class="switch"><input type="checkbox" name="use_ttd_sekretaris" value="1" <?php echo ($edit_data['use_ttd_sekretaris'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label>
                     </div>
 
-                    <!-- Cap BEM (Selalu Muncul) -->
+                    <!-- Cap BPM (Semua Format) -->
                     <div class="switch-container">
-                        <span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap BEM</span>
-                        <label class="switch"><input type="checkbox" name="use_cap_presma" value="1" <?php echo ($edit_data['use_cap_presma'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label>
+                        <span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap BPM</span>
+                        <label class="switch"><input type="checkbox" name="use_cap_bpm" value="1" <?php echo ($edit_data['use_cap_bpm'] ?? ($edit_data['use_cap_presma'] ?? '1')) == '1' ? 'checked' : ''; ?>><span class="slider"></span></label>
                     </div>
 
                     <!-- Cap PANITIA (Format 1 Saja) -->
@@ -1531,18 +1534,6 @@ if ($is_edit || $is_clone) {
                     <div class="switch-container format-1and3-only">
                         <span class="switch-label"><i class="fas fa-stamp"></i> Sertakan Cap WAREK <small style="color:#4facfe;">(Format 1/3)</small></span>
                         <label class="switch"><input type="checkbox" name="use_cap_warek" value="1" <?php echo ($edit_data['use_cap_warek'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label>
-                    </div>
-
-                    <!-- TTD BPM (Format 3 Saja) -->
-                    <div class="switch-container format-3-only">
-                        <span class="switch-label"><i class="fas fa-user-tie"></i> <strong>Sertakan TTD BPM</strong> <small style="color:#a569bd;">(Format 3)</small></span>
-                        <label class="switch"><input type="checkbox" name="use_ttd_bpm" value="1" <?php echo ($edit_data['use_ttd_bpm'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label>
-                    </div>
-
-                    <!-- Cap BPM (Format 3 Saja) -->
-                    <div class="switch-container format-3-only">
-                        <span class="switch-label"><i class="fas fa-stamp"></i> <strong>Sertakan Cap BPM</strong> <small style="color:#a569bd;">(Format 3)</small></span>
-                        <label class="switch"><input type="checkbox" name="use_cap_bpm" value="1" <?php echo ($edit_data['use_cap_bpm'] ?? '1') == '1' ? 'checked' : ''; ?>><span class="slider"></span></label>
                     </div>
                 </div>
             </div>
