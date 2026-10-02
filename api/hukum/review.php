@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/review_service.php';
+require_once __DIR__ . '/review_preview_service.php';
 
 $method = hukum_require_method(['GET', 'POST']);
 $pdo = getConnection();
@@ -22,6 +23,20 @@ if ($method === 'GET') {
         $approval = hukum_review_approval_rows($pdo, $stagingId);
         $row['approval_summary'] = $approval['summary'];
         $row['approval_rows'] = $approval['rows'];
+        $reviewRole = hukum_review_resolve_role((int) $row['dokumen_id']);
+        $row['review_role'] = $reviewRole;
+        $row['can_review'] = $reviewRole !== null
+            && (string) $row['status'] === 'menunggu_review'
+            && (string) ($approval['summary'][$reviewRole]['status'] ?? 'menunggu') === 'menunggu';
+        if ($row['can_review']) {
+            $otherRole = $reviewRole === 'admin' ? 'komisi_i' : 'admin';
+            $otherApproval = $approval['summary'][$otherRole] ?? [];
+            if (($otherApproval['status'] ?? null) === 'disetujui'
+                && (int) ($otherApproval['user_id'] ?? 0) === hukum_current_user_id()) {
+                $row['can_review'] = false;
+            }
+        }
+        $row['review_document'] = hukum_review_preview_pasals($pdo, $stagingId);
         hukum_json_response(['success' => true, 'data' => $row]);
     }
     $user = hukum_current_user();

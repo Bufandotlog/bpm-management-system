@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS hukum_staging_approval (
   id SERIAL PRIMARY KEY,
   staging_id INT NOT NULL,
   user_id INT NOT NULL,
-  peran VARCHAR(32) NOT NULL CHECK (peran IN ('komisi_i', 'ketua_umum')),
+  peran VARCHAR(32) NOT NULL CHECK (peran IN ('komisi_i', 'admin')),
   status VARCHAR(16) NOT NULL DEFAULT 'menunggu' CHECK (status IN ('menunggu', 'disetujui', 'ditolak')),
   note TEXT NULL,
   approved_at TIMESTAMP NULL,
@@ -37,8 +37,9 @@ CREATE INDEX IF NOT EXISTS idx_hukum_staging_approval_status
 CREATE TABLE IF NOT EXISTS hukum_commit_window (
   id BIGSERIAL PRIMARY KEY,
   commit_id INT NULL,
+  staging_id INT NULL,
   user_id INT NOT NULL,
-  peran VARCHAR(32) NOT NULL CHECK (peran IN ('komisi_i', 'ketua_umum')),
+  peran VARCHAR(32) NOT NULL CHECK (peran IN ('komisi_i', 'admin')),
   session_id VARCHAR(128) NULL,
   status VARCHAR(24) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','in_progress','approved','expired','rejected','locked')),
   initiated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -48,8 +49,12 @@ CREATE TABLE IF NOT EXISTS hukum_commit_window (
   request_id VARCHAR(100) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (user_id, commit_id, peran)
+  UNIQUE (user_id, commit_id, peran),
+  UNIQUE (staging_id, user_id, peran)
 );
+
+CREATE INDEX IF NOT EXISTS idx_hukum_commit_window_staging_role_status
+  ON hukum_commit_window (staging_id, peran, status);
 
 CREATE INDEX IF NOT EXISTS idx_hukum_commit_window_expires
   ON hukum_commit_window (expires_at, status);

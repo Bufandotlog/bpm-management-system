@@ -116,7 +116,7 @@ hukum_11p_assert($sameWorkspace->fetchColumn() !== 'siap_commit', 'Same actor in
 $lockSession = '11p-lock-' . bin2hex(random_bytes(6));
 for ($attempt = 0; $attempt < 3; $attempt++) {
     try {
-        hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', 'invalid-password', $lockSession);
+        hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', 'invalid-password', $lockSession, $dualStagingId);
     } catch (RuntimeException $error) {
         hukum_11p_assert($error->getCode() === 403, 'Unexpected failed-password response.');
     }
@@ -127,7 +127,9 @@ try {
 } catch (RuntimeException $error) {
     hukum_11p_assert($error->getCode() === 423, 'Actor A lockout response was not 423.');
 }
-$actorBWindow = hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'ketua_umum', $fixture['credentials']['ketua_umum'], '11p-unrelated-' . bin2hex(random_bytes(4)));
+$provider = $fixture['provider'];
+hukum_set_actor_context_provider($provider->as('ketua_umum'));
+$actorBWindow = hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'admin', $fixture['credentials']['ketua_umum'], '11p-unrelated-' . bin2hex(random_bytes(4)), $dualStagingId);
 hukum_11p_assert($actorBWindow['status'] === 'approved', 'Unrelated Actor B was affected by Actor A lockout.');
 
 $secretSearch = json_encode($fixture['credentials'], JSON_UNESCAPED_SLASHES);

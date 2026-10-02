@@ -3,6 +3,13 @@
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../../admin/core/hukum-clock.php';
 
+function hukum_commit_for_update(PDO $pdo): string
+{
+    return strtolower((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME)) === 'sqlite'
+        ? ''
+        : ' FOR UPDATE';
+}
+
 function hukum_commit_test_failure_inject(string $point): void
 {
     $environment = strtolower((string) (getenv('APP_ENV') ?: ($_ENV['APP_ENV'] ?? '')));
@@ -76,11 +83,11 @@ function hukum_commit_user_must_be_business_role(int $userId, int $documentId, s
     }
 
     if ($peran === 'komisi_i') {
-        return hukum_is_komisi_i($userId, $periodId);
+        return hukum_actor_has_technical_role_for_period('komisi_i', $userId, $periodId);
     }
 
     $row = dbFetchOne(
-        'SELECT id FROM users WHERE id = ? AND role IN (\'admin\', \'superadmin\') LIMIT 1',
+        'SELECT id FROM users WHERE id = ? AND role = \'admin\' LIMIT 1',
         [$userId],
         'i'
     );
@@ -95,20 +102,13 @@ function hukum_commit_user_must_be_business_role_on(PDO $pdo, int $userId, int $
 
     if ($peran === 'admin') {
         $stmt = $pdo->prepare(
-            'SELECT id FROM users WHERE id = ? AND role IN (\'admin\', \'superadmin\') LIMIT 1'
+            'SELECT id FROM users WHERE id = ? AND role = \'admin\' LIMIT 1'
         );
         $stmt->execute([$userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) !== false;
     }
 
-    $stmt = $pdo->prepare(
-        'SELECT id FROM hukum_keanggotaan
-         WHERE user_id = ? AND periode_id = ? AND jabatan = ? AND aktif = 1
-           AND (selesai_pada IS NULL OR selesai_pada >= CURDATE())
-         LIMIT 1'
-    );
-    $stmt->execute([$userId, $periodId, $peran]);
-    return $stmt->fetch(PDO::FETCH_ASSOC) !== false;
+    return hukum_actor_has_technical_role_for_period('komisi_i', $userId, $periodId);
 }
 
 function hukum_commit_verify_password(PDO $pdo, int $userId, string $password): bool
@@ -193,8 +193,12 @@ function hukum_commit_window_row(PDO $pdo, int $userId, string $peran, ?int $com
     return $row !== null && $row !== false ? $row : null;
 }
 
-function hukum_commit_create_window(PDO $pdo, int $userId, string $peran, ?string $password = null, ?string $sessionId = null): array
+function hukum_commit_create_window(PDO $pdo, int $userId, string $peran, ?string $password = null, ?string $sessionId = null, ?int $stagingId = null): array
 {
+    if (strtolower((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME)) === 'sqlite') {
+        return hukum_commit_create_window_unlocked($pdo, $userId, $peran, $password, $sessionId, $stagingId);
+    }
+
     $lockName = 'hukum_commit_window:' . $userId;
     $lock = $pdo->prepare('SELECT GET_LOCK(?, 15)');
     $lock->execute([$lockName]);
@@ -203,45 +207,87 @@ function hukum_commit_create_window(PDO $pdo, int $userId, string $peran, ?strin
     }
 
     try {
-        return hukum_commit_create_window_unlocked($pdo, $userId, $peran, $password, $sessionId);
+        return hukum_commit_create_window_unlocked($pdo, $userId, $peran, $password, $sessionId, $stagingId);
     } finally {
         $release = $pdo->prepare('SELECT RELEASE_LOCK(?)');
         $release->execute([$lockName]);
     }
 }
 
-function hukum_commit_create_window_unlocked(PDO $pdo, int $userId, string $peran, ?string $password = null, ?string $sessionId = null): array
+function hukum_commit_create_window_unlocked(PDO $pdo, int $userId, string $peran, ?string $password = null, ?string $sessionId = null, ?int $stagingId = null): array
 {
     $sessionId = $sessionId ?? session_id();
     $peran = strtolower(trim($peran));
-    if (!in_array($peran, ['komisi_i', 'admin'], true)) {
+    if (!in_array($peran, ['komisi_i', 'admin'], true) || ($stagingId ?? 0) <= 0) {
         throw new RuntimeException('Peran commit tidak valid.', 400);
     }
+    $actor = hukum_authenticated_actor();
+    $actorRole = strtolower((string) ($actor?->technicalRole ?? ''));
+    $actorCanVerifyAsRole = $peran === 'komisi_i'
+        ? $actorRole === 'komisi_i'
+        : $actorRole === 'admin';
+    if ($actor === null || $actor->id !== $userId || !$actorCanVerifyAsRole) {
+        throw new RuntimeException('Identitas akun tidak berwenang untuk verifikasi peran ini.', 403);
+    }
+    $stmt = $pdo->prepare(
+        'SELECT s.status, w.status AS workspace_status, w.dokumen_id, d.periode_id
+         FROM hukum_staging s
+         JOIN hukum_workspace w ON w.id = s.workspace_id
+         JOIN hukum_dokumen d ON d.id = w.dokumen_id
+         WHERE s.id = ? LIMIT 1' . hukum_commit_for_update($pdo)
+    );
+    $stmt->execute([$stagingId]);
+    $staging = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($staging === false || (string) $staging['status'] !== 'disetujui'
+        || (string) $staging['workspace_status'] !== 'siap_commit') {
+        throw new RuntimeException('Hanya staging yang disetujui dan siap commit dapat diverifikasi.', 409);
+    }
+    if (!hukum_commit_user_must_be_business_role_on($pdo, $userId, (int) $staging['periode_id'], $peran)) {
+        throw new RuntimeException('Akun tidak berwenang memverifikasi peran ini pada periode dokumen.', 403);
+    }
+    $approvalStmt = $pdo->prepare(
+        'SELECT peran, user_id, status FROM hukum_staging_approval WHERE staging_id = ?'
+    );
+    $approvalStmt->execute([$stagingId]);
+    $approvals = [];
+    foreach ($approvalStmt->fetchAll(PDO::FETCH_ASSOC) as $approval) {
+        if ((string) $approval['status'] === 'disetujui') {
+            $approvals[(string) $approval['peran']] = (int) $approval['user_id'];
+        }
+    }
+    if (!isset($approvals['komisi_i'], $approvals['admin'])
+        || $approvals['komisi_i'] === $approvals['admin']) {
+        throw new RuntimeException('Staging harus memiliki persetujuan valid dari dua akun berbeda.', 409);
+    }
+    if (($approvals[$peran] ?? 0) !== $userId) {
+        throw new RuntimeException('Verifikasi hanya dapat dilakukan oleh akun yang menyetujui staging untuk peran ini.', 403);
+    }
+
     $otherRole = $peran === 'komisi_i' ? 'admin' : 'komisi_i';
     $stmt = $pdo->prepare(
         'SELECT id, status FROM hukum_commit_window
-         WHERE user_id = ? AND peran = ? AND status IN (\'pending\', \'approved\')
+         WHERE staging_id = ? AND user_id = ? AND peran = ? AND status IN (\'pending\', \'approved\')
          ORDER BY id DESC LIMIT 1'
     );
-    $stmt->execute([$userId, $otherRole]);
+    $stmt->execute([$stagingId, $userId, $otherRole]);
     $otherWindow = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($otherWindow !== false) {
         throw new RuntimeException('Satu aktor tidak dapat menjadi dua pihak commit.', 403);
     }
 
     $stmt = $pdo->prepare(
-        'SELECT * FROM hukum_commit_window WHERE user_id = ? AND peran = ? AND commit_id IS NULL ORDER BY id DESC LIMIT 1'
+        'SELECT * FROM hukum_commit_window WHERE staging_id = ? AND user_id = ? AND peran = ? AND commit_id IS NULL ORDER BY id DESC LIMIT 1'
     );
-    $stmt->execute([$userId, $peran]);
+    $stmt->execute([$stagingId, $userId, $peran]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($password !== null && trim($password) !== '') {
+        hukum_commit_check_cooldown($pdo, $userId, $sessionId);
         if (!hukum_commit_verify_password($pdo, $userId, $password)) {
             hukum_commit_apply_failed_attempt($pdo, $userId, 'wrong_password', $sessionId);
             throw new RuntimeException('Password verifikasi commit tidak valid.', 403);
         }
 
-        hukum_commit_check_cooldown($pdo, $userId, $sessionId);
         if ($row) {
             $pdo->prepare(
                 'UPDATE hukum_commit_window SET status = ?, completed_at = CURRENT_TIMESTAMP, result = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
@@ -250,9 +296,9 @@ function hukum_commit_create_window_unlocked(PDO $pdo, int $userId, string $pera
         }
 
         $pdo->prepare(
-            'INSERT INTO hukum_commit_window (user_id, peran, session_id, status, initiated_at, expires_at, completed_at, result, created_at, updated_at)
-             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
-        )->execute([$userId, $peran, $sessionId, 'approved', hukum_now()->modify('+300 seconds')->format('Y-m-d H:i:s'), 'verified']);
+            'INSERT INTO hukum_commit_window (staging_id, user_id, peran, session_id, status, initiated_at, expires_at, completed_at, result, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+        )->execute([$stagingId, $userId, $peran, $sessionId, 'approved', hukum_now()->modify('+300 seconds')->format('Y-m-d H:i:s'), 'verified']);
         return ['status' => 'approved', 'peran' => $peran, 'user_id' => $userId, 'expires_at' => hukum_now()->modify('+300 seconds')->format('Y-m-d H:i:s')];
     }
 
@@ -262,9 +308,9 @@ function hukum_commit_create_window_unlocked(PDO $pdo, int $userId, string $pera
 
     $expiresAt = hukum_now()->modify('+300 seconds')->format('Y-m-d H:i:s');
     $pdo->prepare(
-        'INSERT INTO hukum_commit_window (user_id, peran, session_id, status, initiated_at, expires_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
-    )->execute([$userId, $peran, $sessionId, 'pending', $expiresAt]);
+        'INSERT INTO hukum_commit_window (staging_id, user_id, peran, session_id, status, initiated_at, expires_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+    )->execute([$stagingId, $userId, $peran, $sessionId, 'pending', $expiresAt]);
 
     return ['status' => 'pending', 'peran' => $peran, 'user_id' => $userId, 'expires_at' => $expiresAt];
 }
@@ -299,6 +345,21 @@ function hukum_commit_snapshot_for_staging(PDO $pdo, int $stagingId): array
             'versi_id' => (int) $link['pasal_versi_id'],
             'hash_konten' => (string) $link['hash_konten'],
             'isi' => json_decode((string) $link['isi'], true) ?? [],
+        ];
+    }
+    $deletionStmt = $pdo->prepare(
+        'SELECT entity_type, entity_id, base_commit_id, reason, snapshot_json
+         FROM hukum_staging_deletion WHERE staging_id = ? ORDER BY id'
+    );
+    $deletionStmt->execute([$stagingId]);
+    foreach ($deletionStmt->fetchAll(PDO::FETCH_ASSOC) as $deletion) {
+        $snapshot[] = [
+            'operation' => 'delete',
+            'entity_type' => (string) $deletion['entity_type'],
+            'entity_id' => (int) $deletion['entity_id'],
+            'base_commit_id' => (int) $deletion['base_commit_id'],
+            'reason' => (string) $deletion['reason'],
+            'before' => json_decode((string) $deletion['snapshot_json'], true) ?? [],
         ];
     }
 
@@ -339,13 +400,14 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
     $stmt->execute([(int) $commit['staging_id'], $documentId]);
     $stagedVersions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $canonicalVersions = [];
+    $canonicalActive = [];
     foreach ($stagedVersions as $version) {
         $canonicalVersions[(int) $version['pasal_id']] = (int) $version['pasal_version_id'];
     }
 
     if (!empty($commit['parent_commit_id'])) {
         $stmt = $pdo->prepare(
-            'SELECT pasal_id, pasal_version_id
+            'SELECT pasal_id, pasal_version_id, is_active
              FROM hukum_graph_snapshot
              WHERE commit_id = ? AND dokumen_id = ?',
         );
@@ -357,9 +419,28 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
                 $canonicalVersions[$pasalId] = $node['pasal_version_id'] !== null
                     ? (int) $node['pasal_version_id']
                     : null;
+                $canonicalActive[$pasalId] = (int) $node['is_active'] === 1;
             }
         }
     }
+
+    $deletionStmt = $pdo->prepare(
+        'SELECT entity_type, entity_id, snapshot_json
+         FROM hukum_staging_deletion WHERE staging_id = ?'
+    );
+    $deletionStmt->execute([(int) $commit['staging_id']]);
+    $deletedPasalIds = [];
+    $deletedBabIds = [];
+    foreach ($deletionStmt->fetchAll(PDO::FETCH_ASSOC) as $deletion) {
+        if ((string) $deletion['entity_type'] === 'bab') {
+            $deletedBabIds[(int) $deletion['entity_id']] = true;
+        }
+        $before = json_decode((string) $deletion['snapshot_json'], true) ?? [];
+        foreach (($before['pasals'] ?? []) as $pasal) {
+            $deletedPasalIds[(int) ($pasal['pasal_id'] ?? 0)] = true;
+        }
+    }
+    unset($deletedPasalIds[0]);
 
     $stmt = $pdo->prepare(
         'SELECT id AS pasal_id, nomor_label
@@ -373,9 +454,10 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
     foreach ($nodes as $node) {
         $pasalId = (int) $node['pasal_id'];
         $versionId = $canonicalVersions[$pasalId] ?? null;
+        $isActive = !isset($deletedPasalIds[$pasalId]) && ($canonicalActive[$pasalId] ?? true);
         $insert = $pdo->prepare(
-            'INSERT INTO hukum_graph_snapshot (commit_id, dokumen_id, pasal_id, pasal_version_id, nomor_label, payload_json, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)'
+            'INSERT INTO hukum_graph_snapshot (commit_id, dokumen_id, pasal_id, pasal_version_id, nomor_label, payload_json, is_active, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)'
         );
         $insert->execute([
             $commitId,
@@ -387,7 +469,29 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
                 'pasal_id' => $pasalId,
                 'nomor_label' => $node['nomor_label'] ?? null,
                 'pasal_version_id' => $versionId,
+                'is_active' => $isActive,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $isActive ? 1 : 0,
+        ]);
+        $canonicalActive[$pasalId] = $isActive;
+    }
+
+    $deletionStmt = $pdo->prepare(
+        'SELECT entity_type, entity_id, reason, snapshot_json
+         FROM hukum_staging_deletion WHERE staging_id = ?'
+    );
+    $deletionStmt->execute([(int) $commit['staging_id']]);
+    $insertDeletion = $pdo->prepare(
+        'INSERT INTO hukum_commit_deletion (commit_id, entity_type, entity_id, reason, snapshot_json)
+         VALUES (?, ?, ?, ?, ?)'
+    );
+    foreach ($deletionStmt->fetchAll(PDO::FETCH_ASSOC) as $deletion) {
+        $insertDeletion->execute([
+            $commitId,
+            (string) $deletion['entity_type'],
+            (int) $deletion['entity_id'],
+            (string) $deletion['reason'],
+            (string) $deletion['snapshot_json'],
         ]);
     }
 
@@ -406,7 +510,9 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
         );
         $stmt->execute([(int) $commit['parent_commit_id'], $documentId]);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $edge) {
-            if (!isset($changedPasalIds[(int) $edge['pasal_anak_id']])
+            if (($canonicalActive[(int) $edge['pasal_anak_id']] ?? false)
+                && ($canonicalActive[(int) $edge['pasal_induk_id']] ?? false)
+                && !isset($changedPasalIds[(int) $edge['pasal_anak_id']])
                 && !isset($changedPasalIds[(int) $edge['pasal_induk_id']])) {
                 $edges[] = $edge;
             }
@@ -423,6 +529,12 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
     );
     $stmt->execute([$documentId, $documentId]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $edge) {
+        $sourcePasalId = (int) $edge['pasal_anak_id'];
+        $targetPasalId = (int) $edge['pasal_induk_id'];
+        if (!($canonicalActive[$sourcePasalId] ?? false)
+            || !($canonicalActive[$targetPasalId] ?? false)) {
+            continue;
+        }
         if (!empty($commit['parent_commit_id'])
             && !isset($changedPasalIds[(int) $edge['pasal_anak_id']])
             && !isset($changedPasalIds[(int) $edge['pasal_induk_id']])) {
@@ -507,14 +619,14 @@ function hukum_commit_verify_snapshot(PDO $pdo, int $commitId): bool
     return hash_equals((string) $commit['hash_commit'], $expected);
 }
 
-function hukum_commit_is_window_approved(PDO $pdo, int $userId, string $peran): ?array
+function hukum_commit_is_window_approved(PDO $pdo, int $userId, string $peran, int $stagingId): ?array
 {
     $stmt = $pdo->prepare(
         'SELECT * FROM hukum_commit_window
-         WHERE user_id = ? AND peran = ? AND status = ? AND commit_id IS NULL
-         ORDER BY id DESC LIMIT 1 FOR UPDATE'
+         WHERE staging_id = ? AND user_id = ? AND peran = ? AND status = ? AND commit_id IS NULL
+         ORDER BY id DESC LIMIT 1' . hukum_commit_for_update($pdo)
     );
-    $stmt->execute([$userId, strtolower(trim($peran)), 'approved']);
+    $stmt->execute([$stagingId, $userId, strtolower(trim($peran)), 'approved']);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row === false) {
         return null;
@@ -545,6 +657,7 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
     }
     hukum_commit_assert_actor_identity($actorId);
 
+    $failedPasswordAttempt = null;
     $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare(
@@ -552,7 +665,7 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
              FROM hukum_staging s
              JOIN hukum_workspace w ON w.id = s.workspace_id
              JOIN hukum_dokumen d ON d.id = w.dokumen_id
-             WHERE s.id = ? LIMIT 1 FOR UPDATE'
+             WHERE s.id = ? LIMIT 1' . hukum_commit_for_update($pdo)
         );
         $stmt->execute([$stagingId]);
         $staging = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -564,13 +677,13 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
             throw new RuntimeException('Staging belum berada pada state siap commit.', 409);
         }
 
-        $workspaceLock = $pdo->prepare('SELECT id FROM hukum_workspace WHERE id = ? FOR UPDATE');
+        $workspaceLock = $pdo->prepare('SELECT id FROM hukum_workspace WHERE id = ?' . hukum_commit_for_update($pdo));
         $workspaceLock->execute([(int) $staging['workspace_id']]);
         if ($workspaceLock->fetch(PDO::FETCH_ASSOC) === false) {
             throw new RuntimeException('Workspace tidak ditemukan.', 404);
         }
         $existingCommit = $pdo->prepare(
-            'SELECT id FROM hukum_commit WHERE staging_id = ? ORDER BY id DESC LIMIT 1 FOR UPDATE'
+            'SELECT id FROM hukum_commit WHERE staging_id = ? ORDER BY id DESC LIMIT 1' . hukum_commit_for_update($pdo)
         );
         $existingCommit->execute([$stagingId]);
         if ($existingCommit->fetch(PDO::FETCH_ASSOC) !== false) {
@@ -592,7 +705,7 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
         $stmt = $pdo->prepare(
             'SELECT user_id, peran, status
              FROM hukum_staging_approval
-             WHERE staging_id = ? ORDER BY peran ASC FOR UPDATE'
+             WHERE staging_id = ? ORDER BY peran ASC' . hukum_commit_for_update($pdo)
         );
         $stmt->execute([$stagingId]);
         $approvalRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -602,21 +715,25 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
                 $approvedRoles[(string) $row['peran']] = (int) $row['user_id'];
             }
         }
-        if (!isset($approvedRoles['komisi_i']) || !isset($approvedRoles['admin'])) {
+        if (!isset($approvedRoles['komisi_i'], $approvedRoles['admin'])) {
             throw new RuntimeException('Staging belum memiliki dua persetujuan yang valid.', 409);
         }
-
-        if (!hukum_commit_verify_password($pdo, $actorId, $password)) {
-            hukum_commit_apply_failed_attempt($pdo, $actorId, 'wrong_password', $sessionId ?? session_id());
-            throw new RuntimeException('Password commit tidak valid.', 403);
+        if ($approvedRoles['komisi_i'] === $approvedRoles['admin']) {
+            throw new RuntimeException('Satu akun tidak dapat memenuhi dua persetujuan.', 409);
         }
         hukum_commit_check_cooldown($pdo, $actorId, $sessionId ?? session_id());
-
+        if (!hukum_commit_verify_password($pdo, $actorId, $password)) {
+            $failedPasswordAttempt = [
+                'actor_id' => $actorId,
+                'session_id' => $sessionId ?? session_id(),
+            ];
+            throw new RuntimeException('Password commit tidak valid.', 403);
+        }
         $validatedWindows = [];
         foreach (['komisi_i', 'admin'] as $requiredRole) {
             $memberId = (int) ($approvedRoles[$requiredRole] ?? 0);
             $window = $memberId > 0
-                ? hukum_commit_is_window_approved($pdo, $memberId, $requiredRole)
+                ? hukum_commit_is_window_approved($pdo, $memberId, $requiredRole, $stagingId)
                 : null;
             if ($window === null) {
                 throw new RuntimeException('Window commit untuk dua pihak belum aktif atau sudah kadaluarsa.', 409);
@@ -628,7 +745,7 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
             'SELECT id, hash_commit
              FROM hukum_commit
              WHERE dokumen_id = ? AND status = ?
-             ORDER BY id DESC LIMIT 1 FOR UPDATE'
+             ORDER BY id DESC LIMIT 1' . hukum_commit_for_update($pdo)
         );
         $stmt->execute([$documentId, 'aktif']);
         $currentCommit = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -719,7 +836,25 @@ function hukum_commit_finalize(PDO $pdo, int $stagingId, int $actorId, string $p
         $pdo->commit();
         return ['success' => true, 'id' => $commitId, 'hash_commit' => $hash, 'status' => 'committed'];
     } catch (Throwable $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if ($failedPasswordAttempt !== null) {
+            try {
+                hukum_commit_apply_failed_attempt(
+                    $pdo,
+                    (int) $failedPasswordAttempt['actor_id'],
+                    'wrong_password',
+                    (string) $failedPasswordAttempt['session_id']
+                );
+            } catch (Throwable $persistError) {
+                throw new RuntimeException(
+                    'Password commit tidak valid dan percobaan gagal tidak dapat dicatat.',
+                    500,
+                    $persistError
+                );
+            }
+        }
         throw $e;
     }
 }

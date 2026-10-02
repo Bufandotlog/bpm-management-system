@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS hukum_graph_snapshot (
   pasal_version_id INT NULL,
   nomor_label VARCHAR(50) NULL,
   payload_json JSON NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_hukum_graph_snapshot_commit_node (commit_id, pasal_id),

@@ -53,6 +53,13 @@ function hukum_business_membership_for_user(int $userId, int $periodeId, string 
     return $row !== null;
 }
 
+function hukum_actor_has_technical_role_for_period(string $role, int $userId, int $periodeId): bool
+{
+    return hukum_current_user_id() === $userId
+        && hukum_current_user_role() === $role
+        && hukum_current_user_periode_id() === $periodeId;
+}
+
 function hukum_is_komisi_i(int $userId = 0, ?int $periodeId = null, ?int $documentId = null): bool
 {
     if ($userId <= 0) {
@@ -117,7 +124,7 @@ $pdo->exec("INSERT INTO hukum_pasal_versi (id, pasal_id, workspace_id, status) V
 $pdo->exec("INSERT INTO hukum_staging_versi (staging_id, pasal_versi_id) VALUES (1, 10)");
 
 $_SESSION['admin_id'] = 2;
-$_SESSION['admin_role'] = 'admin';
+$_SESSION['admin_role'] = 'komisi_i';
 $_SESSION['admin_periode_id'] = 1;
 $_SESSION['admin_can_access_all'] = 0;
 
@@ -138,7 +145,7 @@ if ($result['status'] !== 'disetujui') {
 
 $pdo->exec("INSERT INTO hukum_staging (id, workspace_id, status, diajukan_oleh) VALUES (2, 1, 'menunggu_review', 1)");
 $pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (2, 2, 'komisi_i', 'menunggu', NULL)");
-$pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (2, 3, 'ketua_umum', 'menunggu', NULL)");
+$pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (2, 3, 'admin', 'menunggu', NULL)");
 
 $_SESSION['admin_id'] = 2;
 $_SESSION['admin_role'] = 'admin';

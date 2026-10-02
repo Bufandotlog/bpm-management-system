@@ -28,14 +28,16 @@ function hukum_11q_approve_and_commit(PDO $pdo, array $fixture, int $stagingId, 
     hukum_review_decide($pdo, $stagingId, 'approve', null, $fixture['actors']['komisi_i']->id);
     hukum_set_actor_context_provider($fixture['provider']->as('ketua_umum'));
     hukum_review_decide($pdo, $stagingId, 'approve', null, $fixture['actors']['ketua_umum']->id);
-    hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', $fixture['credentials']['komisi_i'], $suffix . '-a');
-    hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'ketua_umum', $fixture['credentials']['ketua_umum'], $suffix . '-b');
     hukum_set_actor_context_provider($fixture['provider']->as('komisi_i'));
+    hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', $fixture['credentials']['komisi_i'], $suffix . '-a', $stagingId);
+    hukum_set_actor_context_provider($fixture['provider']->as('ketua_umum'));
+    hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'admin', $fixture['credentials']['ketua_umum'], $suffix . '-b', $stagingId);
+    hukum_set_actor_context_provider($fixture['provider']->as('ketua_umum'));
     return hukum_commit_finalize(
         $pdo,
         $stagingId,
-        $fixture['actors']['komisi_i']->id,
-        $fixture['credentials']['komisi_i'],
+        $fixture['actors']['ketua_umum']->id,
+        $fixture['credentials']['ketua_umum'],
         $suffix . '-final',
         $suffix . '-session'
     );
@@ -71,7 +73,9 @@ foreach ([1, 2, 3] as $order) {
     $versionsA[$order] = hukum_create_pasal_draft($pdo, [
         'pasal_id' => $pasals[$order]['id'],
         'workspace_id' => $workspaceA['id'],
-        'isi' => ['teks' => 'A' . $order],
+        'isi' => $order === 2
+            ? ['teks' => 'A' . $order, 'penjelasan' => 'Penjelasan tersimpan pada snapshot']
+            : ['teks' => 'A' . $order],
     ]);
 }
 $stagingA = hukum_submit_staging($pdo, $workspaceA['id'], array_column($versionsA, 'id'), $fixture['actors']['komisi_i']->id);
@@ -96,12 +100,24 @@ $uncommittedP2 = hukum_create_pasal_draft($pdo, [
     'workspace_id' => $workspaceB['id'],
     'isi' => ['teks' => 'UNCOMMITTED-DRAFT'],
 ]);
+hukum_set_actor_context_provider($fixture['provider']->as('komisi_i'));
 $stagingB = hukum_submit_staging($pdo, $workspaceB['id'], [$versionsB[1]['id'], $versionsB[3]['id']], $fixture['actors']['komisi_i']->id);
 $commitB = hukum_11q_approve_and_commit($pdo, $fixture, $stagingB['id'], '11q-b-' . $tag);
 $graphB = $pdo->prepare('SELECT pasal_id, pasal_version_id FROM hukum_graph_snapshot WHERE commit_id = ? ORDER BY pasal_id');
 $graphB->execute([$commitB['id']]);
 $graphBRows = $graphB->fetchAll(PDO::FETCH_ASSOC);
 hukum_11q_assert(count($graphBRows) === 3, 'Revision graph snapshot does not contain three unique nodes.');
+$snapshotContent = $pdo->prepare(
+    'SELECT pv.isi FROM hukum_graph_snapshot gs
+     JOIN hukum_pasal_versi pv ON pv.id = gs.pasal_version_id
+     WHERE gs.commit_id = ? AND gs.pasal_id = ?'
+);
+$snapshotContent->execute([$commitB['id'], $pasals[2]['id']]);
+$preservedContent = json_decode((string) $snapshotContent->fetchColumn(), true);
+hukum_11q_assert(
+    ($preservedContent['penjelasan'] ?? null) === 'Penjelasan tersimpan pada snapshot',
+    'Optional explanation was not preserved in the later committed snapshot.'
+);
 $expected = [
     (int) $pasals[1]['id'] => (int) $versionsB[1]['id'],
     (int) $pasals[2]['id'] => (int) $versionsA[2]['id'],

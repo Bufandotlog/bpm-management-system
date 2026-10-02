@@ -900,7 +900,7 @@ if (isset($page_css)) {
 
             <?php
             $hukum_roles = ['superadmin', 'admin', 'sekretaris', 'komisi_i', 'kominfo', 'anggota'];
-            $is_hukum_active = in_array($current_page, ['hukum-dashboard.php', 'hukum-editor.php', 'hukum-staging.php'], true);
+            $is_hukum_active = in_array($current_page, ['hukum-dashboard.php', 'hukum-editor.php', 'hukum-staging.php', 'hukum-staging-detail.php', 'hukum-commit.php'], true);
             ?>
             <?php if (in_array($admin_role, $hukum_roles, true)): ?>
             <div class="sidebar-dropdown <?php echo $is_hukum_active ? 'active open' : ''; ?>">
@@ -919,6 +919,11 @@ if (isset($page_css)) {
                     <a href="<?php echo baseUrl('admin/hukum-staging.php'); ?>" class="<?php echo $current_page === 'hukum-staging.php' ? 'active' : ''; ?>">
                         <i class="fas fa-layer-group"></i><span>Review / Staging</span>
                     </a>
+                    <?php if (in_array($admin_role, ['superadmin', 'admin', 'komisi_i'], true)): ?>
+                    <a href="<?php echo baseUrl('admin/hukum-commit.php'); ?>" class="<?php echo $current_page === 'hukum-commit.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-file-signature"></i><span>Finalisasi Commit</span>
+                    </a>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endif; ?>

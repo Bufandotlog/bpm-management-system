@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS hukum_graph_snapshot (
   pasal_version_id INTEGER NULL,
   nomor_label VARCHAR(50) NULL,
   payload_json JSONB NULL,
+  is_active SMALLINT NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (commit_id, pasal_id)
 );

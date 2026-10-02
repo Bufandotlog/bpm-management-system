@@ -14,9 +14,31 @@ require_once __DIR__ . '/../api/hukum/pasal_service.php';
 require_once __DIR__ . '/../api/hukum/staging_service.php';
 require_once __DIR__ . '/../api/hukum/review_service.php';
 require_once __DIR__ . '/../api/hukum/commit_service.php';
+require_once __DIR__ . '/../api/hukum/membership_service.php';
 
-$provider = $fixture['provider'];
+$sourceKomisiActor = $fixture['actors']['komisi_i'];
+$technicalKomisiActor = new HukumAuthenticatedActorContext(
+    $sourceKomisiActor->id,
+    $sourceKomisiActor->username,
+    $sourceKomisiActor->displayName,
+    'komisi_i',
+    $sourceKomisiActor->periodId,
+    $sourceKomisiActor->canAccessAll,
+    'test_fixture',
+    true
+);
+$actors = $fixture['actors'];
+$actors['komisi_i'] = $technicalKomisiActor;
+$provider = new HukumTestActorProvider($actors, 'komisi_i');
 hukum_set_actor_context_provider($provider);
+if (!hukum_has_permission('hukum.commit.verify') || hukum_has_permission('hukum.commit.create')) {
+    throw new RuntimeException('Komisi I commit permissions are not separated from finalization.');
+}
+if (!hukum_actor_has_technical_role_for_period('komisi_i', $technicalKomisiActor->id, $fixture['period_id'])
+    || hukum_actor_has_technical_role_for_period('komisi_i', $technicalKomisiActor->id, $fixture['period_id'] + 1)
+    || hukum_actor_has_technical_role_for_period('admin', $technicalKomisiActor->id, $fixture['period_id'])) {
+    throw new RuntimeException('Technical role/period authorization policy is invalid.');
+}
 $suffix = bin2hex(random_bytes(6));
 $document = hukum_create_document($pdo, [
     'jenis' => 'PERATURAN',
@@ -53,6 +75,135 @@ if (($stored['status'] ?? '') !== 'menunggu_review' || (int) $stored['diajukan_o
     throw new RuntimeException('Staging record invalid.');
 }
 
+$adminActor = $fixture['actors']['ketua_umum'];
+$superadminActor = new HukumAuthenticatedActorContext(
+    $adminActor->id,
+    $adminActor->username,
+    $adminActor->displayName,
+    'superadmin',
+    $adminActor->periodId,
+    true,
+    'test_fixture',
+    true
+);
+$superadminActors = $actors;
+$superadminActors['superadmin'] = $superadminActor;
+$superadminProvider = new HukumTestActorProvider($superadminActors, 'superadmin');
+hukum_set_actor_context_provider($superadminProvider);
+if (!hukum_has_permission('hukum.view')
+    || !hukum_has_permission('view:hukum')
+    || hukum_has_permission('hukum.document.create')
+    || hukum_has_permission('hukum.document.update')
+    || hukum_has_permission('create:hukum-dokumen')
+    || hukum_has_permission('hukum.workspace.create')
+    || hukum_has_permission('create:hukum-meja-kerja')
+    || hukum_has_permission('close:hukum-meja-kerja')
+    || hukum_has_permission('hukum.workspace.submit')
+    || hukum_has_permission('hukum.staging.review')
+    || hukum_has_permission('hukum.commit.verify')
+    || hukum_has_permission('hukum.commit.create')
+    || hukum_can_review_staging((int) $document['id'], $superadminActor->id)
+    || hukum_review_resolve_role((int) $document['id'], $superadminActor->id) !== null) {
+    throw new RuntimeException('Superadmin must be read-only in the hukum module.');
+}
+try {
+    hukum_membership_require_admin($superadminActor);
+    throw new RuntimeException('Superadmin was allowed to manage hukum membership.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_create_document($pdo, [
+        'jenis' => 'PERATURAN',
+        'lingkup' => 'induk',
+        'judul' => 'Superadmin must not create hukum document',
+        'slug' => 'superadmin-must-not-create-hukum-' . bin2hex(random_bytes(4)),
+        'periode_id' => $fixture['period_id'],
+    ]);
+    throw new RuntimeException('Superadmin was allowed to create a hukum document.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_create_workspace($pdo, (int) $document['id'], 'Superadmin draft', null, $superadminActor->id);
+    throw new RuntimeException('Superadmin was allowed to create a hukum workspace.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_create_pasal_draft($pdo, [
+        'pasal_id' => (int) $pasal['id'],
+        'workspace_id' => (int) $workspace['id'],
+        'isi' => ['teks' => 'Superadmin must not save a draft'],
+    ]);
+    throw new RuntimeException('Superadmin was allowed to save a hukum draft.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_submit_staging($pdo, (int) $workspace['id'], [(int) $version['id']], $superadminActor->id);
+    throw new RuntimeException('Superadmin was allowed to submit hukum staging.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_review_decide($pdo, $staging['id'], 'reject', 'Superadmin must not reject staging', $superadminActor->id);
+    throw new RuntimeException('Superadmin was allowed to reject staging.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_review_decide($pdo, $staging['id'], 'approve', null, $superadminActor->id);
+    throw new RuntimeException('Superadmin was allowed to approve staging.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_commit_finalize($pdo, (int) $staging['id'], $superadminActor->id, 'unused-password', '11m-superadmin-finalize');
+    throw new RuntimeException('Superadmin was allowed to finalize a hukum commit.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_commit_create_window(
+        $pdo,
+        $superadminActor->id,
+        'admin',
+        $fixture['credentials']['ketua_umum'],
+        '11m-superadmin',
+        (int) $staging['id']
+    );
+    throw new RuntimeException('Superadmin was allowed to verify a commit window.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+
+$adminProvider = $provider->as('ketua_umum');
+hukum_set_actor_context_provider($adminProvider);
+if (!hukum_has_permission('view:hukum')
+    || !hukum_has_permission('create:hukum-dokumen')
+    || !hukum_has_permission('close:hukum-meja-kerja')) {
+    throw new RuntimeException('Legacy hukum permissions no longer map to Admin permissions.');
+}
+hukum_set_actor_context_provider($provider);
 $first = hukum_review_decide($pdo, $staging['id'], 'approve', null, $fixture['actors']['komisi_i']->id);
 if (($first['role'] ?? '') !== 'komisi_i') {
     throw new RuntimeException('Komisi I approval failed.');
@@ -70,22 +221,36 @@ $second = hukum_review_decide($pdo, $staging['id'], 'approve', null, $fixture['a
 if (($second['status'] ?? '') !== 'disetujui') {
     throw new RuntimeException('Second approval did not complete staging.');
 }
+if (!hukum_has_permission('hukum.commit.verify') || !hukum_has_permission('hukum.commit.create')) {
+    throw new RuntimeException('Admin must be able to verify and finalize commit.');
+}
 
-$a = hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', $fixture['credentials']['komisi_i'], '11m-a');
-$b = hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'ketua_umum', $fixture['credentials']['ketua_umum'], '11m-b');
+hukum_set_actor_context_provider($provider->as('komisi_i'));
+$a = hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', $fixture['credentials']['komisi_i'], '11m-a', (int) $staging['id']);
+hukum_set_actor_context_provider($provider->as('ketua_umum'));
+$b = hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'admin', $fixture['credentials']['ketua_umum'], '11m-b', (int) $staging['id']);
 if ($a['status'] !== 'approved' || $b['status'] !== 'approved') {
     throw new RuntimeException('Commit authorization did not verify.');
 }
+if (hukum_commit_is_window_approved(
+    $pdo,
+    $fixture['actors']['komisi_i']->id,
+    'komisi_i',
+    (int) $staging['id'] + 1
+) !== null) {
+    throw new RuntimeException('A verified window leaked across staging records.');
+}
 try {
-    hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'ketua_umum', $fixture['credentials']['komisi_i'], '11m-same');
+    hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'admin', $fixture['credentials']['komisi_i'], '11m-same', (int) $staging['id']);
     throw new RuntimeException('Same actor received two commit roles.');
 } catch (RuntimeException $error) {
     if ($error->getCode() !== 403) {
         throw $error;
     }
 }
+hukum_set_actor_context_provider($provider->as('komisi_i'));
 try {
-    hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', 'wrong-password', '11m-wrong');
+    hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', 'wrong-password', '11m-wrong-' . bin2hex(random_bytes(4)), (int) $staging['id']);
     throw new RuntimeException('Wrong password accepted.');
 } catch (RuntimeException $error) {
     if ($error->getCode() !== 403) {

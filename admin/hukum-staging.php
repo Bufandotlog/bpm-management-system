@@ -32,7 +32,6 @@ hukum_require_permission('hukum.view');
 <script>
 const hukumCsrf = <?php echo json_encode(csrfToken(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 const hukumBase = <?php echo json_encode(baseUrl('api/hukum/')); ?>;
-const hukumCanReview = <?php echo hukum_has_permission('hukum.staging.review') ? 'true' : 'false'; ?>;
 async function hukumRequest(endpoint, options = {}) {
     const response = await fetch(hukumBase + endpoint, {
         ...options,
@@ -55,27 +54,14 @@ async function hukumLoadStaging() {
         document.getElementById('stagingCount').textContent = rows.length + ' item';
     document.getElementById('stagingBody').innerHTML = rows.length ? rows.map(item => {
         const summary = item.approval_summary || {progress:'0/2', komisi_i:{status:'menunggu'}, admin:{status:'menunggu'}};
-        const canAction = hukumCanReview && (summary.komisi_i.status === 'menunggu' || summary.admin.status === 'menunggu');
         return `<tr>
         <td>${hukumEscape(item.judul)}</td>
         <td>${hukumEscape(item.judul_perubahan)}</td>
         <td><span class="hukum-badge">${hukumEscape(summary.progress)}</span><br><small>${hukumEscape(summary.komisi_i.status || 'menunggu')} / ${hukumEscape(summary.admin.status || 'menunggu')}</small></td>
         <td>${hukumEscape(item.diajukan_at)}</td>
-        <td>${hukumCanReview ? `<button class="hukum-btn gold" type="button" ${canAction ? '' : 'disabled'} onclick="hukumReview(${Number(item.id)}, 'approve')">Setujui</button>
-            <button class="hukum-btn danger" type="button" ${canAction ? '' : 'disabled'} onclick="hukumReview(${Number(item.id)}, 'reject')">Tolak</button>` : '<span class="hukum-muted">Read-only</span>'}</td>
+        <td><a class="hukum-btn gold" href="hukum-staging-detail.php?staging_id=${Number(item.id)}">Tinjau</a></td>
     </tr>`;
     }).join('') : '<tr><td colspan="5" class="hukum-empty">Tidak ada staging menunggu review.</td></tr>';
-} catch (error) {
-    hukumNotice(error.message, 'error');
-}
-}
-async function hukumReview(id, decision) {
-const note = decision === 'reject' ? window.prompt('Alasan penolakan wajib diisi:') : '';
-if (decision === 'reject' && !note) return;
-try {
-    await hukumRequest('review.php', {method:'POST', body:JSON.stringify({staging_id:id, decision, note})});
-    hukumNotice('Status staging diperbarui.');
-    hukumLoadStaging();
 } catch (error) {
     hukumNotice(error.message, 'error');
 }

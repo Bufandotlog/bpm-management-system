@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/bab_service.php';
+require_once __DIR__ . '/deletions_service.php';
 $method = hukum_require_method(['GET', 'POST']);
 $pdo = getConnection();
 
@@ -11,9 +12,20 @@ if ($method === 'GET') {
     $doc = dbFetchOne('SELECT periode_id FROM hukum_dokumen WHERE id = ?', [$dokumenId]);
     if (!$doc) hukum_json_response(['success' => false, 'message' => 'Dokumen tidak ditemukan.'], 404);
     hukum_require_document_period((int) $doc['periode_id']);
-    hukum_json_response(['success' => true, 'data' => dbFetchAll(
-        'SELECT * FROM hukum_bab WHERE dokumen_id = ? ORDER BY urutan, id', [$dokumenId]
-    )]);
+    $rows = dbFetchAll(
+        'SELECT b.* FROM hukum_bab b
+         WHERE b.dokumen_id = ?
+           AND NOT EXISTS (
+             SELECT 1
+             FROM hukum_commit_deletion cd
+             JOIN hukum_commit c ON c.id = cd.commit_id
+             WHERE c.dokumen_id = b.dokumen_id
+               AND cd.entity_type = \'bab\' AND cd.entity_id = b.id
+           )
+         ORDER BY b.urutan, b.id',
+        [$dokumenId]
+    );
+    hukum_json_response(['success' => true, 'data' => $rows]);
 }
 
 $input = hukum_input();

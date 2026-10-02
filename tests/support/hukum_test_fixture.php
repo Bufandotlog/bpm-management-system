@@ -53,7 +53,7 @@ function hukum_create_test_fixture(bool $refreshCredentials = true): array
         $actors = [];
         $credentials = [];
         foreach ([
-            'komisi_i' => ['username' => 'test_hukum_11j_komisi_i', 'name' => 'Test Hukum Komisi I', 'role' => 'admin'],
+            'komisi_i' => ['username' => 'test_hukum_11j_komisi_i', 'name' => 'Test Hukum Komisi I', 'role' => 'komisi_i'],
             'ketua_umum' => ['username' => 'test_hukum_11j_ketua_umum', 'name' => 'Test Hukum Ketua Umum', 'role' => 'admin'],
         ] as $key => $definition) {
             $stmt = $pdo->prepare('SELECT id, username, nama, role, periode_id, can_access_all FROM users WHERE username = ? LIMIT 1');
@@ -87,6 +87,11 @@ function hukum_create_test_fixture(bool $refreshCredentials = true): array
                 $credentials[$key] = $password;
             } else {
                 $credentials[$key] = null;
+            }
+            if ((string) $user['role'] !== $definition['role']) {
+                $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')
+                    ->execute([$definition['role'], (int) $user['id']]);
+                $user['role'] = $definition['role'];
             }
             $actors[$key] = new HukumAuthenticatedActorContext(
                 (int) $user['id'], (string) $user['username'], (string) $user['nama'],

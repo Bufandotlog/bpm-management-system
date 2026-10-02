@@ -135,7 +135,10 @@ async function hukumShowDocument(id) {
     ]);
     const detail = document.getElementById('documentDetail'); detail.hidden = false;
     const babRows = (bab.data || []).map(item => `<li>${hukumEscape(item.nomor_label)} — ${hukumEscape(item.judul_bab)}</li>`).join('') || '<li class="hukum-muted">Belum ada BAB.</li>';
-    detail.innerHTML = `<div class="hukum-toolbar"><h2>${hukumEscape(result.data.judul)}</h2><button class="hukum-btn" type="button" onclick="document.getElementById('documentDetail').hidden=true">Tutup</button></div>
+    const editorLink = ['draft', 'aktif'].includes(result.data.status)
+        ? `<a class="hukum-btn gold" href="<?php echo baseUrl('admin/hukum-editor.php'); ?>?dokumen_id=${Number(id)}"><i class="fas fa-pen"></i> Buka editor</a>`
+        : '';
+    detail.innerHTML = `<div class="hukum-toolbar"><h2>${hukumEscape(result.data.judul)}</h2><div class="hukum-actions">${editorLink}<button class="hukum-btn" type="button" onclick="document.getElementById('documentDetail').hidden=true">Tutup</button></div></div>
         <p class="hukum-muted">${hukumEscape(result.data.deskripsi || 'Tidak ada deskripsi.')}</p>
         <div class="hukum-grid"><div class="hukum-stat"><strong>${(bab.data || []).length}</strong><span>BAB</span></div>
         <div class="hukum-stat"><strong>${(workspaces.data || []).filter(item => ['aktif','diajukan'].includes(item.status)).length}</strong><span>Workspace aktif</span></div>

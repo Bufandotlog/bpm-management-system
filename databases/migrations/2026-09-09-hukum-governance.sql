@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS hukum_staging_approval (
   id INT NOT NULL AUTO_INCREMENT,
   staging_id INT NOT NULL,
   user_id INT NOT NULL,
-  peran ENUM('komisi_i','ketua_umum') NOT NULL,
+  peran ENUM('komisi_i','admin') NOT NULL,
   status ENUM('menunggu','disetujui','ditolak') NOT NULL DEFAULT 'menunggu',
   note TEXT NULL,
   approved_at DATETIME NULL,
@@ -48,8 +48,9 @@ CREATE TABLE IF NOT EXISTS hukum_staging_approval (
 CREATE TABLE IF NOT EXISTS hukum_commit_window (
   id BIGINT NOT NULL AUTO_INCREMENT,
   commit_id INT NULL,
+  staging_id INT NULL,
   user_id INT NOT NULL,
-  peran ENUM('komisi_i','ketua_umum') NOT NULL,
+  peran ENUM('komisi_i','admin') NOT NULL,
   session_id VARCHAR(128) NULL,
   status ENUM('pending','in_progress','approved','expired','rejected','locked') NOT NULL DEFAULT 'pending',
   initiated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -61,6 +62,8 @@ CREATE TABLE IF NOT EXISTS hukum_commit_window (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_hukum_commit_window_user_commit_peran (user_id, commit_id, peran),
+  UNIQUE KEY uq_hukum_commit_window_staging_user_role (staging_id, user_id, peran),
+  KEY idx_hukum_commit_window_staging_role_status (staging_id, peran, status),
   KEY idx_hukum_commit_window_expires (expires_at, status),
   CONSTRAINT fk_hukum_commit_window_commit
     FOREIGN KEY (commit_id) REFERENCES hukum_commit (id) ON DELETE SET NULL,
