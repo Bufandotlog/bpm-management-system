@@ -395,3 +395,10 @@ tautan ke pratinjau diff staging lengkap.
   menjadi otoritas untuk memvalidasi ulang staging, persetujuan, dan window.
 - Setelah berhasil, commit ID ditampilkan dan staging dihapus dari daftar siap
   difinalisasi.
+
+Pengajuan staging dari editor menampilkan konfirmasi konsekuensi sebelum form
+autentikasi. Pengguna mengonfirmasi dengan kata sandi; bila 2FA akun aktif,
+kode autentikator juga wajib. Endpoint staging memverifikasi ulang kata sandi
+dan status 2FA akun sebelum membuat snapshot, menerapkan replay protection
+untuk TOTP, serta membatasi percobaan gagal menggunakan rate limit login yang
+tersedia.

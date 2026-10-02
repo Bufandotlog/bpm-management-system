@@ -135,6 +135,7 @@ function hukum_submit_staging(PDO $pdo, int $workspaceId, array $versionIds, ?in
     if ($actorId <= 0 || $actor === null) {
         throw new RuntimeException('Sesi tidak valid untuk submit staging.', 401);
     }
+    hukum_require_service_permission('hukum.workspace.submit');
     $pdo->beginTransaction();
     try {
     $workspaceStmt = $pdo->prepare(

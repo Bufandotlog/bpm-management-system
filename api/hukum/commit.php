@@ -82,7 +82,7 @@ if (in_array($action, ['verify_window', 'init_window'], true)) {
     $role = hukum_current_user_role();
     $peran = match ($role) {
         'komisi_i' => 'komisi_i',
-        'admin', 'superadmin' => 'admin',
+        'admin' => 'admin',
         default => '',
     };
     if ($peran === '' || (isset($input['peran']) && strtolower(trim((string) $input['peran'])) !== $peran)) {

@@ -20,10 +20,6 @@ function hukum_review_resolve_role(int $documentId, ?int $userId = null): ?strin
     }
 
     $role = strtolower((string) hukum_current_user_role());
-    if ($role === 'superadmin') {
-        return 'admin';
-    }
-
     if ($role === 'komisi_i'
         && hukum_actor_has_technical_role_for_period('komisi_i', $candidateId, (int) $periodeId)) {
         return 'komisi_i';
@@ -43,10 +39,6 @@ function hukum_review_resolve_role_on(PDO $pdo, int $documentId, int $userId, in
     }
 
     $role = strtolower((string) hukum_current_user_role());
-    if ($role === 'superadmin') {
-        return 'admin';
-    }
-
     if ($role === 'admin') {
         return 'admin';
     }

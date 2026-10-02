@@ -14,6 +14,7 @@ require_once __DIR__ . '/../api/hukum/pasal_service.php';
 require_once __DIR__ . '/../api/hukum/staging_service.php';
 require_once __DIR__ . '/../api/hukum/review_service.php';
 require_once __DIR__ . '/../api/hukum/commit_service.php';
+require_once __DIR__ . '/../api/hukum/membership_service.php';
 
 $sourceKomisiActor = $fixture['actors']['komisi_i'];
 $technicalKomisiActor = new HukumAuthenticatedActorContext(
@@ -74,6 +75,135 @@ if (($stored['status'] ?? '') !== 'menunggu_review' || (int) $stored['diajukan_o
     throw new RuntimeException('Staging record invalid.');
 }
 
+$adminActor = $fixture['actors']['ketua_umum'];
+$superadminActor = new HukumAuthenticatedActorContext(
+    $adminActor->id,
+    $adminActor->username,
+    $adminActor->displayName,
+    'superadmin',
+    $adminActor->periodId,
+    true,
+    'test_fixture',
+    true
+);
+$superadminActors = $actors;
+$superadminActors['superadmin'] = $superadminActor;
+$superadminProvider = new HukumTestActorProvider($superadminActors, 'superadmin');
+hukum_set_actor_context_provider($superadminProvider);
+if (!hukum_has_permission('hukum.view')
+    || !hukum_has_permission('view:hukum')
+    || hukum_has_permission('hukum.document.create')
+    || hukum_has_permission('hukum.document.update')
+    || hukum_has_permission('create:hukum-dokumen')
+    || hukum_has_permission('hukum.workspace.create')
+    || hukum_has_permission('create:hukum-meja-kerja')
+    || hukum_has_permission('close:hukum-meja-kerja')
+    || hukum_has_permission('hukum.workspace.submit')
+    || hukum_has_permission('hukum.staging.review')
+    || hukum_has_permission('hukum.commit.verify')
+    || hukum_has_permission('hukum.commit.create')
+    || hukum_can_review_staging((int) $document['id'], $superadminActor->id)
+    || hukum_review_resolve_role((int) $document['id'], $superadminActor->id) !== null) {
+    throw new RuntimeException('Superadmin must be read-only in the hukum module.');
+}
+try {
+    hukum_membership_require_admin($superadminActor);
+    throw new RuntimeException('Superadmin was allowed to manage hukum membership.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_create_document($pdo, [
+        'jenis' => 'PERATURAN',
+        'lingkup' => 'induk',
+        'judul' => 'Superadmin must not create hukum document',
+        'slug' => 'superadmin-must-not-create-hukum-' . bin2hex(random_bytes(4)),
+        'periode_id' => $fixture['period_id'],
+    ]);
+    throw new RuntimeException('Superadmin was allowed to create a hukum document.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_create_workspace($pdo, (int) $document['id'], 'Superadmin draft', null, $superadminActor->id);
+    throw new RuntimeException('Superadmin was allowed to create a hukum workspace.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_create_pasal_draft($pdo, [
+        'pasal_id' => (int) $pasal['id'],
+        'workspace_id' => (int) $workspace['id'],
+        'isi' => ['teks' => 'Superadmin must not save a draft'],
+    ]);
+    throw new RuntimeException('Superadmin was allowed to save a hukum draft.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_submit_staging($pdo, (int) $workspace['id'], [(int) $version['id']], $superadminActor->id);
+    throw new RuntimeException('Superadmin was allowed to submit hukum staging.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_review_decide($pdo, $staging['id'], 'reject', 'Superadmin must not reject staging', $superadminActor->id);
+    throw new RuntimeException('Superadmin was allowed to reject staging.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_review_decide($pdo, $staging['id'], 'approve', null, $superadminActor->id);
+    throw new RuntimeException('Superadmin was allowed to approve staging.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_commit_finalize($pdo, (int) $staging['id'], $superadminActor->id, 'unused-password', '11m-superadmin-finalize');
+    throw new RuntimeException('Superadmin was allowed to finalize a hukum commit.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+try {
+    hukum_commit_create_window(
+        $pdo,
+        $superadminActor->id,
+        'admin',
+        $fixture['credentials']['ketua_umum'],
+        '11m-superadmin',
+        (int) $staging['id']
+    );
+    throw new RuntimeException('Superadmin was allowed to verify a commit window.');
+} catch (RuntimeException $error) {
+    if ($error->getCode() !== 403) {
+        throw $error;
+    }
+}
+
+$adminProvider = $provider->as('ketua_umum');
+hukum_set_actor_context_provider($adminProvider);
+if (!hukum_has_permission('view:hukum')
+    || !hukum_has_permission('create:hukum-dokumen')
+    || !hukum_has_permission('close:hukum-meja-kerja')) {
+    throw new RuntimeException('Legacy hukum permissions no longer map to Admin permissions.');
+}
+hukum_set_actor_context_provider($provider);
 $first = hukum_review_decide($pdo, $staging['id'], 'approve', null, $fixture['actors']['komisi_i']->id);
 if (($first['role'] ?? '') !== 'komisi_i') {
     throw new RuntimeException('Komisi I approval failed.');

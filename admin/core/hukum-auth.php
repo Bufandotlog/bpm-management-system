@@ -156,10 +156,6 @@ function hukum_can_review_staging(int $documentId, ?int $userId = null): bool
     }
 
     $currentRole = strtolower((string) hukum_current_user_role());
-    if ($currentRole === 'superadmin') {
-        return true;
-    }
-
     if ($currentRole === 'komisi_i' && hukum_actor_has_technical_role_for_period('komisi_i', $userId, $periodeId)) {
         return true;
     }
@@ -188,10 +184,6 @@ function hukum_can_commit_as(int $documentId, string $peran, ?int $userId = null
     }
 
     $currentRole = strtolower((string) hukum_current_user_role());
-    if ($currentRole === 'superadmin') {
-        return true;
-    }
-
     if ($peran === 'komisi_i') {
         return $currentRole === 'komisi_i' && hukum_actor_has_technical_role_for_period('komisi_i', $userId, $periodeId);
     }
@@ -206,7 +198,7 @@ function hukum_can_commit_as(int $documentId, string $peran, ?int $userId = null
 function hukum_role_permissions(): array
 {
     return [
-        'superadmin' => ['*'],
+        'superadmin' => ['hukum.view', 'hukum.audit.view'],
         'admin' => [
             'hukum.view',
             'hukum.document.create',
@@ -216,6 +208,7 @@ function hukum_role_permissions(): array
             'hukum.pasal.update',
             'hukum.pasal.delete',
             'hukum.workspace.create',
+            'hukum.workspace.close',
             'hukum.workspace.submit',
             'hukum.staging.review',
             'hukum.commit.verify',
@@ -249,13 +242,44 @@ function hukum_has_permission(string $permission): bool
         return false;
     }
 
-    $user = hukum_current_user();
-    if ($user['can_access_all'] || $user['role'] === 'superadmin') {
-        return true;
-    }
-
-    $permissions = hukum_role_permissions()[$user['role']] ?? [];
+    $legacyPermissions = [
+        'view:hukum' => 'hukum.view',
+        'create:hukum-dokumen' => 'hukum.document.create',
+        'edit:hukum-dokumen' => 'hukum.document.update',
+        'delete:hukum-dokumen' => 'hukum.document.delete',
+        'edit:hukum-pasal' => 'hukum.pasal.update',
+        'create:hukum-meja-kerja' => 'hukum.workspace.create',
+        'close:hukum-meja-kerja' => 'hukum.workspace.close',
+        'approve:hukum-staging' => 'hukum.staging.review',
+    ];
+    $permission = $legacyPermissions[$permission] ?? $permission;
+    $role = hukum_current_user_role();
+    $permissions = hukum_role_permissions()[$role] ?? [];
     return in_array($permission, $permissions, true);
+}
+
+function hukum_require_service_permission(string $permission): void
+{
+    if (hukum_authenticated_actor() === null) {
+        throw new RuntimeException('Sesi tidak valid.', 401);
+    }
+    if (!hukum_has_permission($permission)) {
+        throw new RuntimeException('Anda tidak memiliki izin untuk aksi ini.', 403);
+    }
+}
+
+function hukum_require_service_period(int $periodId): void
+{
+    $actor = hukum_authenticated_actor();
+    if ($periodId <= 0) {
+        throw new InvalidArgumentException('Periode dokumen tidak valid.', 400);
+    }
+    if ($actor === null) {
+        throw new RuntimeException('Sesi tidak valid.', 401);
+    }
+    if (!$actor->canAccessAll && $actor->technicalRole !== 'superadmin' && $actor->periodId !== $periodId) {
+        throw new RuntimeException('Anda tidak memiliki akses ke periode dokumen ini.', 403);
+    }
 }
 
 function hukum_json_response(array $payload, int $status = 200): void

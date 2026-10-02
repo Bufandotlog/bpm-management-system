@@ -79,6 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['induk_id'])) {
 
 // === POST: buat relasi baru ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $role !== 'guest') {
+    if (!in_array($role, ['admin', 'komisi_i'], true)) {
+        header('HTTP/1.1 403 Forbidden'); exit('Akses ditolak: hanya Admin atau Komisi I yang dapat mengubah relasi');
+    }
     $data = json_decode(file_get_contents('php://input'), true);
     $jenis = $data['jenis_relasi'] ?? '';
     $dibuat_oleh = $data['dibuat_oleh'] ?? 'auto';
@@ -131,6 +134,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $role !== 'guest') {
 
 // === PUT: update status relasi ===
 if ($_SERVER['REQUEST_METHOD'] === 'PUT' && $role !== 'guest') {
+    if (!in_array($role, ['admin', 'komisi_i'], true)) {
+        header('HTTP/1.1 403 Forbidden'); exit('Akses ditolak: hanya Admin atau Komisi I yang dapat meninjau relasi');
+    }
     $data = json_decode(file_get_contents('php://input'), true);
     $status = $data['status'] ?? ''; // perlu_ditinjau / sudah_diselaraskan / diabaikan_dengan_alasan
     $relasi_id = (int)($data['id'] ?? 0);

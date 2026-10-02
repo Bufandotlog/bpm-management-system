@@ -136,5 +136,8 @@
 .hukum-commit-dialog-error { margin:0; padding:9px 11px; border-radius:7px; color:#ffc0c0; background:rgba(198,40,40,.18); }
 .hukum-commit-dialog .hukum-actions { justify-content:flex-end; margin-top:6px; }
 .hukum-commit-dialog button:disabled { cursor:wait; opacity:.65; }
+.hukum-submit-warning-copy p { margin:10px 0; color:#ddd; line-height:1.55; }
+.hukum-submit-warning-copy p:last-child { margin-bottom:0; }
+.hukum-commit-dialog input[inputmode="numeric"] { max-width:220px; letter-spacing:.3em; text-align:center; }
 @media (max-width:700px) { .hukum-form-grid { grid-template-columns:1fr; } .hukum-form-grid .full { grid-column:auto; } }
 @media (max-width:700px) { .hukum-section-heading, .hukum-inline-heading, .hukum-bab-title, .hukum-pasal-title { align-items:stretch; flex-direction:column; } .hukum-point-row { grid-template-columns:1fr 32px; } .hukum-point-row .point-text { grid-column:1/-1; grid-row:1; } }

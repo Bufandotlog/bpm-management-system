@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'draft' => $draft ?: ['id'=>null,'status'=>'draft','hash_konten'=>'','dibuat_oleh'=>0,'dibuat_pada'=>'','catatan'=>''],
             'dokumen_format' => $dokumen ?: ['format_mukadimah'=>'legacy','diperbarui_oleh'=>0,'waktu_pembaruan'=>''],
             'has_difference' => $hasDifference,
-            'can_edit' => in_array($_SESSION['role'], ['superadmin', 'admin', 'komisi_i'], true)
+            'can_edit' => in_array($_SESSION['role'], ['admin', 'komisi_i'], true)
         ]
     ]);
     exit;
@@ -90,6 +90,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 // === POST: simpan versi draft ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!in_array($_SESSION['role'], ['admin', 'komisi_i'], true)) {
+        header('HTTP/1.1 403 Forbidden');
+        exit('Akses ditolak: hanya Admin atau Komisi I yang dapat menyimpan draft');
+    }
+
     $data = json_decode(file_get_contents('php://input'), true);
     $kontenJson = $data['konten_json'] ?? '';
     $hashKontenInput = $data['hash_konten'] ?? '';
@@ -159,10 +164,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // === POST: aksi REJECT (H-10) ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($data['aksi']) && $data['aksi'] === 'reject') {
-    // hanyalah admin/komisi_i/superadmin sesuai model hukum final
-    if (!in_array($_SESSION['role'], ['superadmin', 'admin', 'komisi_i'], true)) {
+    if (!in_array($_SESSION['role'], ['admin', 'komisi_i'], true)) {
         header('HTTP/1.1 403 Forbidden');
-        echo json_encode(['success'=>false,'error'=>'Akses ditolak: hanya superadmin/admin/komisi_i']);
+        echo json_encode(['success'=>false,'error'=>'Akses ditolak: hanya Admin atau Komisi I']);
         exit;
     }
 

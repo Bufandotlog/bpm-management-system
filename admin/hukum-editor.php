@@ -5,6 +5,7 @@ require_once __DIR__ . '/core/hukum-auth.php';
 hukum_require_permission('hukum.view');
 $defaultDocId = (int) ($_GET['dokumen_id'] ?? 0);
 $actor = hukum_current_user();
+$hukumCssVersion = file_exists(__DIR__ . '/css/hukum.css') ? filemtime(__DIR__ . '/css/hukum.css') : '1';
 $documentSql =
     'SELECT id, judul, slug, jenis, status, periode_id FROM hukum_dokumen
      WHERE status IN (\'draft\', \'aktif\')';
@@ -18,8 +19,11 @@ $documents = dbFetchAll($documentSql, $documentParams);
 $periods = dbFetchAll(
     'SELECT id, nama, tahun_mulai, tahun_selesai FROM periode_kepengurusan ORDER BY tahun_mulai DESC, id DESC'
 );
+$submitAuth = dbFetchOne('SELECT totp_enabled FROM users WHERE id = ? AND is_active = 1 LIMIT 1', [$actor['id']], 'i');
+$submitRequires2fa = (bool) ($submitAuth['totp_enabled'] ?? false);
+$canEditHukum = hukum_has_permission('hukum.document.update');
 ?>
-<link rel="stylesheet" href="<?php echo baseUrl('admin/css/hukum.css'); ?>?v=2">
+<link rel="stylesheet" href="<?php echo baseUrl('admin/css/hukum.css'); ?>?v=<?php echo (int) $hukumCssVersion; ?>">
 
 <div class="hukum-shell">
     <div class="page-header">
@@ -46,15 +50,12 @@ $periods = dbFetchAll(
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <?php if (hukum_has_permission('hukum.document.create')): ?>
-                    <button class="hukum-btn gold" id="showCreateDocBtn" type="button"><i class="fas fa-plus"></i> Dokumen Baru</button>
-                <?php endif; ?>
             </div>
         </div>
         <div class="hukum-progress" aria-label="Langkah editor">
             <button class="hukum-step active" type="button" data-step="1"><b>1</b><span>Informasi</span></button>
-            <button class="hukum-step" type="button" data-step="2"><b>2</b><span>Struktur isi</span></button>
-            <button class="hukum-step" type="button" data-step="3"><b>3</b><span>Pratinjau & kirim</span></button>
+            <button class="hukum-step" type="button" data-step="2" disabled><b>2</b><span>Struktur isi</span></button>
+            <button class="hukum-step" type="button" data-step="3" disabled><b>3</b><span>Pratinjau & kirim</span></button>
         </div>
     </div>
 
@@ -73,9 +74,9 @@ $periods = dbFetchAll(
             <div class="form-group"><label for="docPeriode">Periode <span class="required">*</span></label><select id="docPeriode" name="periode_id" required><option value="">Pilih periode</option><?php foreach ($periods as $period): ?><option value="<?php echo (int) $period['id']; ?>"><?php echo htmlspecialchars($period['nama'] . ' (' . $period['tahun_mulai'] . '/' . $period['tahun_selesai'] . ')', ENT_QUOTES, 'UTF-8'); ?></option><?php endforeach; ?></select></div>
             <div class="form-group full"><label for="docOpening">Mukadimah / pembukaan</label><textarea id="docOpening" rows="5" placeholder="Tuliskan pembukaan dokumen dengan bahasa biasa."></textarea></div>
             <div class="form-group full"><label for="docDescription">Deskripsi singkat</label><textarea id="docDescription" name="deskripsi" rows="3"></textarea></div>
-            <div class="hukum-actions full"><button class="hukum-btn gold" type="submit">Buat dokumen & workspace</button><button class="hukum-btn" type="button" data-next="2">Lanjut ke struktur <i class="fas fa-arrow-right"></i></button></div>
+            <div class="hukum-actions full"><button class="hukum-btn gold" id="createDocumentSubmit" type="submit">Buat dokumen & workspace</button><button class="hukum-btn" id="continueToStructure" type="button" data-next="2" hidden>Lanjut ke struktur <i class="fas fa-arrow-right"></i></button></div>
         </form>
-        <div id="step1Existing" class="hukum-empty" hidden>Informasi dokumen terisi otomatis dan hanya dapat dilihat di sini. Pilih <strong>Dokumen Baru</strong> untuk membuat dokumen lain.</div>
+        <div id="step1Existing" class="hukum-empty" hidden>Informasi dokumen terisi otomatis dan hanya dapat dilihat di sini. Untuk membuat dokumen baru, pilih <strong>Pilih dokumen</strong> pada daftar di atas.</div>
     </section>
     <?php else: ?>
     <section class="hukum-card hukum-step-panel active" id="step-1"><div class="hukum-empty">Anda dapat melihat dokumen, tetapi tidak memiliki izin membuat atau mengubah draft.</div></section>
@@ -112,10 +113,47 @@ $periods = dbFetchAll(
     </section>
 </div>
 
+<dialog id="submitWarningDialog" class="hukum-commit-dialog" aria-labelledby="submitWarningTitle" aria-describedby="submitWarningText">
+    <div class="hukum-commit-dialog-heading">
+        <span class="hukum-kicker">Sebelum mengajukan</span>
+        <h2 id="submitWarningTitle">Kirim workspace ke staging?</h2>
+        <div id="submitWarningText" class="hukum-submit-warning-copy">
+            <p>Setelah dikirim, sistem membuat snapshot staging untuk ditinjau Komisi I dan Admin. Isi yang diajukan menjadi bahan review; workspace tidak dapat diedit selama menunggu review.</p>
+            <p>Jika disetujui, staging akan menunggu proses Finalisasi Commit. Perubahan belum menjadi versi aktif/publik sampai commit difinalisasi.</p>
+        </div>
+    </div>
+    <div class="hukum-actions">
+        <button id="continueSubmitButton" class="hukum-btn gold" type="button">Tetap lanjutkan</button>
+        <button id="cancelSubmitButton" class="hukum-btn" type="button">Batalkan</button>
+    </div>
+</dialog>
+
+<dialog id="submitCredentialsDialog" class="hukum-commit-dialog" aria-labelledby="submitCredentialsTitle" aria-describedby="submitCredentialsText">
+    <form id="submitCredentialsForm">
+        <div class="hukum-commit-dialog-heading">
+            <span class="hukum-kicker">Konfirmasi identitas</span>
+            <h2 id="submitCredentialsTitle">Konfirmasi pengajuan</h2>
+            <p id="submitCredentialsText" class="hukum-muted">Masukkan kata sandi akun Anda untuk mengirim workspace ke staging.</p>
+        </div>
+        <label for="submitPassword">Kata sandi akun Anda</label>
+        <input id="submitPassword" name="password" type="password" autocomplete="current-password" required>
+        <?php if ($submitRequires2fa): ?>
+            <label for="submitTotpCode">Kode autentikator (2FA)</label>
+            <input id="submitTotpCode" name="totp_code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required>
+        <?php endif; ?>
+        <p id="submitCredentialsError" class="hukum-commit-dialog-error" role="alert" hidden></p>
+        <div class="hukum-actions">
+            <button id="confirmSubmitButton" class="hukum-btn gold" type="submit">Konfirmasi & kirim</button>
+            <button id="cancelCredentialsButton" class="hukum-btn" type="button">Batalkan</button>
+        </div>
+    </form>
+</dialog>
+
 <script>
 const hukumCsrf = <?php echo json_encode(csrfToken(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 const hukumBase = <?php echo json_encode(baseUrl('api/hukum/')); ?>;
 const canRequestDeletions = <?php echo hukum_has_permission('hukum.document.update') ? 'true' : 'false'; ?>;
+const submitRequires2fa = <?php echo $submitRequires2fa ? 'true' : 'false'; ?>;
 const initialDocuments = <?php echo json_encode($documents, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 const state = { documents: initialDocuments || [], documentId: <?php echo $defaultDocId; ?>, document: null, workspace: null, babs: [], pasals: [], deletions: [], versions: new Map(), saving: false, savedSignature: null, savedVersionIds: [], loadedSignature: null };
 
@@ -134,8 +172,21 @@ function setDocumentFormMode(existing) {
     form.querySelectorAll('.form-group input, .form-group select, .form-group textarea').forEach(field => {
         field.disabled = existing;
     });
-    form.querySelector('button[type="submit"]').hidden = existing;
     document.getElementById('step1Existing').hidden = !existing;
+    refreshWorkflowActions();
+}
+function refreshWorkflowActions() {
+    const existing = Boolean(state.documentId);
+    const hasWorkspace = Boolean(state.workspace);
+    const createDocumentButton = document.getElementById('createDocumentSubmit');
+    const createWorkspaceButton = document.getElementById('createWorkspaceBtn');
+    const continueButton = document.getElementById('continueToStructure');
+    if (createDocumentButton) createDocumentButton.hidden = existing;
+    if (createWorkspaceButton) createWorkspaceButton.hidden = !existing || hasWorkspace;
+    if (continueButton) continueButton.hidden = !hasWorkspace;
+    document.querySelectorAll('.hukum-step[data-step="2"], .hukum-step[data-step="3"]').forEach(button => {
+        button.disabled = !existing;
+    });
 }
 function setDocumentFormValues(doc) {
     if (!document.getElementById('docTitle')) return;
@@ -164,6 +215,10 @@ function setDocumentFormValues(doc) {
     document.getElementById('docOpening').value = opening;
 }
 function setStep(number) {
+    if (number > 1 && !state.documentId) {
+        notice('Pilih atau buat dokumen terlebih dahulu sebelum melanjutkan.', 'error');
+        return;
+    }
     document.querySelectorAll('.hukum-step-panel').forEach(panel => panel.classList.toggle('active', panel.id === 'step-' + number));
     document.querySelectorAll('.hukum-step').forEach(step => step.classList.toggle('active', Number(step.dataset.step) === number));
     if (number === 3) renderPreview();
@@ -251,7 +306,8 @@ function refreshDraftSaveState() {
     const saveButton = document.getElementById('saveDraftBtn');
     const status = document.getElementById('draftSaveStatus');
     if (!button || !status) return;
-    const canEdit = Boolean(state.documentId && state.workspace?.status === 'aktif');
+    const canEdit = <?php echo $canEditHukum ? 'true' : 'false'; ?>
+        && Boolean(state.documentId && state.workspace?.status === 'aktif');
     const hasSavedSubmission = Boolean(state.savedSignature)
         && state.savedSignature === draftSignature()
         && (state.savedVersionIds.length > 0 || state.deletions.length > 0)
@@ -327,6 +383,7 @@ async function loadDocument(id) {
     state.documentId = documentId; state.workspace = null; state.babs = []; state.pasals = []; state.versions.clear();
     state.deletions = []; state.loadedSignature = null;
     state.savedSignature = null; state.savedVersionIds = [];
+    refreshWorkflowActions();
     refreshDraftSaveState();
     const doc = activeDoc(); document.getElementById('activeDocumentTitle').textContent = doc?.judul || 'Pilih atau buat dokumen';
     if (!documentId) {
@@ -354,6 +411,7 @@ async function loadDocument(id) {
     state.workspace = openWorkspaceStatuses
         .map(status => (workspaces.data || []).find(item => item.status === status))
         .find(Boolean) || null;
+    refreshWorkflowActions();
     state.babs = babs.data || []; state.pasals = pasals.data || [];
     state.deletions = state.workspace
         ? (await request('deletions.php?workspace_id=' + Number(state.workspace.id))).data || []
@@ -375,7 +433,7 @@ async function loadDocument(id) {
     document.getElementById('structureEmpty').hidden = true; document.getElementById('structureEditor').hidden = false;
     renderStructureFromServer();
     await hydratePasalContent();
-    setStructureReadOnly(state.workspace?.status !== 'aktif');
+    setStructureReadOnly(<?php echo $canEditHukum ? 'false' : 'true'; ?> || state.workspace?.status !== 'aktif');
     refreshDraftSaveState();
 }
 async function createWorkspace() {
@@ -503,8 +561,10 @@ async function createDocument(event) {
     const opening = formValue('docOpening'); if (opening) data.mukadimah_json = JSON.stringify({teks: opening});
     try {
         const result = await request('documents.php', {method:'POST', body:JSON.stringify(data)}); state.documentId = Number(result.id);
+        refreshWorkflowActions();
         const workspace = await request('workspaces.php', {method:'POST', body:JSON.stringify({dokumen_id:state.documentId, judul_perubahan:'Penyusunan dokumen baru', tujuan:'Draft dokumen melalui editor terstruktur'})});
         state.workspace = {id:workspace.id, status:workspace.status}; state.documents.push({...data, id:state.documentId}); document.getElementById('documentSelect').value = String(state.documentId);
+        refreshWorkflowActions();
         await loadDocument(state.documentId); notice('Dokumen dan workspace berhasil dibuat.'); setStep(2);
     } catch (error) { notice(error.message, 'error'); }
 }
@@ -557,21 +617,55 @@ async function saveDraft() {
         refreshDraftSaveState();
     }
 }
-async function submitReview() {
+function startSubmitReview() {
+    if (state.saving) return;
+    document.getElementById('submitWarningDialog').showModal();
+}
+function continueSubmitReview() {
+    document.getElementById('submitWarningDialog').close();
+    document.getElementById('submitPassword').value = '';
+    const totpInput = document.getElementById('submitTotpCode');
+    if (totpInput) totpInput.value = '';
+    document.getElementById('submitCredentialsError').hidden = true;
+    document.getElementById('submitCredentialsError').textContent = '';
+    document.getElementById('submitCredentialsDialog').showModal();
+    document.getElementById('submitPassword').focus();
+}
+async function submitReview(password, totpCode) {
     if (state.saving) return; state.saving = true;
     refreshDraftSaveState();
+    const submitButton = document.getElementById('confirmSubmitButton');
+    submitButton.disabled = true;
     try {
         if (!state.workspace || state.workspace.status !== 'aktif') throw new Error('Workspace sudah diajukan atau belum aktif.');
         if (!state.savedSignature || state.savedSignature !== draftSignature()
             || (!state.savedVersionIds.length && !state.deletions.length)) {
             throw new Error('Simpan draft terlebih dahulu. Setelah mengubah isi, simpan kembali sebelum mengajukan.');
         }
-        await request('staging.php', {method:'POST', body:JSON.stringify({workspace_id:Number(state.workspace.id), pasal_versi_ids:state.savedVersionIds})});
+        await request('staging.php', {method:'POST', body:JSON.stringify({
+            workspace_id:Number(state.workspace.id),
+            pasal_versi_ids:state.savedVersionIds,
+            password,
+            ...(submitRequires2fa ? {totp_code:totpCode} : {})
+        })});
         state.savedSignature = null;
         state.savedVersionIds = [];
         state.workspace.status = 'diajukan';
-        notice('Snapshot lengkap berhasil diajukan untuk review.'); await loadDocument(state.documentId);
-    } catch (error) { notice(error.message, 'error'); } finally { state.saving = false; refreshDraftSaveState(); }
+        document.getElementById('submitCredentialsDialog').close();
+        document.getElementById('submitPassword').value = '';
+        if (document.getElementById('submitTotpCode')) document.getElementById('submitTotpCode').value = '';
+        notice('Workspace berhasil dikirim ke staging untuk ditinjau Komisi I dan Admin.');
+        await loadDocument(state.documentId);
+    } catch (error) {
+        notice(error.message, 'error');
+        const errorNode = document.getElementById('submitCredentialsError');
+        errorNode.textContent = error.message;
+        errorNode.hidden = false;
+    } finally {
+        state.saving = false;
+        submitButton.disabled = false;
+        refreshDraftSaveState();
+    }
 }
 document.getElementById('documentSelect').addEventListener('change', event => loadDocument(event.target.value).catch(error => notice(error.message, 'error')));
 document.getElementById('createDocumentForm')?.addEventListener('submit', createDocument);
@@ -587,19 +681,24 @@ document.getElementById('deletionRequests').addEventListener('click', event => {
     const button = event.target.closest('[data-cancel-deletion]');
     if (button) cancelDeletion(Number(button.dataset.cancelDeletion));
 });
-document.getElementById('createWorkspaceBtn').addEventListener('click', createWorkspace);
-document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
-document.getElementById('submitStagingBtn').addEventListener('click', submitReview);
-document.getElementById('showCreateDocBtn')?.addEventListener('click', () => {
-    document.getElementById('documentSelect').value = '';
-    loadDocument('').catch(error => notice(error.message, 'error'));
-    setStep(1);
+document.getElementById('createWorkspaceBtn')?.addEventListener('click', createWorkspace);
+document.getElementById('saveDraftBtn')?.addEventListener('click', saveDraft);
+document.getElementById('submitStagingBtn')?.addEventListener('click', startSubmitReview);
+document.getElementById('continueSubmitButton').addEventListener('click', continueSubmitReview);
+document.getElementById('cancelSubmitButton').addEventListener('click', () => document.getElementById('submitWarningDialog').close());
+document.getElementById('cancelCredentialsButton').addEventListener('click', () => document.getElementById('submitCredentialsDialog').close());
+document.getElementById('submitCredentialsForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const password = document.getElementById('submitPassword').value;
+    const totpCode = document.getElementById('submitTotpCode')?.value || '';
+    submitReview(password, totpCode);
 });
 document.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', () => { if (!state.documentId) return notice('Pilih atau buat dokumen terlebih dahulu.', 'error'); setStep(Number(button.dataset.next)); }));
 document.querySelectorAll('[data-prev]').forEach(button => button.addEventListener('click', () => setStep(Number(button.dataset.prev))));
 document.querySelectorAll('.hukum-step').forEach(button => button.addEventListener('click', () => setStep(Number(button.dataset.step))));
 document.getElementById('docLingkup')?.addEventListener('change', event => { document.getElementById('docOrmawa').required = event.target.value !== 'induk'; });
-(async function init() { if (state.documentId) { document.getElementById('documentSelect').value = String(state.documentId); await loadDocument(state.documentId); setStep(2); } })().catch(error => notice(error.message, 'error'));
+refreshWorkflowActions();
+(async function init() { if (state.documentId) { document.getElementById('documentSelect').value = String(state.documentId); await loadDocument(state.documentId); setStep(state.workspace ? 2 : 1); } })().catch(error => notice(error.message, 'error'));
 </script>
 
 <?php require_once __DIR__ . '/core/footer.php'; ?>

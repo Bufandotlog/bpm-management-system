@@ -2,7 +2,7 @@
 require_once __DIR__ . '/core/header.php';
 require_once __DIR__ . '/core/hukum-auth.php';
 
-hukum_require_permission('hukum.commit.verify');
+hukum_require_permission('hukum.view');
 $canVerifyCommit = hukum_has_permission('hukum.commit.verify');
 $canFinalizeCommit = hukum_has_permission('hukum.commit.create');
 $actor = hukum_current_user();
@@ -181,7 +181,7 @@ function renderCommitDetail() {
 
     const actions = document.getElementById('commitDetailActions');
     actions.replaceChildren();
-    const currentRole = hukumActorRole === 'superadmin' ? 'admin' : hukumActorRole;
+    const currentRole = hukumActorRole;
     const ownApproval = approvalFor(currentRole);
     if (hukumCanVerifyCommit && ['admin', 'komisi_i'].includes(currentRole)
         && ownApproval.status === 'disetujui' && Number(ownApproval.user_id) === hukumActorId) {

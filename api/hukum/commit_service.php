@@ -87,7 +87,7 @@ function hukum_commit_user_must_be_business_role(int $userId, int $documentId, s
     }
 
     $row = dbFetchOne(
-        'SELECT id FROM users WHERE id = ? AND role IN (\'admin\', \'superadmin\') LIMIT 1',
+        'SELECT id FROM users WHERE id = ? AND role = \'admin\' LIMIT 1',
         [$userId],
         'i'
     );
@@ -102,7 +102,7 @@ function hukum_commit_user_must_be_business_role_on(PDO $pdo, int $userId, int $
 
     if ($peran === 'admin') {
         $stmt = $pdo->prepare(
-            'SELECT id FROM users WHERE id = ? AND role IN (\'admin\', \'superadmin\') LIMIT 1'
+            'SELECT id FROM users WHERE id = ? AND role = \'admin\' LIMIT 1'
         );
         $stmt->execute([$userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) !== false;
@@ -225,7 +225,7 @@ function hukum_commit_create_window_unlocked(PDO $pdo, int $userId, string $pera
     $actorRole = strtolower((string) ($actor?->technicalRole ?? ''));
     $actorCanVerifyAsRole = $peran === 'komisi_i'
         ? $actorRole === 'komisi_i'
-        : in_array($actorRole, ['admin', 'superadmin'], true);
+        : $actorRole === 'admin';
     if ($actor === null || $actor->id !== $userId || !$actorCanVerifyAsRole) {
         throw new RuntimeException('Identitas akun tidak berwenang untuk verifikasi peran ini.', 403);
     }

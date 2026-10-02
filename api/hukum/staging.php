@@ -46,6 +46,35 @@ hukum_require_permission('hukum.workspace.submit');
 $input = hukum_input();
 $workspaceId = (int) ($input['workspace_id'] ?? 0);
 $versionInput = $input['pasal_versi_ids'] ?? [];
+if (isRateLimited('login_failed', 5, 15, hukum_current_user()['username'])) {
+    hukum_json_response(['success' => false, 'message' => 'Terlalu banyak konfirmasi gagal. Coba lagi dalam 15 menit.'], 429);
+}
+if (!isset($input['password']) || !is_string($input['password']) || $input['password'] === '') {
+    hukum_json_response(['success' => false, 'message' => 'Kata sandi akun wajib untuk mengirim workspace ke staging.'], 400);
+}
+$actor = hukum_authenticated_actor();
+$credentialStmt = $pdo->prepare('SELECT password, totp_enabled, totp_secret, is_active FROM users WHERE id = ? LIMIT 1');
+$credentialStmt->execute([$actor?->id ?? 0]);
+$credentialUser = $credentialStmt->fetch(PDO::FETCH_ASSOC);
+if ($actor === null || $credentialUser === false || (int) $credentialUser['is_active'] !== 1) {
+    hukum_json_response(['success' => false, 'message' => 'Sesi akun tidak valid. Silakan masuk kembali.'], 401);
+}
+if (!password_verify($input['password'], (string) $credentialUser['password'])) {
+    recordFailedAttempt('login_failed', $actor->username);
+    hukum_json_response(['success' => false, 'message' => 'Kata sandi tidak sesuai. Pengajuan belum dikirim.'], 403);
+}
+if ((bool) $credentialUser['totp_enabled']) {
+    $totpCode = isset($input['totp_code']) && is_string($input['totp_code'])
+        ? preg_replace('/\D/', '', $input['totp_code'])
+        : '';
+    if (empty($credentialUser['totp_secret'])) {
+        hukum_json_response(['success' => false, 'message' => 'Konfigurasi 2FA akun tidak lengkap. Hubungi administrator.'], 409);
+    }
+    if (strlen($totpCode) !== 6 || !totpVerifyWithReplay((string) $credentialUser['totp_secret'], $totpCode, $actor->id)) {
+        recordFailedAttempt('login_failed', $actor->username);
+        hukum_json_response(['success' => false, 'message' => 'Kode autentikator tidak valid atau sudah digunakan. Pengajuan belum dikirim.'], 403);
+    }
+}
 if (!is_array($versionInput)) {
     hukum_json_response(['success' => false, 'message' => 'pasal_versi_ids harus berupa array.'], 400);
 }

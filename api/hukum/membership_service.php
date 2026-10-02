@@ -27,7 +27,7 @@ function hukum_membership_audit(PDO $pdo, HukumAuthenticatedActorContext $actor,
 function hukum_membership_require_admin(?HukumAuthenticatedActorContext $actor = null): HukumAuthenticatedActorContext
 {
     $actor ??= hukum_authenticated_actor();
-    if ($actor === null || !in_array($actor->technicalRole, ['admin', 'superadmin'], true)) {
+    if ($actor === null || $actor->technicalRole !== 'admin') {
         throw new RuntimeException('Membership hanya dapat dikelola oleh administrator.', 403);
     }
     return $actor;
