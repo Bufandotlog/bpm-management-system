@@ -130,6 +130,18 @@
 .page-hukum-detail .hukum-public-card .btn-small { background:var(--hukum-red); border-color:var(--hukum-red); color:var(--hukum-white); }
 .page-hukum .hukum-public-card .btn-small:hover,
 .page-hukum-detail .hukum-public-detail a:hover { background:var(--hukum-yellow); border-color:var(--hukum-yellow); color:var(--hukum-black); }
+.hukum-pasal-explanation { margin-top:12px; }
+.hukum-pasal-explanation summary { display:inline-block; padding:7px 13px; border:1px solid var(--hukum-red); border-radius:20px; color:var(--hukum-white); background:var(--hukum-red); cursor:pointer; list-style:none; }
+.hukum-pasal-explanation summary::-webkit-details-marker { display:none; }
+.hukum-pasal-explanation summary::after { content:"+"; display:inline-block; margin-left:8px; transition:transform .2s ease; }
+.hukum-pasal-explanation[open] summary::after { transform:rotate(45deg); }
+.hukum-pasal-explanation-content { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows .25s ease, opacity .2s ease; }
+.hukum-pasal-explanation[open] .hukum-pasal-explanation-content { grid-template-rows:1fr; opacity:1; }
+.hukum-pasal-explanation-content > div { overflow:hidden; padding:0 14px; border-left:2px solid var(--hukum-yellow); color:var(--hukum-white); white-space:pre-wrap; }
+.hukum-pasal-explanation[open] .hukum-pasal-explanation-content > div { padding-top:12px; padding-bottom:12px; }
+.hukum-pasal-clear { margin:10px 0 0; color:var(--hukum-white); font-size:.9rem; font-style:italic; opacity:.72; }
+.hukum-mukadimah { white-space:pre-wrap; line-height:1.7; }
+@media (prefers-reduced-motion:reduce) { .hukum-pasal-explanation-content, .hukum-pasal-explanation summary::after { transition:none; } }
 
 @media (max-width:700px) {
     .hukum-public-card, .hukum-document-header, .hukum-chapter { padding:16px; }

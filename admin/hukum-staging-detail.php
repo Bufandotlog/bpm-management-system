@@ -107,6 +107,7 @@ function reviewContentLines(content) {
         parts.forEach((part, index) => lines.push((index === 0 ? label : '  ') + part));
     };
     appendText('Isi utama: ', content.teks_utama || content.teks || content.text);
+    appendText('Penjelasan: ', content.penjelasan);
     (Array.isArray(content.ayat) ? content.ayat : []).forEach((ayat, index) => {
         appendText('Ayat ' + String(ayat.nomor || index + 1) + ': ', ayat.teks);
         (Array.isArray(ayat.poin) ? ayat.poin : []).forEach((poin, pointIndex) => {

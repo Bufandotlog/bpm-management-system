@@ -15,6 +15,7 @@ if (!$document) {
 
 $latestCommit = hukum_public_active_commit_by_document((int) $document['id']);
 $history = hukum_public_history_by_document((int) $document['id']);
+$documentOpening = hukum_public_document_opening($document);
 $previousCommit = count($history) > 1 ? $history[1] : null;
 $diffItems = $previousCommit && $latestCommit ? hukum_public_diff_snapshot($previousCommit, $latestCommit) : [];
 $references = $latestCommit ? hukum_public_extract_references_from_snapshot(hukum_public_snapshot_items($latestCommit)) : [];
@@ -84,6 +85,13 @@ include __DIR__ . '/header.php';
             </div>
         </div>
 
+        <?php if ($documentOpening !== ''): ?>
+            <section class="hukum-chapter hukum-mukadimah">
+                <h2>Mukadimah / Pembukaan</h2>
+                <div><?php echo nl2br(htmlspecialchars($documentOpening)); ?></div>
+            </section>
+        <?php endif; ?>
+
         <?php if ($previousCommit && $diffItems): ?>
             <section class="hukum-chapter">
                 <h2>Perubahan struktural</h2>
@@ -126,9 +134,22 @@ include __DIR__ . '/header.php';
                     <?php if ((int) $pasal['bab_id'] !== (int) $chapter['id']) continue; ?>
                     <?php $snapshotItem = $snapshotMap[(int) $pasal['id']] ?? null; ?>
                     <?php if (!$snapshotItem) continue; ?>
+                    <?php
+                    $pasalContent = is_array($snapshotItem['isi'] ?? null) ? $snapshotItem['isi'] : [];
+                    $explanation = trim((string) ($pasalContent['penjelasan'] ?? ''));
+                    unset($pasalContent['penjelasan']);
+                    ?>
                     <article class="hukum-pasal">
                         <h3><?php echo htmlspecialchars($pasal['nomor_label'] . (!empty($pasal['judul_pasal']) ? ' — ' . $pasal['judul_pasal'] : '')); ?></h3>
-                        <div><?php echo hukum_public_content($snapshotItem['isi'] ?? []); ?></div>
+                        <div><?php echo hukum_public_content($pasalContent); ?></div>
+                        <?php if ($explanation !== ''): ?>
+                            <details class="hukum-pasal-explanation">
+                                <summary>Penjelasan</summary>
+                                <div class="hukum-pasal-explanation-content"><div><?php echo nl2br(htmlspecialchars($explanation)); ?></div></div>
+                            </details>
+                        <?php else: ?>
+                            <p class="hukum-pasal-clear">Cukup Jelas</p>
+                        <?php endif; ?>
                     </article>
                 <?php endforeach; ?>
             </section>

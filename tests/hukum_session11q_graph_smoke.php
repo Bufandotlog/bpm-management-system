@@ -73,7 +73,9 @@ foreach ([1, 2, 3] as $order) {
     $versionsA[$order] = hukum_create_pasal_draft($pdo, [
         'pasal_id' => $pasals[$order]['id'],
         'workspace_id' => $workspaceA['id'],
-        'isi' => ['teks' => 'A' . $order],
+        'isi' => $order === 2
+            ? ['teks' => 'A' . $order, 'penjelasan' => 'Penjelasan tersimpan pada snapshot']
+            : ['teks' => 'A' . $order],
     ]);
 }
 $stagingA = hukum_submit_staging($pdo, $workspaceA['id'], array_column($versionsA, 'id'), $fixture['actors']['komisi_i']->id);
@@ -105,6 +107,17 @@ $graphB = $pdo->prepare('SELECT pasal_id, pasal_version_id FROM hukum_graph_snap
 $graphB->execute([$commitB['id']]);
 $graphBRows = $graphB->fetchAll(PDO::FETCH_ASSOC);
 hukum_11q_assert(count($graphBRows) === 3, 'Revision graph snapshot does not contain three unique nodes.');
+$snapshotContent = $pdo->prepare(
+    'SELECT pv.isi FROM hukum_graph_snapshot gs
+     JOIN hukum_pasal_versi pv ON pv.id = gs.pasal_version_id
+     WHERE gs.commit_id = ? AND gs.pasal_id = ?'
+);
+$snapshotContent->execute([$commitB['id'], $pasals[2]['id']]);
+$preservedContent = json_decode((string) $snapshotContent->fetchColumn(), true);
+hukum_11q_assert(
+    ($preservedContent['penjelasan'] ?? null) === 'Penjelasan tersimpan pada snapshot',
+    'Optional explanation was not preserved in the later committed snapshot.'
+);
 $expected = [
     (int) $pasals[1]['id'] => (int) $versionsB[1]['id'],
     (int) $pasals[2]['id'] => (int) $versionsA[2]['id'],

@@ -251,7 +251,7 @@ function nextPasalLabel() {
 }
 function makePasal() {
     const wrapper = document.createElement('article'); wrapper.className = 'hukum-pasal-card';
-    wrapper.innerHTML = '<div class="hukum-inline-heading"><div class="hukum-pasal-title"><label>Pasal <input class="pasal-number" placeholder="1"></label><input class="pasal-heading" placeholder="Judul pasal (opsional)"></div><button class="hukum-icon-btn danger remove-pasal" type="button" title="Hapus pasal"><i class="fas fa-trash"></i></button></div><textarea class="pasal-opening" rows="3" placeholder="Isi pembuka pasal (opsional)"></textarea><div class="ayat-list"></div><button class="hukum-btn subtle add-ayat" type="button"><i class="fas fa-plus"></i> Tambah ayat</button>';
+    wrapper.innerHTML = '<div class="hukum-inline-heading"><div class="hukum-pasal-title"><label>Pasal <input class="pasal-number" placeholder="1"></label><input class="pasal-heading" placeholder="Judul pasal (opsional)"></div><button class="hukum-icon-btn danger remove-pasal" type="button" title="Hapus pasal"><i class="fas fa-trash"></i></button></div><textarea class="pasal-opening" rows="3" placeholder="Isi pembuka pasal (opsional)"></textarea><label class="hukum-field-label">Penjelasan (opsional)<textarea class="pasal-explanation" rows="3" placeholder="Tambahkan penjelasan untuk Pasal ini jika diperlukan."></textarea></label><div class="ayat-list"></div><button class="hukum-btn subtle add-ayat" type="button"><i class="fas fa-plus"></i> Tambah ayat</button>';
     wrapper.querySelector('.pasal-number').value = nextPasalLabel();
     wrapper.querySelector('.remove-pasal').hidden = !canRequestDeletions;
     wrapper.querySelector('.add-ayat').onclick = () => wrapper.querySelector('.ayat-list').appendChild(makeAyat());
@@ -278,7 +278,7 @@ function collectStructure() {
         nomor: bab.querySelector('.bab-number').value.trim(), judul: bab.querySelector('.bab-heading').value.trim(),
         pasal: [...bab.querySelectorAll(':scope > .pasal-list > .hukum-pasal-card')].map(pasal => ({
             id: pasal.dataset.pasalId ? Number(pasal.dataset.pasalId) : null,
-            nomor: pasal.querySelector('.pasal-number').value.trim(), judul: pasal.querySelector('.pasal-heading').value.trim(), pembuka: pasal.querySelector('.pasal-opening').value.trim(),
+            nomor: pasal.querySelector('.pasal-number').value.trim(), judul: pasal.querySelector('.pasal-heading').value.trim(), pembuka: pasal.querySelector('.pasal-opening').value.trim(), penjelasan: pasal.querySelector('.pasal-explanation').value.trim(),
             ayat: [...pasal.querySelectorAll(':scope > .ayat-list > .hukum-ayat-card')].map(ayat => ({
                 nomor: ayat.querySelector('.ayat-number').value.trim(), teks: ayat.querySelector('.ayat-text').value.trim(),
                 poin: [...ayat.querySelectorAll(':scope > .point-list > .hukum-point-row')].map(point => ({nomor: point.querySelector('.point-number').value.trim(), teks: point.querySelector('.point-text').value.trim()}))
@@ -291,7 +291,7 @@ function draftSignature() {
       structure: collectStructure().map(bab => ({
         nomor: bab.nomor, judul: bab.judul,
         pasal: bab.pasal.map(pasal => ({
-            nomor: pasal.nomor, judul: pasal.judul, pembuka: pasal.pembuka,
+        nomor: pasal.nomor, judul: pasal.judul, pembuka: pasal.pembuka, penjelasan: pasal.penjelasan,
             ayat: pasal.ayat.map(ayat => ({
                 nomor: ayat.nomor, teks: ayat.teks,
                 poin: ayat.poin.map(point => ({nomor: point.nomor, teks: point.teks}))
@@ -367,7 +367,7 @@ function validateStructure() {
 }
 function renderPreview() {
     const structure = collectStructure(); const preview = document.getElementById('preview');
-    preview.innerHTML = structure.length ? structure.map(bab => `<div class="preview-bab"><h3>BAB ${escapeHtml(bab.nomor)} <small>${escapeHtml(bab.judul)}</small></h3>${bab.pasal.map(pasal => `<div class="preview-pasal"><h4>Pasal ${escapeHtml(pasal.nomor)} ${escapeHtml(pasal.judul)}</h4>${pasal.pembuka ? `<p>${escapeHtml(pasal.pembuka)}</p>` : ''}${pasal.ayat.map(ayat => `<p><b>(${escapeHtml(ayat.nomor)})</b> ${escapeHtml(ayat.teks)}${ayat.poin.length ? '<ul>' + ayat.poin.map(point => `<li>${escapeHtml(point.nomor)}) ${escapeHtml(point.teks)}</li>`).join('') + '</ul>' : ''}</p>`).join('')}</div>`).join('')}</div>`).join('') : '<div class="hukum-empty">Belum ada isi untuk dipratinjau.</div>';
+    preview.innerHTML = structure.length ? structure.map(bab => `<div class="preview-bab"><h3>BAB ${escapeHtml(bab.nomor)} <small>${escapeHtml(bab.judul)}</small></h3>${bab.pasal.map(pasal => `<div class="preview-pasal"><h4>Pasal ${escapeHtml(pasal.nomor)} ${escapeHtml(pasal.judul)}</h4>${pasal.pembuka ? `<p>${escapeHtml(pasal.pembuka)}</p>` : ''}${pasal.ayat.map(ayat => `<p><b>(${escapeHtml(ayat.nomor)})</b> ${escapeHtml(ayat.teks)}${ayat.poin.length ? '<ul>' + ayat.poin.map(point => `<li>${escapeHtml(point.nomor)}) ${escapeHtml(point.teks)}</li>`).join('') + '</ul>' : ''}</p>`).join('')}${pasal.penjelasan ? `<p class="preview-explanation"><strong>Penjelasan:</strong> ${escapeHtml(pasal.penjelasan)}</p>` : ''}</div>`).join('')}</div>`).join('') : '<div class="hukum-empty">Belum ada isi untuk dipratinjau.</div>';
     const errors = validateStructure();
     const statusMessage = state.workspace?.status === 'siap_commit'
         ? 'Struktur valid. Workspace sudah disetujui dan menunggu commit.'
@@ -528,6 +528,7 @@ async function hydratePasalContent() {
             savedVersions.set(Number(pasal.id), currentWorkspaceDraft);
         }
         node.querySelector('.pasal-opening').value = content.teks_utama || '';
+        node.querySelector('.pasal-explanation').value = content.penjelasan || '';
         const ayatList = node.querySelector('.ayat-list');
         ayatList.innerHTML = '';
         (content.ayat || []).forEach(ayat => {
@@ -592,7 +593,7 @@ async function persistStructure() {
                 pasalNode.dataset.pasalId = String(result.id);
                 nextPasalOrder++;
             }
-            const isi = {teks_utama:pasal.pembuka, ayat:pasal.ayat.map(ayat => ({nomor:ayat.nomor, teks:ayat.teks, poin:ayat.poin.map(point => ({nomor:point.nomor, teks:point.teks}))}))};
+            const isi = {teks_utama:pasal.pembuka, penjelasan:pasal.penjelasan, ayat:pasal.ayat.map(ayat => ({nomor:ayat.nomor, teks:ayat.teks, poin:ayat.poin.map(point => ({nomor:point.nomor, teks:point.teks}))}))};
             const result = await request('pasal.php', {method:'POST', body:JSON.stringify({pasal_id:serverPasal.id, workspace_id:state.workspace.id, isi})}); versionIds.push(Number(result.latest_version_id || result.id));
         }
     }

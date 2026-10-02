@@ -84,6 +84,7 @@ Pengguna mengisi struktur melalui kartu dinamis:
 - tambah/hapus Ayat;
 - tambah/hapus Poin;
 - isi pembuka Pasal;
+- penjelasan opsional per Pasal;
 - judul BAB dan Pasal;
 - nomor BAB, Pasal, Ayat, dan Poin.
 
@@ -115,6 +116,12 @@ Tersedia dua tindakan:
 
 - Wizard editor tiga langkah.
 - Penggantian textarea JSON mentah dengan UI BAB/Pasal/Ayat/Poin.
+- Penjelasan opsional per Pasal disimpan bersama isi versi, ditampilkan pada
+  pratinjau dan diff review, serta ikut terlacak dalam snapshot commit.
+- Halaman publik menampilkan disclosure `Penjelasan` bila teks tersedia, atau
+  `Cukup Jelas` untuk Pasal tanpa penjelasan, termasuk snapshot lama.
+- Halaman detail publik menampilkan mukadimah/pembukaan dari format JSON
+  maupun format legacy sebelum struktur BAB dan Pasal.
 - Kartu dinamis untuk menambah dan menghapus elemen struktur.
 - Form informasi dokumen dan mukadimah.
 - Pratinjau dokumen sebelum penyimpanan/pengajuan.

@@ -8,12 +8,40 @@ function hukum_public_document_by_slug(string $slug): ?array
     }
 
     return dbFetchOne(
-        "SELECT id, periode_id, jenis, lingkup, nama_ormawa, judul, slug, deskripsi, mukadimah_json, status, published_at
+        "SELECT id, periode_id, jenis, lingkup, nama_ormawa, judul, slug, deskripsi,
+                format_mukadimah, mukadimah_json, mukadimah_legacy, status, published_at
          FROM hukum_dokumen
          WHERE slug = ? AND status = 'aktif'
          LIMIT 1",
         [$slug]
     );
+}
+
+function hukum_public_document_opening(array $document): string
+{
+    $legacy = trim((string) ($document['mukadimah_legacy'] ?? ''));
+    if (($document['format_mukadimah'] ?? '') !== 'json' || empty($document['mukadimah_json'])) {
+        return $legacy;
+    }
+
+    try {
+        $decoded = json_decode((string) $document['mukadimah_json'], true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $error) {
+        throw new RuntimeException('Mukadimah dokumen tidak dapat dibaca.', 500, $error);
+    }
+
+    if (is_string($decoded)) {
+        return trim($decoded);
+    }
+    if (is_array($decoded)) {
+        foreach (['teks', 'text', 'isi', 'pembukaan'] as $key) {
+            if (isset($decoded[$key]) && is_string($decoded[$key])) {
+                return trim($decoded[$key]);
+            }
+        }
+    }
+
+    return $legacy;
 }
 
 function hukum_public_active_commit_by_document(int $documentId): ?array
