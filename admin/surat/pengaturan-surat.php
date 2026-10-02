@@ -202,8 +202,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
         } else {
             if ($action === 'tambah') {
                 dbQuery(
-                    "INSERT INTO surat_templates (periode_id, jenis, label, isi_teks, perihal_default) VALUES (?, ?, ?, ?, ?)",
-                    [$periode_id, $jenis, $label, $isi_teks, $perihal_default], "issss"
+                    "INSERT INTO surat_templates (periode_id, jenis, label, nama_template, isi_teks, perihal_default) VALUES (?, ?, ?, ?, ?, ?)",
+                    [$periode_id, $jenis, $label, $label, $isi_teks, $perihal_default], "isssss"
                 );
                 $success = "Template " . ucfirst($jenis) . " berhasil disimpan!";
             } else {
@@ -1029,9 +1029,8 @@ document.getElementById('jenis_select').addEventListener('change', function() {
     let wrap_kode = document.getElementById('wrap_kode_keg');
     let wrap_isi = document.getElementById('wrap_isi_teks');
     if(type === 'tujuan') {
-        hint.innerHTML = 'Ketik tujuan lengkap di sini (Boleh enter ke bawah).<br>Contoh:<br>Bapak Rektor Universitas X<br>Di Tempat';
-        area.rows = 4;
-        area.placeholder = 'Rektor Universitas X\nDi Tempat';
+        if(hint) hint.innerHTML = 'Ketik tujuan lengkap di sini (Boleh enter ke bawah).<br>Contoh:<br>Bapak Rektor Universitas X<br>Di Tempat';
+        if(area) { area.rows = 4; area.placeholder = 'Rektor Universitas X\nDi Tempat'; }
         if(wrap_kode) wrap_kode.style.display = 'none';
         if(wrap_isi) wrap_isi.style.display = 'block';
     } else if(type === 'kegiatan') {
@@ -1041,9 +1040,8 @@ document.getElementById('jenis_select').addEventListener('change', function() {
         if(wrap_kode) wrap_kode.style.display = 'none';
         if(wrap_isi) wrap_isi.style.display = 'none';
     } else {
-        hint.innerHTML = 'Ketik perihal surat di sini. Tidak perlu enter ke bawah.<br>Contoh: Permohonan Bantuan Dana';
-        area.rows = 2;
-        area.placeholder = 'Permohonan Bantuan Dana';
+        if(hint) hint.innerHTML = 'Ketik perihal surat di sini. Tidak perlu enter ke bawah.<br>Contoh: Permohonan Bantuan Dana';
+        if(area) { area.rows = 2; area.placeholder = 'Permohonan Bantuan Dana'; }
         if(wrap_kode) wrap_kode.style.display = 'none';
         if(wrap_isi) wrap_isi.style.display = 'block';
     }
