@@ -60,7 +60,7 @@ $pdo->exec(
         id INTEGER PRIMARY KEY,
         staging_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        peran TEXT NOT NULL CHECK(peran IN ("komisi_i","ketua_umum")),
+        peran TEXT NOT NULL CHECK(peran IN ("komisi_i","admin")),
         status TEXT NOT NULL DEFAULT "menunggu" CHECK(status IN ("menunggu","disetujui","ditolak")),
         note TEXT NULL,
         approved_at TEXT NULL,
@@ -74,7 +74,7 @@ $pdo->exec(
         id INTEGER PRIMARY KEY,
         commit_id INTEGER NULL,
         user_id INTEGER NOT NULL,
-        peran TEXT NOT NULL CHECK(peran IN ("komisi_i","ketua_umum")),
+        peran TEXT NOT NULL CHECK(peran IN ("komisi_i","admin")),
         session_id TEXT NULL,
         status TEXT NOT NULL DEFAULT "pending" CHECK(status IN ("pending","in_progress","approved","expired","rejected","locked")),
         initiated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -109,7 +109,7 @@ $pdo->exec("INSERT INTO hukum_keanggotaan (id, user_id, periode_id, jabatan, mul
 
 $pdo->exec("INSERT INTO hukum_staging (id, workspace_id, status) VALUES (1, 10, 'menunggu_review')");
 $pdo->exec("INSERT INTO hukum_staging_approval (id, staging_id, user_id, peran, status, note) VALUES (1, 1, 1, 'komisi_i', 'disetujui', 'ok')");
-$pdo->exec("INSERT INTO hukum_staging_approval (id, staging_id, user_id, peran, status, note) VALUES (2, 1, 2, 'ketua_umum', 'disetujui', 'ok')");
+$pdo->exec("INSERT INTO hukum_staging_approval (id, staging_id, user_id, peran, status, note) VALUES (2, 1, 2, 'admin', 'disetujui', 'ok')");
 
 $pdo->exec("INSERT INTO hukum_workspace (id, dokumen_id, status) VALUES (1, 1, 'aktif')");
 $pdo->exec("INSERT INTO hukum_commit_window (id, commit_id, user_id, peran, session_id, status, expires_at) VALUES (1, NULL, 1, 'komisi_i', 'sess-a', 'pending', '2026-09-08 15:25:00')");

@@ -25,9 +25,11 @@ function hukum_create_pasal(PDO $pdo, array $input): array
     if ($order <= 0) {
         throw new InvalidArgumentException('urutan harus lebih dari 0.', 400);
     }
-    if (dbFetchOne('SELECT id FROM hukum_pasal WHERE dokumen_id = ? AND nomor_label = ? LIMIT 1', [$documentId, $label])
-        || dbFetchOne('SELECT id FROM hukum_pasal WHERE dokumen_id = ? AND urutan = ? LIMIT 1', [$documentId, $order])) {
-        throw new RuntimeException('Nomor atau urutan pasal sudah digunakan.', 409);
+    if (dbFetchOne('SELECT id FROM hukum_pasal WHERE dokumen_id = ? AND nomor_label = ? LIMIT 1', [$documentId, $label])) {
+        throw new RuntimeException("Nomor pasal '{$label}' sudah digunakan dalam dokumen ini.", 409);
+    }
+    if (dbFetchOne('SELECT id FROM hukum_pasal WHERE dokumen_id = ? AND urutan = ? LIMIT 1', [$documentId, $order])) {
+        throw new RuntimeException("Urutan pasal {$order} sudah digunakan dalam dokumen ini.", 409);
     }
     $babId = isset($input['bab_id']) ? (int) $input['bab_id'] : null;
     if ($babId !== null && !dbFetchOne('SELECT id FROM hukum_bab WHERE id = ? AND dokumen_id = ?', [$babId, $documentId])) {
@@ -60,8 +62,9 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
     hukum_require_service_period((int) $pasal['periode_id']);
     $workspaceId = (int) ($input['workspace_id'] ?? 0);
     $workspace = dbFetchOne('SELECT id, dokumen_id, status FROM hukum_workspace WHERE id = ?', [$workspaceId]);
-    if (!$workspace || (int) $workspace['dokumen_id'] !== (int) $pasal['dokumen_id'] || $workspace['status'] !== 'aktif') {
-        throw new RuntimeException('Workspace aktif tidak valid untuk pasal ini.', 409);
+    if (!$workspace || (int) $workspace['dokumen_id'] !== (int) $pasal['dokumen_id']
+        || !in_array((string) $workspace['status'], ['aktif', 'diajukan'], true)) {
+        throw new RuntimeException('Workspace tidak valid untuk pasal ini.', 409);
     }
     $latest = dbFetchOne(
         'SELECT id, updated_at FROM hukum_pasal_versi WHERE pasal_id = ? ORDER BY created_at DESC, id DESC LIMIT 1',
@@ -74,20 +77,68 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
     $contents = hukum_decode_json_field($input['isi'] ?? null, 'isi');
     $canonical = hukum_canonical_json($contents);
     $hash = hash('sha256', $canonical);
+    $existing = dbFetchOne(
+        'SELECT id, workspace_id, status FROM hukum_pasal_versi WHERE pasal_id = ? AND hash_konten = ? LIMIT 1',
+        [$pasalId, $hash]
+    );
+    if ($existing !== null) {
+        if ((int) $existing['workspace_id'] !== $workspaceId
+            || !in_array((string) $existing['status'], ['draft', 'staged'], true)) {
+            throw new RuntimeException(
+                'Konten identik sudah tercatat pada versi dengan status ' . (string) $existing['status'] . '.',
+                409
+            );
+        }
+        hukum_sync_inline_references($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents);
+        return [
+            'id' => (int) $existing['id'],
+            'hash_konten' => $hash,
+            'latest_version_id' => (int) $existing['id'],
+            'reused' => true,
+        ];
+    }
+
     $stmt = $pdo->prepare(
         'INSERT INTO hukum_pasal_versi
          (pasal_id, workspace_id, isi, hash_konten, status, dibuat_oleh, dibuat_dari_versi_id)
          VALUES (?, ?, ?, ?, \'draft\', ?, ?)'
     );
-    $stmt->execute([
-        $pasalId, $workspaceId, $canonical, $hash, hukum_current_user_id(),
-        isset($input['dibuat_dari_versi_id']) ? (int) $input['dibuat_dari_versi_id'] : null,
-    ]);
+    try {
+        $stmt->execute([
+            $pasalId, $workspaceId, $canonical, $hash, hukum_current_user_id(),
+            isset($input['dibuat_dari_versi_id']) ? (int) $input['dibuat_dari_versi_id'] : null,
+        ]);
+    } catch (PDOException $error) {
+        $sqlState = (string) ($error->errorInfo[0] ?? $error->getCode());
+        $driverCode = (int) ($error->errorInfo[1] ?? 0);
+        $isUniqueViolation = $sqlState === '23505'
+            || ($sqlState === '23000' && in_array($driverCode, [19, 1062], true));
+        if (!$isUniqueViolation) {
+            throw $error;
+        }
+
+        $existing = dbFetchOne(
+            'SELECT id, workspace_id, status FROM hukum_pasal_versi WHERE pasal_id = ? AND hash_konten = ? LIMIT 1',
+            [$pasalId, $hash]
+        );
+        if ($existing === null
+            || (int) $existing['workspace_id'] !== $workspaceId
+            || !in_array((string) $existing['status'], ['draft', 'staged'], true)) {
+            throw $error;
+        }
+        hukum_sync_inline_references($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents);
+        return [
+            'id' => (int) $existing['id'],
+            'hash_konten' => $hash,
+            'latest_version_id' => (int) $existing['id'],
+            'reused' => true,
+        ];
+    }
     $id = (int) $pdo->lastInsertId();
     hukum_sync_inline_references($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents);
     hukum_audit($pdo, 'hukum_pasal_versi', $id, 'create_draft', null, [
         'pasal_id' => $pasalId,
         'hash_konten' => $hash,
     ]);
-    return ['id' => $id, 'hash_konten' => $hash, 'latest_version_id' => $id];
+    return ['id' => $id, 'hash_konten' => $hash, 'latest_version_id' => $id, 'reused' => false];
 }

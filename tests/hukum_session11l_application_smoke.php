@@ -50,6 +50,14 @@ $draft = hukum_create_pasal_draft($pdo, [
     'workspace_id' => $workspace['id'],
     'isi' => ['blocks' => [['type' => 'paragraph', 'text' => 'Draft valid']]],
 ]);
+$duplicateDraft = hukum_create_pasal_draft($pdo, [
+    'pasal_id' => $pasal['id'],
+    'workspace_id' => $workspace['id'],
+    'isi' => ['blocks' => [['type' => 'paragraph', 'text' => 'Draft valid']]],
+]);
+if ((int) $duplicateDraft['id'] !== (int) $draft['id'] || empty($duplicateDraft['reused'])) {
+    throw new RuntimeException('Saving identical draft content should reuse the existing version.');
+}
 
 if (!$pdo->query('SELECT id FROM hukum_dokumen WHERE id = ' . $documentId)->fetchColumn()
     || !$pdo->query('SELECT id FROM hukum_bab WHERE id = ' . (int) $bab['id'])->fetchColumn()
@@ -69,6 +77,34 @@ try {
 } catch (RuntimeException $error) {
     if ($error->getCode() !== 409) {
         throw $error;
+    }
+}
+
+foreach ([
+    [
+        'nomor_label' => 'Pasal 1',
+        'urutan' => 2,
+        'message' => "Nomor pasal 'Pasal 1' sudah digunakan dalam dokumen ini.",
+    ],
+    [
+        'nomor_label' => 'Pasal 2',
+        'urutan' => 1,
+        'message' => 'Urutan pasal 1 sudah digunakan dalam dokumen ini.',
+    ],
+] as $duplicate) {
+    try {
+        hukum_create_pasal($pdo, [
+            'dokumen_id' => $documentId,
+            'bab_id' => $bab['id'],
+            'nomor_label' => $duplicate['nomor_label'],
+            'judul_pasal' => 'Duplicate validation',
+            'urutan' => $duplicate['urutan'],
+        ]);
+        throw new RuntimeException('Duplicate Pasal number/order was accepted.');
+    } catch (RuntimeException $error) {
+        if ($error->getCode() !== 409 || $error->getMessage() !== $duplicate['message']) {
+            throw $error;
+        }
     }
 }
 

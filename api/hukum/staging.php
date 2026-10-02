@@ -45,10 +45,11 @@ if ($method === 'GET') {
 hukum_require_permission('hukum.workspace.submit');
 $input = hukum_input();
 $workspaceId = (int) ($input['workspace_id'] ?? 0);
-$versionIds = hukum_staging_normalize_version_ids($input['pasal_versi_ids'] ?? []);
-if ($versionIds === []) {
-    hukum_json_response(['success' => false, 'message' => 'pasal_versi_ids wajib berupa array.'], 400);
+$versionInput = $input['pasal_versi_ids'] ?? [];
+if (!is_array($versionInput)) {
+    hukum_json_response(['success' => false, 'message' => 'pasal_versi_ids harus berupa array.'], 400);
 }
+$versionIds = hukum_staging_normalize_version_ids($versionInput);
 
 try {
     $result = hukum_submit_staging($pdo, $workspaceId, $versionIds, hukum_current_user_id());

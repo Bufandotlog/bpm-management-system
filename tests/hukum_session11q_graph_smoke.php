@@ -28,14 +28,16 @@ function hukum_11q_approve_and_commit(PDO $pdo, array $fixture, int $stagingId, 
     hukum_review_decide($pdo, $stagingId, 'approve', null, $fixture['actors']['komisi_i']->id);
     hukum_set_actor_context_provider($fixture['provider']->as('ketua_umum'));
     hukum_review_decide($pdo, $stagingId, 'approve', null, $fixture['actors']['ketua_umum']->id);
-    hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', $fixture['credentials']['komisi_i'], $suffix . '-a');
-    hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'ketua_umum', $fixture['credentials']['ketua_umum'], $suffix . '-b');
     hukum_set_actor_context_provider($fixture['provider']->as('komisi_i'));
+    hukum_commit_create_window($pdo, $fixture['actors']['komisi_i']->id, 'komisi_i', $fixture['credentials']['komisi_i'], $suffix . '-a', $stagingId);
+    hukum_set_actor_context_provider($fixture['provider']->as('ketua_umum'));
+    hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'admin', $fixture['credentials']['ketua_umum'], $suffix . '-b', $stagingId);
+    hukum_set_actor_context_provider($fixture['provider']->as('ketua_umum'));
     return hukum_commit_finalize(
         $pdo,
         $stagingId,
-        $fixture['actors']['komisi_i']->id,
-        $fixture['credentials']['komisi_i'],
+        $fixture['actors']['ketua_umum']->id,
+        $fixture['credentials']['ketua_umum'],
         $suffix . '-final',
         $suffix . '-session'
     );
@@ -96,6 +98,7 @@ $uncommittedP2 = hukum_create_pasal_draft($pdo, [
     'workspace_id' => $workspaceB['id'],
     'isi' => ['teks' => 'UNCOMMITTED-DRAFT'],
 ]);
+hukum_set_actor_context_provider($fixture['provider']->as('komisi_i'));
 $stagingB = hukum_submit_staging($pdo, $workspaceB['id'], [$versionsB[1]['id'], $versionsB[3]['id']], $fixture['actors']['komisi_i']->id);
 $commitB = hukum_11q_approve_and_commit($pdo, $fixture, $stagingB['id'], '11q-b-' . $tag);
 $graphB = $pdo->prepare('SELECT pasal_id, pasal_version_id FROM hukum_graph_snapshot WHERE commit_id = ? ORDER BY pasal_id');

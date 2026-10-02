@@ -1,5 +1,12 @@
 <?php
 
+function hukum_review_for_update(PDO $pdo): string
+{
+    return strtolower((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME)) === 'sqlite'
+        ? ''
+        : ' FOR UPDATE';
+}
+
 function hukum_review_resolve_role(int $documentId, ?int $userId = null): ?string
 {
     $candidateId = $userId ?? hukum_current_user_id();
@@ -17,7 +24,8 @@ function hukum_review_resolve_role(int $documentId, ?int $userId = null): ?strin
         return 'admin';
     }
 
-    if (hukum_is_komisi_i($candidateId, (int) $periodeId) && $role === 'komisi_i') {
+    if ($role === 'komisi_i'
+        && hukum_actor_has_technical_role_for_period('komisi_i', $candidateId, (int) $periodeId)) {
         return 'komisi_i';
     }
 
@@ -43,16 +51,8 @@ function hukum_review_resolve_role_on(PDO $pdo, int $documentId, int $userId, in
         return 'admin';
     }
 
-    $membership = $pdo->prepare(
-        'SELECT jabatan FROM hukum_keanggotaan
-         WHERE user_id = ? AND periode_id = ? AND aktif = 1
-           AND jabatan = \'komisi_i\'
-           AND (selesai_pada IS NULL OR selesai_pada >= CURDATE())'
-    );
-    $membership->execute([$userId, $periodeId]);
-    $roles = array_fill_keys($membership->fetchAll(PDO::FETCH_COLUMN), true);
-
-    if (isset($roles['komisi_i']) && $role === 'komisi_i') {
+    if ($role === 'komisi_i'
+        && hukum_actor_has_technical_role_for_period('komisi_i', $userId, $periodeId)) {
         return 'komisi_i';
     }
 
@@ -103,7 +103,7 @@ function hukum_review_apply_decision(PDO $pdo, int $stagingId, string $decision,
          FROM hukum_staging s
          JOIN hukum_workspace w ON w.id = s.workspace_id
          JOIN hukum_dokumen d ON d.id = w.dokumen_id
-         WHERE s.id = ? FOR UPDATE',
+         WHERE s.id = ?' . hukum_review_for_update($pdo),
     );
     $stagingStmt->execute([$stagingId]);
     $staging = $stagingStmt->fetch(PDO::FETCH_ASSOC);
@@ -122,7 +122,7 @@ function hukum_review_apply_decision(PDO $pdo, int $stagingId, string $decision,
     }
 
     $existingStmt = $pdo->prepare(
-        'SELECT * FROM hukum_staging_approval WHERE staging_id = ? AND peran = ? FOR UPDATE',
+        'SELECT * FROM hukum_staging_approval WHERE staging_id = ? AND peran = ?' . hukum_review_for_update($pdo),
     );
     $existingStmt->execute([$stagingId, $role]);
     $existing = $existingStmt->fetch(PDO::FETCH_ASSOC);
@@ -148,7 +148,7 @@ function hukum_review_apply_decision(PDO $pdo, int $stagingId, string $decision,
         );
         $otherStmt->execute([$stagingId, $role]);
         $other = $otherStmt->fetch(PDO::FETCH_ASSOC);
-        if ($other !== null && (int) $other['user_id'] === $actorId) {
+        if ($other !== false && $other !== null && (int) $other['user_id'] === $actorId) {
             throw new RuntimeException('Satu aktor tidak dapat memenuhi dua approval.', 403);
         }
         $pdo->prepare(
@@ -184,12 +184,21 @@ function hukum_review_apply_decision(PDO $pdo, int $stagingId, string $decision,
     }
 
     $ownApprovalStmt = $pdo->prepare(
-        'SELECT * FROM hukum_staging_approval WHERE staging_id = ? AND peran = ? FOR UPDATE',
+        'SELECT * FROM hukum_staging_approval WHERE staging_id = ? AND peran = ?' . hukum_review_for_update($pdo),
     );
     $ownApprovalStmt->execute([$stagingId, $role]);
     $ownApproval = $ownApprovalStmt->fetch(PDO::FETCH_ASSOC);
     if (!$ownApproval || (string) $ownApproval['status'] !== 'menunggu') {
         throw new RuntimeException('Approval untuk peran Anda sudah diproses.', 409);
+    }
+    $otherApprovalStmt = $pdo->prepare(
+        'SELECT user_id FROM hukum_staging_approval
+         WHERE staging_id = ? AND peran <> ? AND status = \'disetujui\' LIMIT 1'
+    );
+    $otherApprovalStmt->execute([$stagingId, $role]);
+    $otherApproval = $otherApprovalStmt->fetch(PDO::FETCH_ASSOC);
+    if ($otherApproval !== false && (int) $otherApproval['user_id'] === $actorId) {
+        throw new RuntimeException('Satu akun tidak dapat memberikan kedua persetujuan.', 403);
     }
 
     $pdo->prepare(

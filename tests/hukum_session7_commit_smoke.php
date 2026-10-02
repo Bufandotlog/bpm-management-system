@@ -1,6 +1,7 @@
 <?php
 
 session_start();
+require_once __DIR__ . '/../admin/core/hukum-clock.php';
 
 if (!function_exists('dbFetchOne')) {
     function dbFetchOne(string $sql, array $params = []): ?array
@@ -29,6 +30,26 @@ if (!function_exists('hukum_current_user_role')) {
 }
 if (!function_exists('hukum_current_user_periode_id')) {
     function hukum_current_user_periode_id(): int { return (int) ($_SESSION['admin_periode_id'] ?? 0); }
+}
+if (!function_exists('hukum_authenticated_actor')) {
+    function hukum_authenticated_actor(): ?object {
+        return (object) [
+            'id' => hukum_current_user_id(),
+            'technicalRole' => hukum_current_user_role(),
+            'periodId' => hukum_current_user_periode_id(),
+            'canAccessAll' => true,
+        ];
+    }
+}
+if (!function_exists('hukum_technical_role_is_admin')) {
+    function hukum_technical_role_is_admin(string $role): bool {
+        return in_array(strtolower($role), ['admin', 'superadmin'], true);
+    }
+}
+if (!function_exists('hukum_actor_has_technical_role_for_period')) {
+    function hukum_actor_has_technical_role_for_period(string $role, int $userId, int $periodeId): bool {
+        return $role === 'komisi_i' && $userId === 2 && $periodeId === 1;
+    }
 }
 if (!function_exists('hukum_period_for_document')) {
     function hukum_period_for_document(int $documentId): ?int {
@@ -72,6 +93,7 @@ $_SESSION['admin_can_access_all'] = 1;
 $serviceSource = file_get_contents(__DIR__ . '/../api/hukum/commit_service.php');
 $serviceSource = preg_replace('/^<\?php\s*/', '', $serviceSource, 1);
 $serviceSource = preg_replace('/require_once __DIR__ \. \'\/\_bootstrap\.php\';\s*/', '', $serviceSource, 1);
+$serviceSource = preg_replace('/require_once __DIR__ \. \'\/\.\.\/\.\.\/admin\/core\/hukum-clock\.php\';\s*/', '', $serviceSource, 1);
 eval($serviceSource);
 
 $database = __DIR__ . '/tmp_hukum_session7.sqlite';
@@ -81,7 +103,7 @@ $GLOBALS['pdo']->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $GLOBALS['pdo']->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 $pdo = $GLOBALS['pdo'];
 
-$pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT NOT NULL, password TEXT NOT NULL)');
+$pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT NOT NULL, password TEXT NOT NULL, role TEXT NOT NULL DEFAULT "admin")');
 $pdo->exec('CREATE TABLE periode_kepengurusan (id INTEGER PRIMARY KEY, nama TEXT NOT NULL)');
 $pdo->exec('CREATE TABLE hukum_keanggotaan (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, periode_id INTEGER NOT NULL, jabatan TEXT NOT NULL, mulai_pada TEXT NOT NULL DEFAULT CURRENT_DATE, selesai_pada TEXT NULL, aktif INTEGER NOT NULL DEFAULT 1)');
 $pdo->exec('CREATE TABLE hukum_dokumen (id INTEGER PRIMARY KEY, periode_id INTEGER NOT NULL, judul TEXT NOT NULL, status TEXT NOT NULL DEFAULT "draft", updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
@@ -92,10 +114,12 @@ $pdo->exec('CREATE TABLE hukum_pasal (id INTEGER PRIMARY KEY, dokumen_id INTEGER
 $pdo->exec('CREATE TABLE hukum_pasal_versi (id INTEGER PRIMARY KEY, pasal_id INTEGER NOT NULL, workspace_id INTEGER NOT NULL, isi TEXT NOT NULL, hash_konten TEXT NOT NULL, status TEXT NOT NULL DEFAULT "draft")');
 $pdo->exec('CREATE TABLE hukum_staging_versi (staging_id INTEGER NOT NULL, pasal_versi_id INTEGER NOT NULL, PRIMARY KEY (staging_id, pasal_versi_id))');
 $pdo->exec('CREATE TABLE hukum_relasi_pasal (id INTEGER PRIMARY KEY, pasal_anak_id INTEGER NOT NULL, pasal_induk_id INTEGER NOT NULL, source_version_id INTEGER NULL, target_version_id INTEGER NULL, jenis_relasi TEXT NOT NULL DEFAULT "mengacu", created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, dibuat_oleh TEXT NOT NULL DEFAULT "auto")');
-$pdo->exec('CREATE TABLE hukum_graph_snapshot (id INTEGER PRIMARY KEY AUTOINCREMENT, commit_id INTEGER NOT NULL, dokumen_id INTEGER NOT NULL, pasal_id INTEGER NOT NULL, pasal_version_id INTEGER NULL, nomor_label TEXT NULL, payload_json TEXT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$pdo->exec('CREATE TABLE hukum_graph_snapshot (id INTEGER PRIMARY KEY AUTOINCREMENT, commit_id INTEGER NOT NULL, dokumen_id INTEGER NOT NULL, pasal_id INTEGER NOT NULL, pasal_version_id INTEGER NULL, nomor_label TEXT NULL, payload_json TEXT NULL, is_active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
 $pdo->exec('CREATE TABLE hukum_graph_snapshot_edge (id INTEGER PRIMARY KEY AUTOINCREMENT, snapshot_id INTEGER NOT NULL, source_pasal_id INTEGER NOT NULL, target_pasal_id INTEGER NOT NULL, source_version_id INTEGER NULL, target_version_id INTEGER NULL, jenis_relasi TEXT NOT NULL DEFAULT "mengacu", metadata_json TEXT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$pdo->exec('CREATE TABLE hukum_staging_deletion (id INTEGER PRIMARY KEY AUTOINCREMENT, staging_id INTEGER NOT NULL, entity_type TEXT NOT NULL, entity_id INTEGER NOT NULL, base_commit_id INTEGER NOT NULL, reason TEXT NOT NULL, snapshot_json TEXT NOT NULL)');
+$pdo->exec('CREATE TABLE hukum_commit_deletion (id INTEGER PRIMARY KEY AUTOINCREMENT, commit_id INTEGER NOT NULL, entity_type TEXT NOT NULL, entity_id INTEGER NOT NULL, reason TEXT NOT NULL, snapshot_json TEXT NOT NULL)');
 $pdo->exec('CREATE TABLE hukum_commit (id INTEGER PRIMARY KEY, dokumen_id INTEGER NOT NULL, staging_id INTEGER NOT NULL, parent_commit_id INTEGER NULL, hash_commit TEXT NOT NULL, snapshot_tree TEXT NOT NULL, forum_tipe TEXT NOT NULL, tanggal_forum TEXT NOT NULL, status TEXT NOT NULL DEFAULT "aktif", dibuat_oleh INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, replaced_at TEXT NULL)');
-$pdo->exec('CREATE TABLE hukum_commit_window (id INTEGER PRIMARY KEY, commit_id INTEGER NULL, user_id INTEGER NOT NULL, peran TEXT NOT NULL, session_id TEXT NULL, status TEXT NOT NULL DEFAULT "pending", initiated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, expires_at TEXT NOT NULL, completed_at TEXT NULL, result TEXT NULL, request_id TEXT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$pdo->exec('CREATE TABLE hukum_commit_window (id INTEGER PRIMARY KEY, commit_id INTEGER NULL, staging_id INTEGER NULL, user_id INTEGER NOT NULL, peran TEXT NOT NULL, session_id TEXT NULL, status TEXT NOT NULL DEFAULT "pending", initiated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, expires_at TEXT NOT NULL, completed_at TEXT NULL, result TEXT NULL, request_id TEXT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
 $pdo->exec('CREATE TABLE hukum_commit_lockout (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, session_id TEXT NULL, failed_attempts INTEGER NOT NULL DEFAULT 0, locked_until TEXT NULL, last_reason TEXT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
 $pdo->exec('CREATE TABLE hukum_audit_log (id INTEGER PRIMARY KEY, entitas TEXT NOT NULL, entitas_id INTEGER NOT NULL, aksi TEXT NOT NULL, aktor_id INTEGER NOT NULL, role_context TEXT NULL, periode_id INTEGER NULL, request_id TEXT NULL, result TEXT NOT NULL DEFAULT "success", context_json TEXT NULL, sebelum_json TEXT NULL, sesudah_json TEXT NULL, ip_address TEXT NULL)');
 
@@ -104,10 +128,10 @@ $pdo->exec("INSERT INTO periode_kepengurusan (id, nama) VALUES (1, '2026-2027')"
 $pdo->exec("INSERT INTO hukum_keanggotaan (user_id, periode_id, jabatan, mulai_pada, aktif) VALUES (2, 1, 'komisi_i', '2026-01-01', 1)");
 $pdo->exec("INSERT INTO hukum_keanggotaan (user_id, periode_id, jabatan, mulai_pada, aktif) VALUES (3, 1, 'ketua_umum', '2026-01-01', 1)");
 $pdo->exec("INSERT INTO hukum_dokumen (id, periode_id, judul, status) VALUES (1, 1, 'Dokumen Uji', 'draft')");
-$pdo->exec("INSERT INTO hukum_workspace (id, dokumen_id, status) VALUES (1, 1, 'diajukan')");
-$pdo->exec("INSERT INTO hukum_staging (id, workspace_id, status, diajukan_oleh) VALUES (1, 1, 'menunggu_review', 1)");
+$pdo->exec("INSERT INTO hukum_workspace (id, dokumen_id, status) VALUES (1, 1, 'siap_commit')");
+$pdo->exec("INSERT INTO hukum_staging (id, workspace_id, status, diajukan_oleh) VALUES (1, 1, 'disetujui', 1)");
 $pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status) VALUES (1, 2, 'komisi_i', 'disetujui')");
-$pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status) VALUES (1, 3, 'ketua_umum', 'disetujui')");
+$pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status) VALUES (1, 3, 'admin', 'disetujui')");
 $pdo->exec("INSERT INTO hukum_pasal_versi (id, pasal_id, workspace_id, isi, hash_konten, status) VALUES (10, 1, 1, '{\"isi\":\"teks\"}', 'hash-10', 'staged')");
 $pdo->exec("INSERT INTO hukum_staging_versi (staging_id, pasal_versi_id) VALUES (1, 10)");
 
@@ -115,40 +139,45 @@ $_SESSION['admin_id'] = 2;
 $_SESSION['admin_role'] = 'admin';
 $_SESSION['admin_periode_id'] = 1;
 
-$windowKomisi = hukum_commit_create_window($pdo, 2, 'komisi_i', 'secret', 'sess-k1');
+$_SESSION['admin_id'] = 2;
+$_SESSION['admin_role'] = 'komisi_i';
+$windowKomisi = hukum_commit_create_window($pdo, 2, 'komisi_i', 'secret', 'sess-k1', 1);
 if (($windowKomisi['status'] ?? '') !== 'approved') { fwrite(STDERR, "Komisi I window should be approved\n"); exit(1); }
 
-$windowKetua = hukum_commit_create_window($pdo, 3, 'ketua_umum', 'secret', 'sess-k2');
-if (($windowKetua['status'] ?? '') !== 'approved') { fwrite(STDERR, "Ketua Umum window should be approved\n"); exit(1); }
+$_SESSION['admin_id'] = 3;
+$_SESSION['admin_role'] = 'admin';
+$windowAdmin = hukum_commit_create_window($pdo, 3, 'admin', 'secret', 'sess-k2', 1);
+if (($windowAdmin['status'] ?? '') !== 'approved') { fwrite(STDERR, "Admin window should be approved\n"); exit(1); }
 
-$result = hukum_commit_finalize($pdo, 1, 2, 'secret', 'req-1', 'sess-k1');
-if (($result['success'] ?? false) !== true) { fwrite(STDERR, "Two-party commit should succeed\n"); exit(1); }
-if (!hukum_commit_verify_snapshot($pdo, (int) $result['id'])) { fwrite(STDERR, "Stored commit hash should verify\n"); exit(1); }
-
-$_SESSION['admin_id'] = 2;
 try {
-    hukum_commit_finalize($pdo, 1, 2, 'wrong', 'req-2', 'sess-k1');
+    hukum_commit_finalize($pdo, 1, 3, 'wrong', 'req-wrong', 'sess-k2');
     fwrite(STDERR, "Wrong password commit should fail\n");
     exit(1);
 } catch (RuntimeException $e) {
     // expected
 }
 
+$_SESSION['admin_id'] = 3;
+$_SESSION['admin_role'] = 'admin';
+$result = hukum_commit_finalize($pdo, 1, 3, 'secret', 'req-1', 'sess-k2');
+if (($result['success'] ?? false) !== true) { fwrite(STDERR, "Two-party commit should succeed\n"); exit(1); }
+if (!hukum_commit_verify_snapshot($pdo, (int) $result['id'])) { fwrite(STDERR, "Stored commit hash should verify\n"); exit(1); }
+
 try {
-    hukum_commit_finalize($pdo, 1, 2, 'secret', 'req-3', 'sess-k1');
+    hukum_commit_finalize($pdo, 1, 3, 'secret', 'req-3', 'sess-k2');
     fwrite(STDERR, "Duplicate finalize should fail\n");
     exit(1);
 } catch (RuntimeException $e) {
     // expected
 }
 
-$pdo->exec("INSERT INTO hukum_commit_window (user_id, peran, session_id, status, initiated_at, expires_at, created_at, updated_at) VALUES (2, 'komisi_i', 'sess-exp', 'approved', '2020-01-01 00:00:00', '2020-01-01 00:00:00', '2020-01-01 00:00:00', '2020-01-01 00:00:00')");
-if (hukum_commit_is_window_approved($pdo, 2, 'komisi_i')) {
+$pdo->exec("INSERT INTO hukum_commit_window (staging_id, user_id, peran, session_id, status, initiated_at, expires_at, created_at, updated_at) VALUES (99, 2, 'komisi_i', 'sess-exp', 'approved', '2020-01-01 00:00:00', '2020-01-01 00:00:00', '2020-01-01 00:00:00', '2020-01-01 00:00:00')");
+if (hukum_commit_is_window_approved($pdo, 2, 'komisi_i', 99)) {
     fwrite(STDERR, "Expired window should be rejected\n");
     exit(1);
 }
 
-$failed = dbFetchOne('SELECT failed_attempts FROM hukum_commit_lockout WHERE user_id = ? AND session_id = ? LIMIT 1', [2, 'sess-k1']);
+$failed = dbFetchOne('SELECT failed_attempts FROM hukum_commit_lockout WHERE user_id = ? AND session_id = ? LIMIT 1', [3, 'sess-k2']);
 if (($failed['failed_attempts'] ?? 0) < 1) { fwrite(STDERR, "Failed password attempts should be recorded\n"); exit(1); }
 
 echo "Session 7 commit smoke tests passed.\n";

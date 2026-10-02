@@ -51,7 +51,7 @@ try {
     } elseif ($operation === 'approval') {
         $result['value'] = hukum_review_decide($pdo, $id, 'approve', null, $actor->id);
     } elseif ($operation === 'authorization') {
-        $result['value'] = hukum_commit_create_window($pdo, $actor->id, 'komisi_i', $credential, '11o-race-' . $id . '-' . $actorKey);
+        $result['value'] = hukum_commit_create_window($pdo, $actor->id, $actorKey === 'komisi_i' ? 'komisi_i' : 'admin', $credential, '11o-race-' . $id . '-' . $actorKey, $id);
     } elseif ($operation === 'finalize') {
         $result['value'] = hukum_commit_finalize($pdo, $id, $actor->id, $credential, '11o-finalize-' . $actorKey, '11o-finalize-' . $actorKey);
     } else {

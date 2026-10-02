@@ -147,8 +147,10 @@ $pdo->exec('CREATE TABLE hukum_pasal_versi (id INTEGER PRIMARY KEY, pasal_id INT
 $pdo->exec('CREATE TABLE hukum_referensi_inline (id INTEGER PRIMARY KEY, pasal_asal_id INTEGER NOT NULL, dokumen_tujuan_id INTEGER NOT NULL, pasal_tujuan_nomor TEXT NOT NULL, ayat_tujuan_nomor INTEGER NULL)');
 $pdo->exec('CREATE TABLE hukum_relasi_pasal (id INTEGER PRIMARY KEY, pasal_anak_id INTEGER NOT NULL, pasal_induk_id INTEGER NOT NULL, source_version_id INTEGER NULL, target_version_id INTEGER NULL, jenis_relasi TEXT NOT NULL DEFAULT "mengacu", dibuat_oleh TEXT NOT NULL DEFAULT "manual", dibuat_oleh_user_id INTEGER NULL)');
 $pdo->exec('CREATE TABLE hukum_commit (id INTEGER PRIMARY KEY, dokumen_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "aktif")');
-$pdo->exec('CREATE TABLE hukum_graph_snapshot (id INTEGER PRIMARY KEY AUTOINCREMENT, commit_id INTEGER NOT NULL, dokumen_id INTEGER NOT NULL, pasal_id INTEGER NOT NULL, pasal_version_id INTEGER NULL, nomor_label TEXT NULL, payload_json TEXT NULL)');
+$pdo->exec('CREATE TABLE hukum_graph_snapshot (id INTEGER PRIMARY KEY AUTOINCREMENT, commit_id INTEGER NOT NULL, dokumen_id INTEGER NOT NULL, pasal_id INTEGER NOT NULL, pasal_version_id INTEGER NULL, nomor_label TEXT NULL, payload_json TEXT NULL, is_active INTEGER NOT NULL DEFAULT 1)');
 $pdo->exec('CREATE TABLE hukum_graph_snapshot_edge (id INTEGER PRIMARY KEY AUTOINCREMENT, snapshot_id INTEGER NOT NULL, source_pasal_id INTEGER NOT NULL, target_pasal_id INTEGER NOT NULL, source_version_id INTEGER NULL, target_version_id INTEGER NULL, jenis_relasi TEXT NOT NULL DEFAULT "mengacu", metadata_json TEXT NULL)');
+$pdo->exec('CREATE TABLE hukum_staging_deletion (id INTEGER PRIMARY KEY AUTOINCREMENT, staging_id INTEGER NOT NULL, entity_type TEXT NOT NULL, entity_id INTEGER NOT NULL, base_commit_id INTEGER NOT NULL, reason TEXT NOT NULL, snapshot_json TEXT NOT NULL)');
+$pdo->exec('CREATE TABLE hukum_commit_deletion (id INTEGER PRIMARY KEY AUTOINCREMENT, commit_id INTEGER NOT NULL, entity_type TEXT NOT NULL, entity_id INTEGER NOT NULL, reason TEXT NOT NULL, snapshot_json TEXT NOT NULL)');
 
 $pdo->exec("INSERT INTO hukum_dokumen (id, judul, periode_id) VALUES (1, 'Dokumen A', 1), (2, 'Dokumen B', 1)");
 $pdo->exec("INSERT INTO hukum_pasal (id, dokumen_id, nomor_label) VALUES (10, 1, 'Pasal 10'), (11, 1, 'Pasal 11'), (20, 2, 'Pasal 20')");

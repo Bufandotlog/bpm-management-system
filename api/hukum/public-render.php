@@ -96,6 +96,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt->execute([$commit['id']]);
     $commitDoc = $stmt->fetchColumn();
 
+    if ($pasalId > 0) {
+        $activePasal = $pdo->prepare(
+            'SELECT 1 FROM hukum_graph_snapshot
+             WHERE commit_id = ? AND pasal_id = ? AND is_active = 1 LIMIT 1'
+        );
+        $activePasal->execute([(int) $commit['id'], $pasalId]);
+        if ($activePasal->fetchColumn() === false) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Pasal tidak termasuk dalam snapshot commit ini']);
+            exit;
+        }
+    }
+
     // Ambil data pasal + format
     $pasalData = renderKonten($pdo, $pasalId ?: $commitDoc ?: 0, '');
 

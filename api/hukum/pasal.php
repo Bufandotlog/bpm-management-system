@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/pasal_service.php';
+require_once __DIR__ . '/deletions_service.php';
 
 $method = hukum_require_method(['GET', 'POST']);
 $pdo = getConnection();
@@ -16,7 +17,15 @@ if ($method === 'GET') {
             'SELECT p.*, v.id AS active_version_id, v.hash_konten AS active_hash
              FROM hukum_pasal p
              LEFT JOIN hukum_pasal_versi v ON v.pasal_id = p.id AND v.status = \'committed\'
-             WHERE p.dokumen_id = ? ORDER BY p.urutan, p.id',
+             WHERE p.dokumen_id = ?
+               AND (NOT EXISTS (SELECT 1 FROM hukum_commit c WHERE c.dokumen_id = p.dokumen_id AND c.status = \'aktif\')
+                    OR EXISTS (
+                      SELECT 1 FROM hukum_graph_snapshot gs
+                      JOIN hukum_commit c ON c.id = gs.commit_id
+                      WHERE c.dokumen_id = p.dokumen_id AND c.status = \'aktif\'
+                        AND gs.pasal_id = p.id AND gs.is_active = 1
+                    ))
+             ORDER BY p.urutan, p.id',
             [$documentId]
         )]);
     }
@@ -30,6 +39,10 @@ if ($method === 'GET') {
     );
     if (!$pasal) hukum_json_response(['success' => false, 'message' => 'Pasal tidak ditemukan.'], 404);
     hukum_require_document_period((int) $pasal['periode_id']);
+    if (hukum_deletion_active_commit($pdo, (int) $pasal['dokumen_id']) !== null
+        && !hukum_pasal_is_active($pdo, (int) $pasal['dokumen_id'], $pasalId)) {
+        hukum_json_response(['success' => false, 'message' => 'Pasal tidak lagi menjadi bagian dari dokumen aktif.'], 404);
+    }
     hukum_json_response(['success' => true, 'data' => dbFetchAll(
         'SELECT id, pasal_id, workspace_id, isi, hash_konten, status, dibuat_oleh, dibuat_dari_versi_id, created_at, updated_at
          FROM hukum_pasal_versi WHERE pasal_id = ? ORDER BY created_at DESC, id DESC',

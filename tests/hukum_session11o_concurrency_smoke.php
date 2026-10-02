@@ -184,33 +184,38 @@ $authRace = hukum_11o_prepare('authorization', ['komisi_i', 'komisi_i'], [$stagi
 hukum_11o_assert(count(array_filter($authRace, static fn (array $row): bool => $row['success'] === true)) >= 1, 'Commit authorization race produced no valid authorization.');
 $authWindowCountAfter = (int) $pdo->query("SELECT COUNT(*) FROM hukum_commit_window WHERE user_id = {$fixture['actors']['komisi_i']->id} AND peran = 'komisi_i' AND commit_id IS NULL")->fetchColumn();
 hukum_11o_assert(($authWindowCountAfter - $authWindowCountBefore) <= 1, 'Commit authorization race created duplicate active windows: ' . json_encode(['before' => $authWindowCountBefore, 'after' => $authWindowCountAfter, 'workers' => $authRace]));
-$authB = hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'ketua_umum', $fixture['credentials']['ketua_umum'], '11o-auth-b');
+hukum_set_actor_context_provider($provider->as('ketua_umum'));
+$authB = hukum_commit_create_window($pdo, $fixture['actors']['ketua_umum']->id, 'admin', $fixture['credentials']['ketua_umum'], '11o-auth-b', $stagingId);
 hukum_11o_assert($authB['status'] === 'approved', 'Second commit authorization setup failed.');
 $komisiWindowId = (int) $pdo->query(
-    "SELECT id FROM hukum_commit_window WHERE user_id = {$fixture['actors']['komisi_i']->id} AND peran = 'komisi_i' AND status = 'approved' AND commit_id IS NULL ORDER BY id DESC LIMIT 1"
+    "SELECT id FROM hukum_commit_window WHERE staging_id = {$stagingId} AND user_id = {$fixture['actors']['komisi_i']->id} AND peran = 'komisi_i' AND status = 'approved' AND commit_id IS NULL ORDER BY id DESC LIMIT 1"
 )->fetchColumn();
 $ketuaWindowId = (int) $pdo->query(
-    "SELECT id FROM hukum_commit_window WHERE user_id = {$fixture['actors']['ketua_umum']->id} AND peran = 'ketua_umum' AND status = 'approved' AND commit_id IS NULL ORDER BY id DESC LIMIT 1"
+    "SELECT id FROM hukum_commit_window WHERE user_id = {$fixture['actors']['ketua_umum']->id} AND peran = 'admin' AND staging_id = {$stagingId} AND status = 'approved' AND commit_id IS NULL ORDER BY id DESC LIMIT 1"
 )->fetchColumn();
 hukum_11o_assert($komisiWindowId > 0 && $ketuaWindowId > 0, 'Approved authorization windows were not prepared.');
 $pdo->prepare('UPDATE hukum_staging SET status = \'menunggu_review\' WHERE id = ?')->execute([$stagingId]);
 $pdo->prepare('UPDATE hukum_workspace SET status = \'diajukan\' WHERE id = ?')->execute([(int) $workspace['id']]);
 try {
-    hukum_commit_finalize($pdo, $stagingId, $fixture['actors']['komisi_i']->id, $fixture['credentials']['komisi_i'], '11o-invalid-state', '11o-invalid-state');
+    hukum_set_actor_context_provider($provider->as('ketua_umum'));
+    hukum_commit_finalize($pdo, $stagingId, $fixture['actors']['ketua_umum']->id, $fixture['credentials']['ketua_umum'], '11o-invalid-state', '11o-invalid-state');
     throw new RuntimeException('Finalization accepted a non-ready state.');
 } catch (RuntimeException $error) {
     hukum_11o_assert(str_contains($error->getMessage(), 'siap commit'), 'Unexpected invalid-state rejection: ' . $error->getMessage());
 }
+hukum_set_actor_context_provider($provider);
 $pdo->prepare('UPDATE hukum_staging SET status = \'disetujui\' WHERE id = ?')->execute([$stagingId]);
 $pdo->prepare('UPDATE hukum_workspace SET status = \'siap_commit\' WHERE id = ?')->execute([(int) $workspace['id']]);
 $GLOBALS['hukum_commit_test_failure_point'] = 'after_commit_insert';
 try {
-    hukum_commit_finalize($pdo, $stagingId, $fixture['actors']['komisi_i']->id, $fixture['credentials']['komisi_i'], '11o-failure', '11o-failure');
+    hukum_set_actor_context_provider($provider->as('ketua_umum'));
+    hukum_commit_finalize($pdo, $stagingId, $fixture['actors']['ketua_umum']->id, $fixture['credentials']['ketua_umum'], '11o-failure', '11o-failure');
     throw new RuntimeException('Commit failure injection did not abort finalization.');
 } catch (RuntimeException $error) {
     hukum_11o_assert(str_contains($error->getMessage(), 'TEST commit failure injection'), 'Unexpected failure injection result: ' . $error->getCode() . ' ' . $error->getMessage());
 }
 hukum_commit_test_set_failure_point(null);
+hukum_set_actor_context_provider($provider);
 hukum_11o_assert((int) $pdo->query("SELECT COUNT(*) FROM hukum_commit WHERE staging_id = {$stagingId}")->fetchColumn() === 0, 'Failed finalization left a commit row.');
 hukum_11o_assert((string) $pdo->query("SELECT status FROM hukum_workspace WHERE id = {$workspace['id']}")->fetchColumn() === 'siap_commit', 'Failed finalization changed workspace state.');
 $finalizeRace = hukum_11o_prepare('finalize', ['komisi_i', 'ketua_umum'], [$stagingId, [$credentialFiles['komisi_i'], $credentialFiles['ketua_umum']]]);
@@ -235,8 +240,8 @@ hukum_11o_assert((string) $pdo->query("SELECT status FROM hukum_workspace WHERE 
 hukum_11o_assert((string) $pdo->query("SELECT status FROM hukum_staging WHERE id = {$stagingId}")->fetchColumn() === 'disetujui', 'Staging was not finalized.');
 hukum_11o_assert((int) $pdo->query("SELECT COUNT(*) FROM hukum_audit_log WHERE entitas = 'hukum_commit' AND entitas_id = {$commitId} AND aksi = 'finalize' AND result = 'success'")->fetchColumn() === 1, 'Commit audit sequence is inconsistent.');
 try {
-    hukum_set_actor_context_provider($provider->as('komisi_i'));
-    hukum_commit_finalize($pdo, $stagingId, $fixture['actors']['komisi_i']->id, $fixture['credentials']['komisi_i'], '11o-replay-a', '11o-replay-a');
+    hukum_set_actor_context_provider($provider->as('ketua_umum'));
+    hukum_commit_finalize($pdo, $stagingId, $fixture['actors']['ketua_umum']->id, $fixture['credentials']['ketua_umum'], '11o-replay-a', '11o-replay-a');
     throw new RuntimeException('Replay with first credential was accepted.');
 } catch (RuntimeException $error) {
     hukum_11o_assert($error->getCode() === 409, 'Replay rejection did not use a conflict response: ' . $error->getCode() . ' ' . $error->getMessage());

@@ -78,6 +78,17 @@ function hukum_business_membership_for_user(int $userId, int $periodeId, string 
     return $row !== null;
 }
 
+function hukum_actor_has_technical_role_for_period(string $role, int $userId, int $periodeId): bool
+{
+    $actor = hukum_authenticated_actor();
+    return $actor !== null
+        && $userId > 0
+        && $actor->id === $userId
+        && $periodeId > 0
+        && $actor->technicalRole === strtolower(trim($role))
+        && ($actor->canAccessAll || $actor->periodId === $periodeId);
+}
+
 function hukum_is_komisi_i(int $userId = 0, ?int $periodeId = null, ?int $documentId = null): bool
 {
     if ($userId <= 0) {
@@ -149,7 +160,7 @@ function hukum_can_review_staging(int $documentId, ?int $userId = null): bool
         return true;
     }
 
-    if ($currentRole === 'komisi_i' && hukum_is_komisi_i($userId, $periodeId)) {
+    if ($currentRole === 'komisi_i' && hukum_actor_has_technical_role_for_period('komisi_i', $userId, $periodeId)) {
         return true;
     }
 
@@ -182,7 +193,7 @@ function hukum_can_commit_as(int $documentId, string $peran, ?int $userId = null
     }
 
     if ($peran === 'komisi_i') {
-        return $currentRole === 'komisi_i' && hukum_is_komisi_i($userId, $periodeId);
+        return $currentRole === 'komisi_i' && hukum_actor_has_technical_role_for_period('komisi_i', $userId, $periodeId);
     }
 
     if ($peran === 'admin') {
@@ -207,6 +218,7 @@ function hukum_role_permissions(): array
             'hukum.workspace.create',
             'hukum.workspace.submit',
             'hukum.staging.review',
+            'hukum.commit.verify',
             'hukum.commit.create',
             'hukum.commit.approve',
             'hukum.audit.view',
@@ -221,6 +233,7 @@ function hukum_role_permissions(): array
             'hukum.workspace.create',
             'hukum.workspace.submit',
             'hukum.staging.review',
+            'hukum.commit.verify',
             'hukum.audit.view',
         ],
         'sekretaris' => ['hukum.view', 'hukum.audit.view'],

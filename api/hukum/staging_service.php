@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/deletions_service.php';
 
 function hukum_staging_normalize_version_ids(array $versionIds): array
 {
@@ -17,8 +18,8 @@ function hukum_staging_normalize_version_ids(array $versionIds): array
 function hukum_staging_validate_submission(PDO $pdo, int $workspaceId, array $versionIds): array
 {
     $versionIds = hukum_staging_normalize_version_ids($versionIds);
-    if ($workspaceId <= 0 || $versionIds === []) {
-        throw new RuntimeException('Workspace dan pasal versi yang akan distaging wajib valid.', 400);
+    if ($workspaceId <= 0) {
+        throw new RuntimeException('Workspace wajib valid.', 400);
     }
     $workspaceStmt = $pdo->prepare(
         'SELECT ws.id, ws.dokumen_id, ws.status, d.periode_id
@@ -34,6 +35,18 @@ function hukum_staging_validate_submission(PDO $pdo, int $workspaceId, array $ve
         throw new RuntimeException('Workspace tidak aktif untuk submit staging.', 409);
     }
     $documentId = (int) $workspace['dokumen_id'];
+    $deletions = hukum_deletion_workspace_records($pdo, $workspaceId);
+    if ($versionIds === [] && $deletions === []) {
+        throw new RuntimeException('Simpan minimal satu versi Pasal atau catat penghapusan sebelum mengajukan staging.', 400);
+    }
+    $deletedPasalIds = [];
+    foreach ($deletions as $deletion) {
+        hukum_deletion_assert_current_base($pdo, $documentId, (int) $deletion['base_commit_id']);
+        foreach (($deletion['snapshot']['pasals'] ?? []) as $pasal) {
+            $deletedPasalIds[] = (int) $pasal['pasal_id'];
+        }
+    }
+    $deletedPasalIds = array_values(array_unique($deletedPasalIds));
     $versions = [];
     $pasalIds = [];
     foreach ($versionIds as $versionId) {
@@ -77,6 +90,18 @@ function hukum_staging_validate_submission(PDO $pdo, int $workspaceId, array $ve
         ];
         $pasalIds[] = (int) $version['pasal_id'];
     }
+    if (array_intersect($deletedPasalIds, $pasalIds) !== []) {
+        throw new RuntimeException('Satu Pasal tidak dapat diubah dan dihapus dalam staging yang sama.', 409);
+    }
+    $currentCommitId = hukum_deletion_active_commit($pdo, $documentId);
+    if ($deletedPasalIds !== [] && $currentCommitId !== null) {
+        $replacementContents = [];
+        foreach ($versions as $version) {
+            $replacementContents[(int) $version['pasal_id']] = $version['isi'];
+        }
+        hukum_deletion_assert_no_active_relations($pdo, $currentCommitId, $deletedPasalIds);
+        hukum_deletion_assert_no_inline_references($pdo, $currentCommitId, $deletedPasalIds, $replacementContents);
+    }
     $existingStmt = $pdo->prepare(
         'SELECT id FROM hukum_staging
          WHERE workspace_id = ? AND status IN (\'menunggu_review\', \'disetujui\')
@@ -88,12 +113,15 @@ function hukum_staging_validate_submission(PDO $pdo, int $workspaceId, array $ve
         throw new RuntimeException('Workspace sudah memiliki staging yang aktif.', 409);
     }
     $pasalIds = array_values(array_unique($pasalIds));
-    $impact = hukum_staging_impact_analysis($pdo, $documentId, $pasalIds, 1);
+    $impactPasalIds = array_values(array_unique(array_merge($pasalIds, $deletedPasalIds)));
+    $impact = hukum_staging_impact_analysis($pdo, $documentId, $impactPasalIds, 1);
     return [
         'workspace_id' => $workspaceId,
         'dokumen_id' => $documentId,
         'periode_id' => (int) $workspace['periode_id'],
         'versions' => $versions,
+        'deletions' => $deletions,
+        'deleted_pasal_ids' => $deletedPasalIds,
         'pasal_ids' => $pasalIds,
         'impact' => $impact,
         'self_commit_valid' => hukum_staging_self_commit_valid($pdo, $workspaceId, $documentId, $pasalIds, $impact['relations']),
@@ -123,14 +151,8 @@ function hukum_submit_staging(PDO $pdo, int $workspaceId, array $versionIds, ?in
         && $actor->periodId !== (int) $workspace['periode_id']) {
         throw new RuntimeException('Anda tidak memiliki akses ke periode staging ini.', 403);
     }
-    $membership = $pdo->prepare(
-        'SELECT id FROM hukum_keanggotaan
-         WHERE user_id = ? AND periode_id = ? AND jabatan = \'komisi_i\' AND aktif = 1
-           AND (selesai_pada IS NULL OR selesai_pada >= CURDATE()) LIMIT 1'
-    );
-    $membership->execute([$actorId, (int) $workspace['periode_id']]);
-    if ($membership->fetch(PDO::FETCH_ASSOC) === false) {
-        throw new RuntimeException('Hanya Komisi I yang dapat submit staging.', 403);
+    if (!hukum_actor_has_technical_role_for_period('komisi_i', $actorId, (int) $workspace['periode_id'])) {
+        throw new RuntimeException('Hanya Komisi I pada periode dokumen yang dapat submit staging.', 403);
     }
         $submission = hukum_staging_validate_submission($pdo, $workspaceId, $versionIds);
         $stmt = $pdo->prepare(
@@ -153,6 +175,7 @@ function hukum_submit_staging(PDO $pdo, int $workspaceId, array $versionIds, ?in
             $link->execute([$stagingId, $version['id']]);
             $mark->execute([$version['id']]);
         }
+        hukum_deletion_copy_to_staging($pdo, $workspaceId, $stagingId, (int) $submission['dokumen_id']);
         if (!empty($submission['impact']['relations'])) {
             $check = $pdo->prepare(
                 'SELECT id FROM hukum_notifikasi
@@ -191,6 +214,7 @@ function hukum_submit_staging(PDO $pdo, int $workspaceId, array $versionIds, ?in
         hukum_audit($pdo, 'hukum_staging', $stagingId, 'submit', null, [
             'workspace_id' => $workspaceId,
             'pasal_versi_ids' => $versionIds,
+            'deletion_count' => count($submission['deletions']),
             'impact_count' => count($submission['impact']['relations'] ?? []),
             'self_commit_valid' => $submission['self_commit_valid'],
         ]);
@@ -247,7 +271,7 @@ function hukum_staging_impact_analysis(PDO $pdo, int $documentId, array $pasalId
 
 function hukum_staging_self_commit_valid(PDO $pdo, int $workspaceId, int $documentId, array $pasalIds, array $relations): bool
 {
-    if ($relations === []) {
+    if ($relations === [] || $pasalIds === []) {
         return false;
     }
     $ids = array_values(array_unique(array_map('intval', $pasalIds)));
