@@ -6,14 +6,30 @@ require_once __DIR__ . '/document_service.php';
 function hukum_create_pasal(PDO $pdo, array $input): array
 {
     hukum_require_service_permission('hukum.pasal.create');
-    $documentId = (int) ($input['dokumen_id'] ?? 0);
-    $doc = dbFetchOne('SELECT periode_id, status FROM hukum_dokumen WHERE id = ?', [$documentId]);
-    if (!$doc) {
-        throw new RuntimeException('Dokumen tidak ditemukan.', 404);
-    }
-    hukum_require_service_period((int) $doc['periode_id']);
-    if ($doc['status'] !== 'draft') {
-        throw new RuntimeException('Pasal hanya dapat dibuat pada dokumen draft.', 409);
+    $workspaceId = isset($input['workspace_id']) ? (int) $input['workspace_id'] : 0;
+    if ($workspaceId > 0) {
+        $ws = dbFetchOne('SELECT dokumen_id, status FROM hukum_workspace WHERE id = ?', [$workspaceId]);
+        if (!$ws) throw new RuntimeException('Workspace tidak ditemukan.', 404);
+        $documentId = (int) $ws['dokumen_id'];
+        $doc = dbFetchOne('SELECT periode_id, status FROM hukum_dokumen WHERE id = ?', [$documentId]);
+        if (!$doc) throw new RuntimeException('Dokumen tidak ditemukan.', 404);
+        if (!in_array((string) $ws['status'], ['aktif', 'diajukan'], true)) {
+            throw new RuntimeException('Workspace tidak aktif untuk membuat Pasal.', 409);
+        }
+        if (isset($input['dokumen_id']) && (int) $input['dokumen_id'] !== $documentId) {
+            throw new RuntimeException('Dokumen tidak sesuai dengan workspace.', 409);
+        }
+        hukum_require_service_period((int) $doc['periode_id']);
+    } else {
+        $documentId = (int) ($input['dokumen_id'] ?? 0);
+        $doc = dbFetchOne('SELECT periode_id, status FROM hukum_dokumen WHERE id = ?', [$documentId]);
+        if (!$doc) {
+            throw new RuntimeException('Dokumen tidak ditemukan.', 404);
+        }
+        hukum_require_service_period((int) $doc['periode_id']);
+        if ($doc['status'] !== 'draft') {
+            throw new RuntimeException('Pasal hanya dapat dibuat pada dokumen draft.', 409);
+        }
     }
     foreach (['nomor_label', 'urutan'] as $field) {
         if (!isset($input[$field]) || trim((string) $input[$field]) === '') {

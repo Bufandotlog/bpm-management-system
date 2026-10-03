@@ -24,6 +24,14 @@ if ($method === 'GET') {
                       JOIN hukum_commit c ON c.id = gs.commit_id
                       WHERE c.dokumen_id = p.dokumen_id AND c.status = \'aktif\'
                         AND gs.pasal_id = p.id AND gs.is_active = 1
+                    )
+                    OR EXISTS (
+                      SELECT 1 FROM hukum_pasal_versi pv
+                      JOIN hukum_workspace w ON w.id = pv.workspace_id
+                      WHERE pv.pasal_id = p.id
+                        AND w.dokumen_id = p.dokumen_id
+                        AND w.status IN (\'aktif\', \'diajukan\', \'siap_commit\')
+                        AND pv.status IN (\'draft\', \'staged\')
                     ))
              ORDER BY p.urutan, p.id',
             [$documentId]
@@ -52,7 +60,7 @@ if ($method === 'GET') {
 
 $input = hukum_input();
 try {
-    if (isset($input['isi']) || !empty($input['workspace_id']) || isset($input['pasal_id'])) {
+    if (isset($input['isi']) || isset($input['pasal_id'])) {
         $result = hukum_create_pasal_draft($pdo, $input);
     } else {
         $result = hukum_create_pasal($pdo, $input);
