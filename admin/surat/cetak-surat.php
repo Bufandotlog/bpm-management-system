@@ -163,12 +163,18 @@ $f_kode = strtoupper($parts[2] ?? '');
 $f_tujuan = strtoupper(trim(explode("\n", $surat['tujuan'])[0]));
 $f_tahun = end($parts) ?: date('Y');
 $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
+
+$is_pdf_mode = ($_GET['action'] ?? '') === 'pdf';
+if ($is_pdf_mode) {
+    ob_start();
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($download_name); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -193,6 +199,15 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             position:relative; z-index:0;
         }
 
+        .page-container {
+            width: 100%;
+            overflow-x: auto;
+            display: flex;
+            justify-content: center;
+            background: #525659;
+            padding: 10mm 0;
+        }
+
         /* Non-Printable Elements (Tombol Cetak) */
         .no-print {
             text-align: center;
@@ -202,12 +217,29 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             position: sticky;
             top: 0;
             z-index: 1000;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .btn {
             background: #4A90E2; color: #fff; border: none; padding: 10px 20px; font-size: 16px;
-            border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin: 0 5px;
+            border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block;
         }
         .btn-warning { background: #f39c12; }
+        
+        @media screen and (max-width: 768px) {
+            .page-container {
+                justify-content: flex-start;
+                padding: 10px;
+            }
+            .page {
+                margin: 0; /* Remove auto margin on mobile so it aligns left in the scroll container */
+            }
+            .btn {
+                flex: 1 1 100%;
+            }
+        }
         
         /* Kop Surat Custom */
         .kop-surat {
@@ -347,8 +379,9 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
 <body>
 
     <?php if (!isset($_GET['bulk'])): ?>
+    <?php if (!$is_pdf_mode): ?>
     <div class="no-print">
-        <button onclick="safePrint()" class="btn"><i class="fas fa-print"></i> Cetak Dokumen</button>
+        <a href="?id=<?php echo $id; ?>&action=pdf" class="btn"><i class="fas fa-file-pdf"></i> Download PDF Asli</a>
         <button onclick="exportWord()" class="btn" style="background:#27ae60;"><i class="fas fa-file-word"></i> Download Word</button>
         <?php
         $back_link = "arsip-surat.php";
@@ -359,8 +392,10 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
         <a href="<?php echo htmlspecialchars($back_link); ?>" class="btn btn-warning"><i class="fas fa-arrow-left"></i> Kembali</a>
     </div>
     <?php endif; ?>
+    <?php endif; ?>
 
-    <div class="page">
+    <div class="page-container">
+        <div class="page">
         <!-- 1. KOP SURAT -->
         <?php 
         $kop_path = rtrim(UPLOAD_PATH, '/\\') . '/kop_surat.png';
@@ -1108,7 +1143,90 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
         </div>
         <?php endforeach; ?>
     <?php endif; ?>
+    </div> <!-- End of page-container -->
     
+    <?php
+    if ($is_pdf_mode) {
+        $html = ob_get_clean();
+        $html .= '</body></html>';
+        
+        require_once __DIR__ . '/../../vendor/autoload.php';
+        
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        
+        $dompdf_output = $dompdf->output();
+        
+        // Setup Temporary Directory
+        $temp_dir = sys_get_temp_dir() . '/' . uniqid('bpm_pdf_', true);
+        if (!mkdir($temp_dir) && !is_dir($temp_dir)) {
+            die('Gagal membuat direktori temporary.');
+        }
+        
+        $main_pdf = $temp_dir . '/main.pdf';
+        file_put_contents($main_pdf, $dompdf_output);
+        $files_to_merge = [$main_pdf];
+        
+        // Handle External PDF Attachments
+        if (!empty($konten['lampiran_files']) && is_array($konten['lampiran_files'])) {
+            foreach ($konten['lampiran_files'] as $f) {
+                // Fallback to local path or uploadUrl
+                $local_path = rtrim(UPLOAD_PATH, '/\\') . '/' . ltrim(str_replace('uploads/', '', $f), '/\\');
+                
+                if (file_exists($local_path)) {
+                    $files_to_merge[] = $local_path;
+                } else {
+                    $file_url = uploadUrl($f);
+                    $pdf_data = @file_get_contents($file_url);
+                    if ($pdf_data) {
+                        $temp_pdf = $temp_dir . '/' . md5($f) . '.pdf';
+                        file_put_contents($temp_pdf, $pdf_data);
+                        $files_to_merge[] = $temp_pdf;
+                    }
+                }
+            }
+        }
+        
+        // Merge with Ghostscript
+        $merged_pdf = $temp_dir . '/merged.pdf';
+        if (count($files_to_merge) > 1) {
+            $files_args = implode(' ', array_map('escapeshellarg', $files_to_merge));
+            $cmd = "gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile=" . escapeshellarg($merged_pdf) . " " . $files_args;
+            exec($cmd, $output, $return_var);
+            if ($return_var === 0 && file_exists($merged_pdf)) {
+                $final_output = $merged_pdf;
+            } else {
+                $final_output = $main_pdf;
+            }
+        } else {
+            $final_output = $main_pdf;
+        }
+        
+        // Output to Browser
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . addslashes($download_name) . '.pdf"');
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        readfile($final_output);
+        
+        // Cleanup temp
+        if (count($files_to_merge) > 1) {
+            foreach ($files_to_merge as $f) {
+                if (strpos($f, $temp_dir) === 0) @unlink($f);
+            }
+        }
+        @unlink($main_pdf);
+        @unlink($merged_pdf);
+        @rmdir($temp_dir);
+        exit;
+    }
+    ?>
+
     <!-- Container untuk render Lampiran PDF (EXTERNAL) -->
     <div id="lampiran-render-container"></div>
     

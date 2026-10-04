@@ -7,7 +7,8 @@
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",
         "ext-pdo_pgsql": "*",
-        "aws/aws-sdk-php": "^3.388"
+        "aws/aws-sdk-php": "^3.388",
+        "dompdf/dompdf": "^3.1"
     },
     "config": {
         "optimize-autoloader": true,
