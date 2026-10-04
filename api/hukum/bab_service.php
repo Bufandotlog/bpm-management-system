@@ -13,7 +13,7 @@ function hukum_create_bab(PDO $pdo, array $input): array
         $documentId = (int) $ws['dokumen_id'];
         $doc = dbFetchOne('SELECT periode_id, status FROM hukum_dokumen WHERE id = ?', [$documentId]);
         if (!$doc) throw new RuntimeException('Dokumen tidak ditemukan.', 404);
-        if (!in_array((string) $ws['status'], ['aktif', 'diajukan'], true)) {
+        if ((string) $ws['status'] !== 'aktif') {
             throw new RuntimeException('Workspace tidak aktif untuk membuat BAB.', 409);
         }
         if (isset($input['dokumen_id']) && (int) $input['dokumen_id'] !== $documentId) {
@@ -71,7 +71,7 @@ function hukum_update_bab_metadata(PDO $pdo, array $input): array
     $workspaceId = (int) ($input['workspace_id'] ?? 0);
     $workspace = dbFetchOne('SELECT id, dokumen_id, status FROM hukum_workspace WHERE id = ?', [$workspaceId]);
     if (!$workspace || (int) $workspace['dokumen_id'] !== (int) $bab['dokumen_id']
-        || !in_array((string) $workspace['status'], ['aktif', 'diajukan'], true)) {
+        || (string) $workspace['status'] !== 'aktif') {
         throw new RuntimeException('Workspace tidak valid untuk BAB ini.', 409);
     }
 

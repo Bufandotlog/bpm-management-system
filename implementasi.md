@@ -399,40 +399,40 @@ melalui UI tanpa request manual.
 
 ### Tujuan
 
-Membuat submit staging atomik dan mencegah perubahan yang tidak selaras.
+Membuat submit staging atomik, menyimpan edge relasi dari draft, dan memberi
+sinyal dampak searah sejak Save Draft.
 
 ### Pekerjaan
 
-1. Di `POST /api/hukum/staging.php`, lock workspace dan seluruh versi terkait.
-2. Jalankan validasi deterministik wajib sebelum BFS:
-   - duplikasi pasal/nomor;
-   - struktur dokumen tidak valid;
-   - broken reference;
-   - invalid numbering atau ayat;
-   - status draft tidak cocok dengan workspace.
-3. Setelah validasi dasar lolos, jalankan impact analysis dengan BFS maksimum
-   depth 10 pada graph relasi.
-4. Cari notifikasi aktif pada seluruh tree terdampak.
-5. Jika ada masalah, rollback transaksi dan kembalikan daftar pasal bermasalah
-   serta link ke editor.
-6. Jika lolos, buat staging `menunggu_forum`, ubah semua versi terpilih menjadi
-   `staged`, dan ubah workspace menjadi `diajukan`.
-7. Self-resolution harus sangat ketat:
-   - notifikasi aktif hanya bisa auto-resolve jika child berada dalam impact
-     tree yang sama;
-   - child harus memiliki draft baru pada workspace yang sama;
-   - draft harus berbeda dari version sebelumnya;
-   - draft harus lolos semua validasi;
-   - tidak ada dependency unresolved lainnya.
-8. Simpan draft tidak menghasilkan notifikasi baru atau validasi staging penuh.
+1. `pasal_service.php` menyimpan versi dan menyinkronkan `isi.acuan_pasal_id`
+   ke `hukum_relasi_pasal` dalam transaksi yang sama; label acuan lama tetap
+   didukung untuk kompatibilitas.
+2. Saat ada versi baru untuk Pasal yang sudah memiliki baseline `committed`,
+   `relationship_service.php` menjalankan BFS terarah dari induk ke anak dan
+   membuat notifikasi `perlu_ditinjau` untuk relasi terdampak, termasuk lintas
+   dokumen. Picker menyusun pencarian dengan urutan dokumen → BAB → Pasal.
+3. Editor memuat ulang notifikasi dokumen setelah Save Draft. Versi baru pada
+   Pasal anak menyelesaikan sinyal anak tersebut; keputusan mengabaikan tetap
+   mewajibkan alasan.
+4. Penyelarasan otomatis mensyaratkan versi anak baru berbeda pada konten selain
+   daftar acuan; perubahan acuan saja tidak menghapus sinyal merah.
+5. Sebelum staging, backend mengunci workspace dan dokumen lalu menolak submit
+   bila masih ada notifikasi aktif pada dokumen, termasuk di luar subset versi
+   yang dikirim.
+6. Jika lolos, submit atomik menautkan versi ke staging dan mengubah workspace
+   menjadi `diajukan`; endpoint tulis menolak perubahan pada workspace tersebut.
 
 ### Acceptance criteria
 
-- Satu draft gagal menyebabkan semua draft gagal masuk staging.
-- BFS berhenti pada depth 10.
-- Tidak ada notifikasi baru saat Simpan Draft.
-- Self-commit hanya berlaku pada workspace yang sama dan kondisi yang sah.
-- Semakin kompleksnya impact analysis hanya ditambahkan setelah validasi dasar.
+- Acuan B → A tersimpan dengan ID anak dan induk yang benar; satu anak memiliki
+  maksimal satu target `mengacu`, dan target tidak valid membatalkan transaksi.
+- Perubahan A memberi sinyal kepada B dan C pada rantai A → B → C, tanpa
+  traversal balik atau batas kedalaman yang menghentikan rantai.
+- Save Draft awal tidak memberi sinyal karena belum ada baseline committed.
+- Satu notifikasi `perlu_ditinjau` yang tersisa menolak staging secara hard block.
+- Perubahan konten pada versi baru B menyelesaikan notifikasi B; perubahan
+  acuan saja tidak, dan pengabaian menyimpan alasan.
+- Save Draft tidak dapat mengubah workspace setelah statusnya `diajukan`.
 
 ---
 

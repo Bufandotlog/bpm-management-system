@@ -202,6 +202,8 @@ Tersedia dua tindakan:
 | `api/hukum/bab_service.php` | Validasi dan penyimpanan BAB |
 | `api/hukum/pasal.php` | Membuat Pasal, membaca versi, dan menyimpan draft Pasal |
 | `api/hukum/pasal_service.php` | Validasi workspace serta canonical JSON versi Pasal |
+| `api/hukum/relationship_service.php` | Sinkronisasi acuan, propagasi dampak searah, dan validasi hard block staging |
+| `api/hukum/notifications.php` | Membaca notifikasi, menyelaraskan versi anak, dan menyimpan alasan pengabaian |
 | `api/hukum/staging.php` | Mengirim versi draft ke staging |
 | `api/hukum/staging_service.php` | Validasi snapshot, referensi, dan perubahan status staging |
 | `admin/core/hukum-auth.php` | Pemeriksaan role teknis terhadap periode untuk aksi Hukum |
@@ -248,6 +250,7 @@ Form Pasal dikonversi ke struktur internal seperti berikut sebelum dikirim ke
 ```json
 {
   "teks_utama": "Isi pembuka Pasal",
+  "acuan": ["Pasal 1"],
   "ayat": [
     {
       "nomor": "1",
@@ -264,7 +267,11 @@ Form Pasal dikonversi ke struktur internal seperti berikut sebelum dikirim ke
 ```
 
 Struktur ini hanya menjadi kontrak backend. Pengguna tetap berinteraksi dengan
-field dan kartu UI biasa.
+field dan kartu UI biasa. Setiap label pada `acuan` harus menunjuk secara unik
+ke Pasal dalam dokumen yang sama; backend menyimpan relasi sebagai
+`pasal_anak_id` (Pasal yang sedang diedit) dan `pasal_induk_id` (Pasal acuan).
+Perubahan pada Pasal acuan menandai anak-anak yang terdampak saat Save Draft.
+Notifikasi yang belum diselesaikan memblokir staging untuk seluruh dokumen.
 
 ## 7. Prasyarat Backend Finalisasi Commit
 

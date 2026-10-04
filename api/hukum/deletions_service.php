@@ -144,21 +144,30 @@ function hukum_deletion_assert_no_active_relations(PDO $pdo, int $commitId, arra
         return;
     }
     $deleted = array_fill_keys(array_map('intval', $deletedPasalIds), true);
+    $placeholders = implode(',', array_fill(0, count($deletedPasalIds), '?'));
     $stmt = $pdo->prepare(
         'SELECT e.source_pasal_id, e.target_pasal_id
          FROM hukum_graph_snapshot_edge e
          JOIN hukum_graph_snapshot s ON s.id = e.snapshot_id
-         JOIN hukum_graph_snapshot source_node
-           ON source_node.commit_id = s.commit_id
-          AND source_node.pasal_id = e.source_pasal_id
-          AND source_node.is_active = 1
+         JOIN hukum_commit source_commit
+           ON source_commit.id = s.commit_id AND source_commit.status = ?
+         JOIN hukum_pasal target_pasal ON target_pasal.id = e.target_pasal_id
+         JOIN (
+           SELECT dokumen_id, MAX(id) AS commit_id
+           FROM hukum_commit
+           WHERE status = ?
+           GROUP BY dokumen_id
+         ) target_commit ON target_commit.dokumen_id = target_pasal.dokumen_id
          JOIN hukum_graph_snapshot target_node
-           ON target_node.commit_id = s.commit_id
+           ON target_node.commit_id = target_commit.commit_id
           AND target_node.pasal_id = e.target_pasal_id
           AND target_node.is_active = 1
-         WHERE s.commit_id = ?'
+         WHERE s.is_active = 1
+           AND s.pasal_id = e.source_pasal_id
+           AND ((e.source_pasal_id IN (' . $placeholders . ') AND s.commit_id = ?)
+                OR (e.target_pasal_id IN (' . $placeholders . ') AND target_node.commit_id = ?))'
     );
-    $stmt->execute([$commitId]);
+    $stmt->execute(array_merge(['aktif', 'aktif'], array_keys($deleted), [$commitId], array_keys($deleted), [$commitId]));
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $edge) {
         $sourceId = (int) $edge['source_pasal_id'];
         $targetId = (int) $edge['target_pasal_id'];

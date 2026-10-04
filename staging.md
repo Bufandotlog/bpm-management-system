@@ -17,33 +17,34 @@ Staging adalah **gerbang validasi sistemik dan atomik** sebelum draft masuk ke t
 
 ---
 
-## 2. Alur Eksekusi Staging
+## 2. Alur Draft, Sinyal Dampak, dan Staging
 
-### A. Submit dari Meja Kerja
+### A. Save Draft dan hubungan searah
+
+1. Relasi disimpan saat Pasal anak (B) menyimpan `acuan_pasal_id`; backend membentuk edge `pasal_anak_id = B` dan `pasal_induk_id = A`.
+2. Picker mencari dokumen → BAB → Pasal pada dokumen yang dapat diakses pengguna. Satu Pasal hanya memiliki satu target `mengacu`; satu target dapat diacu banyak Pasal. Target invalid atau periode tanpa izin membatalkan penyimpanan versi secara atomik.
+3. Draft pertama sebuah Pasal tidak menimbulkan sinyal dampak. Sinyal dibuat ketika versi baru mengubah Pasal yang telah memiliki versi `committed`.
+4. Setelah relasi tersinkron, backend melakukan BFS searah dari induk yang berubah ke seluruh anak yang mengacu kepadanya, termasuk lintas dokumen dan rantai A → B → C. Siklus aman karena node yang sudah dikunjungi tidak diproses ulang.
+5. Relasi terdampak menerima notifikasi `perlu_ditinjau`. Editor mengambil ulang notifikasi dokumen aktif setelah Save Draft dan menampilkan banner merah pada Pasal anak.
+6. Commit menyimpan edge lintas dokumen dalam snapshot sumber; halaman publik menautkan hanya ke target dalam dokumen aktif dan snapshot aktif. Penghapusan target diblokir selama ada relasi snapshot aktif.
+
+### B. Menyelesaikan sinyal
+
+1. Jika teks/konten Pasal anak berubah (bukan hanya daftar acuan), Save Draft versi baru anak mengubah notifikasi aktif untuk anak tersebut menjadi `sudah_diselaraskan`.
+2. Jika perubahan induk tidak memerlukan perubahan pada anak, pengguna dapat memilih **"Tidak perlu berubah"** dan menyimpan alasan minimal 10 karakter. Status menjadi `diabaikan_dengan_alasan`.
+3. Mengubah daftar acuan anak juga menyinkronkan graph; relasi yang dihapus tidak lagi memiliki notifikasi aktif karena notifikasi terikat ke relasi tersebut.
+
+### C. Submit Staging dan Review
 
 Saat Komisi I klik **"Submit Staging"**:
 
-1. **Validasi atomik**: sistem memeriksa seluruh draft di meja kerja sekaligus. Jika ada satu saja pasal yang melanggar aturan (nomor pasal duplikat, struktur JSON tidak valid, dan sebagainya), seluruh submit ditolak tanpa partial submit.
-2. **Snapshot pasal**: versi draft berstatus `draft` dipromosikan menjadi `staged`.
-3. **Staging Gate** dijalankan sebelum promosi status final dikonfirmasi.
-
-### B. Notifikasi Cascade
-
-Jika Staging Gate lolos:
-
-1. Sistem menelusuri relasi pasal secara rekursif. Detail struktur graph ada di `graph.md`.
-2. Setiap pasal anak dalam tree yang terdampak perubahan pasal induk dibuatkan entri notifikasi di tabel notifikasi peninjauan, yang memuat:
-   - `dipicu_oleh_pasal_versi_id`: ID versi pasal yang sedang di-staging.
-   - `pasal_induk_versi_sebelum_id`: versi induk sebelum perubahan.
-   - `pasal_induk_versi_sesudah_id`: versi induk sesudah perubahan.
-3. Status notifikasi otomatis menjadi `perlu_ditinjau`.
-
-### C. Status Staging dan Review
-
-1. Data masuk ke `hukum_staging` dengan status awal `menunggu_forum`.
-2. Komisi I dan Ketua Umum BPM melakukan approval terpisah.
-3. Approval staging tidak memakai timer ketat.
-4. Hasil review:
+1. Backend mengunci workspace dan dokumen lalu memeriksa notifikasi `perlu_ditinjau` yang masih aktif pada dokumen. Satu saja sinyal aktif menolak staging dengan HTTP 409; menyimpan draft tetap diperbolehkan.
+2. Setelah hard block lolos, validasi referensi dan versi dijalankan, seluruh versi terpilih ditautkan secara atomik ke staging dan berstatus `staged`.
+3. Workspace berubah menjadi `diajukan`; endpoint Save Draft menolak perubahan lanjutan pada workspace tersebut.
+4. Data masuk ke `hukum_staging` dengan status `menunggu_review`.
+5. Komisi I dan Ketua Umum BPM melakukan approval terpisah.
+6. Approval staging tidak memakai timer ketat.
+7. Hasil review:
 
 | Hasil | Status `hukum_staging` | Efek |
 |---|---|---|
@@ -51,54 +52,45 @@ Jika Staging Gate lolos:
 | **Ditolak** | `ditolak` | Draft tidak dihapus; meja kerja kembali `aktif`, lalu Komisi I memperbaiki dan submit ulang |
 
 Status `disetujui` hanya diberikan setelah kedua pihak menyetujui. Jika baru
-satu pihak menyetujui, status tetap `menunggu_forum` dengan indikator `1/2`.
+satu pihak menyetujui, status tetap `menunggu_review` dengan indikator `1/2`.
 
 ---
 
-## 3. Staging Gate (Recursive BFS — "Impact Analysis")
+## 3. Staging Gate (Hard Block)
 
-Ini adalah bagian inti yang berfungsi sebagai *security guard* sebelum submit diterima.
-
-1. Sistem melakukan **Breadth-First Search (BFS)** ke seluruh pohon relasi pasal terdampak, dengan batas kedalaman 10 level.
-2. Sistem mengecek `hukum_relasi_pasal` atau tabel referensi terkait. Jika ditemukan satu saja pasal dalam tree yang memiliki notifikasi `perlu_ditinjau` yang masih aktif, submit ditolak secara hard block.
-3. Tujuannya adalah mencegah pasal anak tertinggal dan tidak diselaraskan setelah pasal induknya berubah.
+BFS dijalankan saat Save Draft untuk membuat sinyal dampak searah. Saat submit, backend mengecek notifikasi aktif di seluruh dokumen, bukan hanya pada Pasal yang dipilih untuk staging. Karena itu, staging tidak bisa melewati Pasal terdampak dengan mengirim subset versi.
 
 Pseudocode kondisi blokir:
 
 ```text
 IF COUNT(notifikasi aktif WHERE status = 'perlu_ditinjau'
-         AND pasal_id IN (tree hasil BFS)) > 0
+         AND pasal_anak.dokumen_id = dokumen_workspace) > 0
 THEN REJECT submit (atomic, seluruh draft ditolak)
 ```
 
----
-
-## 4. Logika "Self-Commit" (Override Gate)
-
-Jika submit ditolak karena notifikasi aktif:
-
-1. Komisi I mengedit pasal anak yang terblokir di meja kerja yang sama.
-2. Saat Submit Staging ditekan kembali, sistem mendeteksi pasal anak tersebut juga sedang diedit di workspace yang sama.
-3. Sistem mengizinkan submit melewati gate untuk kasus self-commit tersebut.
-4. Jika commit berhasil, sistem otomatis melakukan auto-resolve terhadap notifikasi terkait karena pasal anak dianggap telah diselaraskan bersama perubahan induk.
-
-Ini adalah satu-satunya jalur resmi untuk melewati Staging Gate. Tidak ada override manual atau paksa di luar mekanisme ini.
+Tidak ada self-commit override untuk melewati notifikasi aktif. Pengguna harus menyelaraskan Pasal anak atau mengabaikannya dengan alasan tercatat sebelum mengajukan staging.
 
 ---
+
+## 4. Penyelesaian Notifikasi
+
+- Penyelarasan otomatis hanya berlaku pada notifikasi milik Pasal anak yang versi draft barunya benar-benar dibuat dalam Save Draft tersebut.
+- Pengabaian membutuhkan alasan dan mengubah status notifikasi, bukan menghapus histori.
+- Penyimpanan dan penyelesaian draft berjalan sebelum submit staging; keputusan tersebut tidak menjadi jalur untuk melewati validasi staging lain.
 
 ## 5. Eksepsi dan Logika Lanjutan
 
-### A. Simpan Draft Tidak Memicu Gate
+### A. Save Draft Boleh Berjalan Saat Ada Sinyal
 
-- Menyimpan draft tidak membuat notifikasi peninjauan otomatis.
-- Notifikasi baru dibuat saat Komisi I klik **Submit Staging**.
-- Tujuannya mencegah spam notifikasi selama penulisan dan perapian struktur yang dapat berlangsung beberapa hari.
+- Sinyal dampak dibuat saat Save Draft mengubah Pasal yang sudah pernah committed; draft awal tidak memicu sinyal.
+- Sinyal tidak mencegah pengguna menyimpan draft atau menyunting Pasal anak. Sinyal hanya memblokir submit staging hingga diselesaikan.
+- Penyelesaian otomatis hanya dilakukan untuk Pasal anak yang memiliki versi baru dengan perubahan teks/konten pada penyimpanan draft saat ini; perubahan daftar acuan saja atau versi lama yang dipakai ulang tidak dianggap penyelarasan.
 
 ### B. Atomic Submit
 
 - Semua draft dalam satu meja kerja masuk staging sekaligus, atau tidak ada yang masuk.
 - Jika hanya Pasal 4 memiliki notifikasi aktif, submit untuk Pasal 2, 3, dan 4 tetap ditolak total.
-- Solusinya adalah menyelesaikan notifikasi Pasal 4 atau melakukan self-commit, kemudian submit ulang seluruh draft.
+- Solusinya adalah menyelaraskan Pasal 4 atau mengabaikan dampaknya dengan alasan, kemudian submit ulang seluruh draft.
 
 ### C. Meja Kerja Archived Read-Only
 
@@ -108,16 +100,15 @@ Ini adalah satu-satunya jalur resmi untuk melewati Staging Gate. Tidak ada overr
 
 ---
 
-## 6. Contoh Alur Nyata: Multi-Day Multi-Draft
+## 6. Contoh Alur Dampak: A → B → C
 
-| Hari | Aksi | Kondisi Meja Kerja |
+| Langkah | Aksi | Hasil |
 |---|---|---|
-| 1 | Edit Pasal A → Simpan Draft, tutup halaman | 1 draft, meja kerja tetap `aktif` |
-| 2 | Buka kembali, edit Pasal B → Simpan Draft | 2 draft (A, B) |
-| 3 | Edit Pasal C → Simpan Draft | 3 draft (A, B, C) |
-| 4 | Klik **Submit Staging** | BFS berjalan ke seluruh tree yang menyertakan 3 draft |
-
-Jika semua clear, ketiga pasal masuk staging sekaligus dan meja kerja menjadi `diajukan`. Jika ada notifikasi aktif, seluruh submit ditolak dan Komisi I memperbaiki di meja kerja yang sama.
+| 1 | Pasal B menyimpan acuan ke Pasal A dan Pasal C ke Pasal B | Edge `B → A` dan `C → B` tersimpan |
+| 2 | Pasal A yang sudah committed diubah lalu Save Draft | Sinyal `perlu_ditinjau` dibuat untuk B dan C |
+| 3 | B disunting dan disimpan sebagai versi baru | Notifikasi B menjadi `sudah_diselaraskan`; draft tersimpan |
+| 4 | Pengguna memilih alasan typo pada C | Notifikasi C menjadi `diabaikan_dengan_alasan` |
+| 5 | Komisi I mengajukan staging | Lolos hanya jika tidak ada lagi notifikasi aktif di dokumen |
 
 ---
 
@@ -125,10 +116,13 @@ Jika semua clear, ketiga pasal masuk staging sekaligus dan meja kerja menjadi `d
 
 | Fitur | Implementasi Teknis |
 |---|---|
-| Pemicu notifikasi | Query ke tabel relasi pasal saat `POST /api/hukum/staging` |
-| Mekanisme blocking | Hard block jika notifikasi aktif ditemukan dalam tree hasil BFS |
+| Pemicu notifikasi | Save Draft versi baru pada Pasal dengan baseline `committed` |
+| Sinkronisasi relasi | `api/hukum/relationship_service.php`, dipanggil oleh `pasal_service.php` |
+| Resolusi otomatis | Versi Pasal anak baru tersimpan melalui aksi `align_versions` |
+| Resolusi dengan alasan | `POST /api/hukum/notifications.php`, decision `ignore` |
+| Mekanisme blocking | Hard block jika notifikasi aktif ditemukan pada dokumen workspace |
 | Penyimpanan draft | `hukum_pasal_versi` dengan status `draft` atau `staged` |
-| Status staging | `hukum_staging.status`: `menunggu_forum` → `disetujui` / `ditolak` |
+| Status staging | `hukum_staging.status`: `menunggu_review` → `disetujui` / `ditolak` |
 | Atomicity | Seluruh validasi, relasi versi, dan perubahan status dibungkus satu transaksi |
 
 ---
@@ -138,4 +132,3 @@ Jika semua clear, ketiga pasal masuk staging sekaligus dan meja kerja menjadi `d
 1. **Struktur approval staging** — schema aktual masih memiliki satu kolom reviewer;
    perlu tabel approval terpisah untuk menyimpan approval Komisi I dan Ketua Umum BPM.
 2. **Threshold gap penomoran (VALIDATION-02)** — apakah pengecekan ini bagian dari validasi atomik atau validasi terpisah? Nilainya harus configurable, bukan hardcode.
-3. **Tabel target BFS** — apakah BFS menelusuri `hukum_relasi_pasal` langsung atau memakai tabel index/cache untuk mempercepat query hierarki hingga 10 level? Lihat `graph.md`.

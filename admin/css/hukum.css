@@ -63,6 +63,16 @@
 .hukum-ayat-card textarea, .hukum-pasal-card > textarea { width:100%; box-sizing:border-box; }
 .hukum-pasal-card > .hukum-field-label { display:block; margin-top:10px; color:#bbb; font-size:.82rem; }
 .hukum-pasal-card > .hukum-field-label textarea { display:block; width:100%; box-sizing:border-box; margin-top:6px; }
+.hukum-acuan-card { position:relative; margin:12px 0; padding:12px; border:1px solid rgba(43,108,176,.45); border-radius:8px; background:rgba(43,108,176,.08); }
+.hukum-acuan-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; color:#b9d8ff; }
+.acuan-picker-field { position:relative; margin-top:9px; }
+.acuan-picker-field[hidden] { display:none !important; }
+.acuan-picker-field label { display:block; margin-bottom:5px; color:#bbb; font-size:.82rem; }
+.acuan-picker-field input { width:100%; box-sizing:border-box; }
+.acuan-picker-results { position:absolute; z-index:30; top:100%; left:0; right:0; display:grid; max-height:220px; overflow:auto; border:1px solid rgba(255,255,255,.2); border-radius:0 0 8px 8px; background:#17212e; box-shadow:0 8px 20px rgba(0,0,0,.35); }
+.acuan-picker-option { padding:9px 11px; border:0; border-bottom:1px solid rgba(255,255,255,.08); color:#eee; background:transparent; text-align:left; cursor:pointer; }
+.acuan-picker-option:hover, .acuan-picker-option:focus { background:rgba(43,108,176,.3); }
+.acuan-picker-empty { padding:9px 11px; color:#bbb; font-size:.85rem; }
 .hukum-point-row { display:grid; grid-template-columns:60px 1fr 32px; gap:8px; align-items:start; margin-top:8px; }
 .hukum-point-row textarea { width:100%; box-sizing:border-box; }
 .hukum-icon-btn { border:0; border-radius:6px; width:32px; height:32px; cursor:pointer; color:#ddd; background:rgba(255,255,255,.1); }

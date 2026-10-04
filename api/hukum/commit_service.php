@@ -573,43 +573,53 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
     if (!empty($commit['parent_commit_id'])) {
         $stmt = $pdo->prepare(
             'SELECT e.id, e.source_pasal_id AS pasal_anak_id, e.target_pasal_id AS pasal_induk_id,
+                    target_pasal.dokumen_id AS target_document_id,
                     e.jenis_relasi, e.source_version_id, e.target_version_id
              FROM hukum_graph_snapshot_edge e
              JOIN hukum_graph_snapshot s ON s.id = e.snapshot_id
+             JOIN hukum_pasal target_pasal ON target_pasal.id = e.target_pasal_id
              WHERE s.commit_id = ? AND s.dokumen_id = ?'
         );
         $stmt->execute([(int) $commit['parent_commit_id'], $documentId]);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $edge) {
-            if (($canonicalActive[(int) $edge['pasal_anak_id']] ?? false)
-                && ($canonicalActive[(int) $edge['pasal_induk_id']] ?? false)
-                && !isset($changedPasalIds[(int) $edge['pasal_anak_id']])
-                && !isset($changedPasalIds[(int) $edge['pasal_induk_id']])) {
+            $sourcePasalId = (int) $edge['pasal_anak_id'];
+            $targetPasalId = (int) $edge['pasal_induk_id'];
+            $targetIsLocal = (int) $edge['target_document_id'] === $documentId;
+            if (($canonicalActive[$sourcePasalId] ?? false)
+                && !isset($changedPasalIds[$sourcePasalId])
+                && (!$targetIsLocal || (
+                    ($canonicalActive[$targetPasalId] ?? false)
+                    && !isset($changedPasalIds[$targetPasalId])
+                ))) {
                 $edges[] = $edge;
             }
         }
     }
 
     $stmt = $pdo->prepare(
-        'SELECT r.id, r.pasal_anak_id, r.pasal_induk_id, r.jenis_relasi, r.source_version_id, r.target_version_id
+        'SELECT r.id, r.pasal_anak_id, r.pasal_induk_id, pi.dokumen_id AS target_document_id,
+                r.jenis_relasi, r.source_version_id, r.target_version_id
          FROM hukum_relasi_pasal r
          JOIN hukum_pasal pa ON pa.id = r.pasal_anak_id
          JOIN hukum_pasal pi ON pi.id = r.pasal_induk_id
-         WHERE pa.dokumen_id = ? AND pi.dokumen_id = ?
-           AND r.source_version_id IS NOT NULL AND r.target_version_id IS NOT NULL'
+         WHERE pa.dokumen_id = ?
+           AND r.source_version_id IS NOT NULL'
     );
-    $stmt->execute([$documentId, $documentId]);
+    $stmt->execute([$documentId]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $edge) {
         $sourcePasalId = (int) $edge['pasal_anak_id'];
         $targetPasalId = (int) $edge['pasal_induk_id'];
+        $targetDocumentId = (int) $edge['target_document_id'];
         if (!($canonicalActive[$sourcePasalId] ?? false)
-            || !($canonicalActive[$targetPasalId] ?? false)) {
+            || ($targetDocumentId === $documentId && !($canonicalActive[$targetPasalId] ?? false))) {
             continue;
         }
         if (!empty($commit['parent_commit_id'])
             && !isset($changedPasalIds[(int) $edge['pasal_anak_id']])
-            && !isset($changedPasalIds[(int) $edge['pasal_induk_id']])) {
+            && ($targetDocumentId !== $documentId || !isset($changedPasalIds[$targetPasalId]))) {
             continue;
         }
+        $edge['target_document_id'] = $targetDocumentId;
         $edges[] = $edge;
     }
 
@@ -617,15 +627,33 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
         $sourcePasalId = (int) $edge['pasal_anak_id'];
         $targetPasalId = (int) $edge['pasal_induk_id'];
         if (!array_key_exists($sourcePasalId, $canonicalVersions)
-            || !array_key_exists($targetPasalId, $canonicalVersions)) {
+            || !($canonicalActive[$sourcePasalId] ?? false)) {
             continue;
         }
 
-        $sourceVersionId = (int) $edge['source_version_id'];
-        $targetVersionId = (int) $edge['target_version_id'];
-        if ($sourceVersionId !== $canonicalVersions[$sourcePasalId]
-            || $targetVersionId !== $canonicalVersions[$targetPasalId]) {
+        $sourceVersionId = (int) $canonicalVersions[$sourcePasalId];
+        if ($sourceVersionId <= 0
+            || (!empty($edge['source_version_id']) && $sourceVersionId !== (int) $edge['source_version_id'])) {
             continue;
+        }
+        $targetDocumentId = (int) ($edge['target_document_id'] ?? 0);
+        if ($targetDocumentId === $documentId) {
+            if (!($canonicalActive[$targetPasalId] ?? false)) {
+                continue;
+            }
+            $targetVersionId = $canonicalVersions[$targetPasalId] ?? null;
+        } else {
+            $targetSnapshotVersion = dbFetchOne(
+                'SELECT gs.pasal_version_id
+                 FROM hukum_graph_snapshot gs
+                 JOIN hukum_commit c ON c.id = gs.commit_id AND c.status = ?
+                 WHERE gs.dokumen_id = ? AND gs.pasal_id = ? AND gs.is_active = 1
+                 ORDER BY c.id DESC LIMIT 1',
+                ['aktif', $targetDocumentId, $targetPasalId]
+            );
+            $targetVersionId = $targetSnapshotVersion !== null && $targetSnapshotVersion['pasal_version_id'] !== null
+                ? (int) $targetSnapshotVersion['pasal_version_id']
+                : null;
         }
 
         $stmt = $pdo->prepare(
@@ -634,9 +662,7 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
         );
         $stmt->execute([$commitId, $sourcePasalId]);
         $snapshotId = $stmt->fetch(PDO::FETCH_ASSOC);
-        $stmt->execute([$commitId, $targetPasalId]);
-        $targetSnapshot = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$snapshotId || !$targetSnapshot) {
+        if (!$snapshotId) {
             continue;
         }
 

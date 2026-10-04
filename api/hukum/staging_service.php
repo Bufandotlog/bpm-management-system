@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/deletions_service.php';
+require_once __DIR__ . '/relationship_service.php';
 
 function hukum_staging_normalize_version_ids(array $versionIds): array
 {
@@ -35,6 +36,8 @@ function hukum_staging_validate_submission(PDO $pdo, int $workspaceId, array $ve
         throw new RuntimeException('Workspace tidak aktif untuk submit staging.', 409);
     }
     $documentId = (int) $workspace['dokumen_id'];
+    $pdo->prepare('SELECT id FROM hukum_dokumen WHERE id = ? FOR UPDATE')->execute([$documentId]);
+    hukum_assert_no_pending_impact_notifications($pdo, $documentId);
     $deletions = hukum_deletion_workspace_records($pdo, $workspaceId);
     if ($versionIds === [] && $deletions === []) {
         throw new RuntimeException('Simpan minimal satu versi Pasal atau catat penghapusan sebelum mengajukan staging.', 400);
@@ -137,7 +140,7 @@ function hukum_staging_validate_submission(PDO $pdo, int $workspaceId, array $ve
     }
     $pasalIds = array_values(array_unique($pasalIds));
     $impactPasalIds = array_values(array_unique(array_merge($pasalIds, $deletedPasalIds)));
-    $impact = hukum_staging_impact_analysis($pdo, $documentId, $impactPasalIds, 1);
+    $impact = hukum_staging_impact_analysis($pdo, $documentId, $impactPasalIds);
     return [
         'workspace_id' => $workspaceId,
         'dokumen_id' => $documentId,
@@ -203,39 +206,6 @@ function hukum_submit_staging(PDO $pdo, int $workspaceId, array $versionIds, ?in
             }
         }
         hukum_deletion_copy_to_staging($pdo, $workspaceId, $stagingId, (int) $submission['dokumen_id']);
-        if (!empty($submission['impact']['relations'])) {
-            $check = $pdo->prepare(
-                'SELECT id FROM hukum_notifikasi
-                 WHERE relasi_id = ? AND dipicu_oleh_versi_id = ? AND status = \'perlu_ditinjau\' LIMIT 1'
-            );
-            $insert = $pdo->prepare(
-                'INSERT INTO hukum_notifikasi
-                 (relasi_id, pasal_anak_id, pasal_induk_id, dipicu_oleh_versi_id, status)
-                 VALUES (?, ?, ?, ?, \'perlu_ditinjau\')'
-            );
-            foreach ($submission['impact']['relations'] as $relation) {
-                $sourceVersionId = 0;
-                foreach ($submission['versions'] as $version) {
-                    if ((int) $version['pasal_id'] === (int) $relation['pasal_anak_id']
-                        || (int) $version['pasal_id'] === (int) $relation['pasal_induk_id']) {
-                        $sourceVersionId = (int) $version['id'];
-                        break;
-                    }
-                }
-                if ($sourceVersionId <= 0) {
-                    continue;
-                }
-                $check->execute([(int) $relation['id'], $sourceVersionId]);
-                if ($check->fetchColumn() === false) {
-                    $insert->execute([
-                        (int) $relation['id'],
-                        (int) $relation['pasal_anak_id'],
-                        (int) $relation['pasal_induk_id'],
-                        $sourceVersionId,
-                    ]);
-                }
-            }
-        }
         $pdo->prepare('UPDATE hukum_workspace SET status = \'diajukan\' WHERE id = ?')
             ->execute([$workspaceId]);
         hukum_audit($pdo, 'hukum_staging', $stagingId, 'submit', null, [
@@ -260,40 +230,14 @@ function hukum_submit_staging(PDO $pdo, int $workspaceId, array $versionIds, ?in
     }
 }
 
-function hukum_staging_impact_analysis(PDO $pdo, int $documentId, array $pasalIds, int $maxDepth = 1): array
+function hukum_staging_impact_analysis(PDO $pdo, int $documentId, array $pasalIds): array
 {
-    $queue = array_map(static fn (int $id): array => ['pasal_id' => $id, 'depth' => 0], array_unique(array_map('intval', $pasalIds)));
-    $seen = [];
-    $relations = [];
-    while ($queue !== []) {
-        $current = array_shift($queue);
-        if ($current['depth'] >= $maxDepth || isset($seen[$current['pasal_id']])) {
-            continue;
-        }
-        $seen[$current['pasal_id']] = true;
-        $stmt = $pdo->prepare(
-            'SELECT r.id, r.pasal_anak_id, r.pasal_induk_id, r.jenis_relasi
-             FROM hukum_relasi_pasal r
-             JOIN hukum_pasal pa ON pa.id = r.pasal_anak_id
-             JOIN hukum_pasal pi ON pi.id = r.pasal_induk_id
-             WHERE (r.pasal_anak_id = ? OR r.pasal_induk_id = ?)
-               AND pa.dokumen_id = ? AND pi.dokumen_id = ?'
-        );
-        $stmt->execute([$current['pasal_id'], $current['pasal_id'], $documentId, $documentId]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as $row) {
-            $relations[(int) $row['id']] = [
-                'id' => (int) $row['id'],
-                'pasal_anak_id' => (int) $row['pasal_anak_id'],
-                'pasal_induk_id' => (int) $row['pasal_induk_id'],
-                'jenis_relasi' => (string) $row['jenis_relasi'],
-            ];
-            $other = (int) $row['pasal_anak_id'] === $current['pasal_id']
-                ? (int) $row['pasal_induk_id'] : (int) $row['pasal_anak_id'];
-            $queue[] = ['pasal_id' => $other, 'depth' => $current['depth'] + 1];
-        }
-    }
-    return ['pasal_ids' => array_keys($seen), 'relations' => array_values($relations), 'depth_limit' => $maxDepth];
+    $relations = hukum_relationship_descendant_edges($pdo, $documentId, $pasalIds);
+    $pasalIds = array_values(array_unique(array_merge(
+        array_map('intval', $pasalIds),
+        array_column($relations, 'pasal_anak_id')
+    )));
+    return ['pasal_ids' => $pasalIds, 'relations' => $relations, 'depth_limit' => null];
 }
 
 function hukum_staging_self_commit_valid(PDO $pdo, int $workspaceId, int $documentId, array $pasalIds, array $relations): bool

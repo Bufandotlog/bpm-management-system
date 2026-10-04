@@ -21,6 +21,34 @@ $diffItems = $previousCommit && $latestCommit ? hukum_public_diff_snapshot($prev
 $references = $latestCommit ? hukum_public_extract_references_from_snapshot(hukum_public_snapshot_items($latestCommit)) : [];
 $snapshot = $latestCommit ? hukum_public_snapshot_items($latestCommit) : [];
 $snapshotMap = $latestCommit ? hukum_public_snapshot_map($latestCommit) : [];
+$acuanByPasal = [];
+if ($latestCommit) {
+    $publicAcuan = dbFetchAll(
+        "SELECT e.source_pasal_id, e.target_pasal_id, p.nomor_label, p.judul_pasal,
+                b.nomor_label AS bab_nomor, b.judul_bab, d.judul AS dokumen_judul, d.slug AS dokumen_slug
+         FROM hukum_graph_snapshot_edge e
+         JOIN hukum_graph_snapshot source_snapshot ON source_snapshot.id = e.snapshot_id
+         JOIN hukum_pasal p ON p.id = e.target_pasal_id
+         JOIN hukum_dokumen d ON d.id = p.dokumen_id AND d.status = 'aktif'
+         LEFT JOIN hukum_bab b ON b.id = p.bab_id
+         JOIN (
+             SELECT dokumen_id, MAX(id) AS commit_id
+             FROM hukum_commit
+             WHERE status = 'aktif'
+             GROUP BY dokumen_id
+         ) current_commit ON current_commit.dokumen_id = d.id
+         JOIN hukum_graph_snapshot target_snapshot
+           ON target_snapshot.commit_id = current_commit.commit_id
+          AND target_snapshot.pasal_id = p.id
+          AND target_snapshot.is_active = 1
+         WHERE source_snapshot.commit_id = ? AND e.jenis_relasi = 'mengacu'
+         ORDER BY e.id",
+        [(int) $latestCommit['id']]
+    );
+    foreach ($publicAcuan as $relation) {
+        $acuanByPasal[(int) $relation['source_pasal_id']][] = $relation;
+    }
+}
 
 $chapters = dbFetchAll(
     'SELECT id, nomor_label, judul_bab FROM hukum_bab WHERE dokumen_id = ? ORDER BY urutan, id',
@@ -137,19 +165,50 @@ include __DIR__ . '/header.php';
                     <?php
                     $pasalContent = is_array($snapshotItem['isi'] ?? null) ? $snapshotItem['isi'] : [];
                     $explanation = trim((string) ($pasalContent['penjelasan'] ?? ''));
+                    $acuan = is_array($pasalContent['acuan'] ?? null) ? $pasalContent['acuan'] : [];
+                    $hasPasalAcuanId = array_key_exists('acuan_pasal_id', $pasalContent);
                     unset($pasalContent['penjelasan']);
+                    unset($pasalContent['acuan']);
+                    unset($pasalContent['acuan_pasal_id']);
                     ?>
-                    <article class="hukum-pasal">
+                    <article class="hukum-pasal" id="pasal-<?php echo (int) $pasal['id']; ?>">
                         <h3><?php echo htmlspecialchars($pasal['nomor_label'] . (!empty($pasal['judul_pasal']) ? ' — ' . $pasal['judul_pasal'] : '')); ?></h3>
                         <div><?php echo hukum_public_content($pasalContent); ?></div>
-                        <?php if ($explanation !== ''): ?>
-                            <details class="hukum-pasal-explanation">
-                                <summary>Penjelasan</summary>
-                                <div class="hukum-pasal-explanation-content"><div><?php echo nl2br(htmlspecialchars($explanation)); ?></div></div>
-                            </details>
-                        <?php else: ?>
-                            <p class="hukum-pasal-clear">Cukup Jelas</p>
-                        <?php endif; ?>
+
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: flex-start;">
+                            <?php if ($explanation !== ''): ?>
+                                <details class="hukum-pasal-explanation" style="margin-top: 0; width: 100%;">
+                                    <summary style="display: inline-block; padding: 6px 12px; background: #c53030; color: white; border-radius: 4px; cursor: pointer;">Penjelasan +</summary>
+                                    <div class="hukum-pasal-explanation-content"><div><?php echo nl2br(htmlspecialchars($explanation)); ?></div></div>
+                                </details>
+                            <?php else: ?>
+                                <p class="hukum-pasal-clear" style="margin-bottom: 0;">Cukup Jelas</p>
+                            <?php endif; ?>
+
+                            <?php if (!empty($acuanByPasal[(int) $pasal['id']]) || (!$hasPasalAcuanId && !empty($acuan))): ?>
+                                <details class="hukum-pasal-explanation" style="margin-top: 0; width: 100%;">
+                                    <summary style="display: inline-block; padding: 6px 12px; background: #2b6cb0; color: white; border-radius: 4px; cursor: pointer;">Acuan +</summary>
+                                    <div class="hukum-pasal-explanation-content">
+                                        <ul style="margin: 0; padding-left: 20px;">
+                                        <?php foreach (($acuanByPasal[(int) $pasal['id']] ?? []) as $acu): ?>
+                                            <li>Mengacu ke: <a href="<?php echo htmlspecialchars(baseUrl('hukum-detail.php?slug=' . urlencode((string) $acu['dokumen_slug']) . '#pasal-' . (int) $acu['target_pasal_id'])); ?>">
+                                                <strong><?php echo htmlspecialchars((string) $acu['dokumen_judul']); ?></strong>
+                                                <?php if (!empty($acu['bab_nomor']) || !empty($acu['judul_bab'])): ?>
+                                                    — <?php echo htmlspecialchars(trim((string) $acu['bab_nomor'] . ' ' . (string) $acu['judul_bab'])); ?>
+                                                <?php endif; ?>
+                                                — <?php echo htmlspecialchars((string) $acu['nomor_label']); ?><?php if (!empty($acu['judul_pasal'])): ?> — <?php echo htmlspecialchars((string) $acu['judul_pasal']); ?><?php endif; ?>
+                                            </a></li>
+                                        <?php endforeach; ?>
+                                        <?php if (!$hasPasalAcuanId && empty($acuanByPasal[(int) $pasal['id']])): ?>
+                                            <?php foreach ($acuan as $acu): ?>
+                                                <li>Mengacu ke: <strong><?php echo htmlspecialchars((string) $acu); ?></strong></li>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                        </ul>
+                                    </div>
+                                </details>
+                            <?php endif; ?>
+                        </div>
                     </article>
                 <?php endforeach; ?>
             </section>

@@ -149,13 +149,30 @@ $canEditHukum = hukum_has_permission('hukum.document.update');
     </form>
 </dialog>
 
+<dialog id="ignoreImpactDialog" class="hukum-commit-dialog" aria-labelledby="ignoreImpactTitle">
+    <form id="ignoreImpactForm">
+        <div class="hukum-commit-dialog-heading">
+            <span class="hukum-kicker">Konfirmasi penyelarasan</span>
+            <h2 id="ignoreImpactTitle">Abaikan Dampak Perubahan</h2>
+            <p class="hukum-muted">Pasal ini ditandai terdampak oleh perubahan pasal acuannya. Jika perubahan acuan (misal: typo) tidak mengharuskan pasal ini diubah, berikan alasannya untuk menghapus status terdampak.</p>
+        </div>
+        <input type="hidden" id="impactPasalId" name="pasal_id">
+        <label for="ignoreReason">Alasan tidak perlu diubah <span class="required">*</span></label>
+        <textarea id="ignoreReason" name="alasan" rows="3" required placeholder="Contoh: Perubahan pada pasal acuan hanya berupa perbaikan ejaan..."></textarea>
+        <div class="hukum-actions" style="margin-top:15px;">
+            <button id="confirmIgnoreButton" class="hukum-btn gold" type="submit">Simpan Alasan</button>
+            <button id="cancelIgnoreButton" class="hukum-btn" type="button" onclick="document.getElementById('ignoreImpactDialog').close()">Batalkan</button>
+        </div>
+    </form>
+</dialog>
+
 <script>
 const hukumCsrf = <?php echo json_encode(csrfToken(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 const hukumBase = <?php echo json_encode(baseUrl('api/hukum/')); ?>;
 const canRequestDeletions = <?php echo hukum_has_permission('hukum.document.update') ? 'true' : 'false'; ?>;
 const submitRequires2fa = <?php echo $submitRequires2fa ? 'true' : 'false'; ?>;
 const initialDocuments = <?php echo json_encode($documents, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
-const state = { documents: initialDocuments || [], documentId: <?php echo $defaultDocId; ?>, document: null, workspace: null, babs: [], pasals: [], deletions: [], versions: new Map(), saving: false, savedSignature: null, savedVersionIds: [], loadedSignature: null };
+const state = { documents: initialDocuments || [], documentId: <?php echo $defaultDocId; ?>, document: null, workspace: null, babs: [], pasals: [], deletions: [], versions: new Map(), impactNotifications: [], pendingAlignmentVersionIds: [], saving: false, savedSignature: null, savedVersionIds: [], loadedSignature: null };
 
 function escapeHtml(value) { const node = document.createElement('div'); node.textContent = value ?? ''; return node.innerHTML; }
 function notice(message, type = 'success') { const node = document.getElementById('hukumNotice'); node.textContent = message; node.className = 'hukum-notice show ' + type; window.setTimeout(() => node.className = 'hukum-notice', 5000); }
@@ -235,6 +252,169 @@ function makeAyat() {
     wrapper.querySelector('.add-point').onclick = () => wrapper.querySelector('.point-list').appendChild(makePoint());
     wrapper.querySelector('.remove-ayat').onclick = () => wrapper.remove(); return wrapper;
 }
+function makeAcuan(sourcePasalId = 0) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'hukum-acuan-card';
+    wrapper.innerHTML = '<div class="hukum-acuan-heading"><strong>Hubungkan Pasal</strong><button class="hukum-icon-btn danger remove-acuan" type="button" title="Hapus acuan"><i class="fas fa-trash"></i></button></div><div class="acuan-picker-field"><label>Nama dokumen</label><input class="acuan-document-search" autocomplete="off" placeholder="Cari nama dokumen..."><div class="acuan-picker-results" role="listbox"></div></div><div class="acuan-picker-field" hidden><label>Nama BAB</label><input class="acuan-bab-search" autocomplete="off" placeholder="Pilih dokumen terlebih dahulu..." disabled><div class="acuan-picker-results" role="listbox"></div></div><div class="acuan-picker-field" hidden><label>Nama Pasal</label><input class="acuan-pasal-search" autocomplete="off" placeholder="Pilih BAB terlebih dahulu..." disabled><div class="acuan-picker-results" role="listbox"></div></div><input class="acuan-target-id" type="hidden">';
+    const documentField = wrapper.querySelector('.acuan-document-search');
+    const babField = wrapper.querySelector('.acuan-bab-search');
+    const pasalField = wrapper.querySelector('.acuan-pasal-search');
+    const [documentResults, babResults, pasalResults] = wrapper.querySelectorAll('.acuan-picker-results');
+    const [documentGroup, babGroup, pasalGroup] = wrapper.querySelectorAll('.acuan-picker-field');
+    let requestSequence = 0;
+
+    const clearTarget = () => {
+        wrapper.dataset.babId = '';
+        wrapper.dataset.targetPasalId = '';
+        wrapper.querySelector('.acuan-target-id').value = '';
+        pasalField.value = '';
+        pasalResults.replaceChildren();
+        pasalGroup.hidden = true;
+    };
+    const renderOptions = async (field, results, level, params, format, select) => {
+        const sequence = ++requestSequence;
+        const query = field.value.trim();
+        results.replaceChildren();
+        if (query.length < 1) return;
+        params.set('level', level);
+        params.set('q', query);
+        try {
+            const result = await request('pasal-targets.php?' + params.toString());
+            if (sequence !== requestSequence || !field.isConnected) return;
+            (result.data || []).forEach(item => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'acuan-picker-option';
+                option.setAttribute('role', 'option');
+                option.textContent = format(item);
+                option.addEventListener('click', () => {
+                    select(item);
+                    if (level === 'pasal') {
+                        delete wrapper.closest('.hukum-pasal-card')?.dataset.legacyAcuanConflict;
+                    }
+                    results.replaceChildren();
+                    renderPreview();
+                    refreshDraftSaveState();
+                });
+                results.appendChild(option);
+            });
+            if (!results.childElementCount) {
+                const empty = document.createElement('span');
+                empty.className = 'acuan-picker-empty';
+                empty.textContent = 'Tidak ada hasil yang cocok.';
+                results.appendChild(empty);
+            }
+        } catch (error) {
+            if (sequence === requestSequence) notice('Pencarian acuan gagal: ' + error.message, 'error');
+        }
+    };
+    const searchDocuments = () => {
+        wrapper.dataset.documentId = '';
+        documentGroup.dataset.selectedId = '';
+        babGroup.hidden = true;
+        babField.disabled = true;
+        babField.value = '';
+        clearTarget();
+        renderOptions(
+            documentField,
+            documentResults,
+            'dokumen',
+            new URLSearchParams(),
+            item => `${item.judul} (${item.jenis})`,
+            item => {
+                wrapper.dataset.documentId = String(item.id);
+                documentGroup.dataset.selectedId = String(item.id);
+                documentField.value = `${item.judul} (${item.jenis})`;
+                babGroup.hidden = false;
+                babField.disabled = false;
+                babField.placeholder = 'Cari BAB...';
+                babField.focus();
+            }
+        );
+    };
+    const searchBab = () => {
+        const documentId = Number(wrapper.dataset.documentId || 0);
+        wrapper.dataset.babId = '';
+        babGroup.dataset.selectedId = '';
+        clearTarget();
+        if (!documentId) return;
+        renderOptions(
+            babField,
+            babResults,
+            'bab',
+            new URLSearchParams({dokumen_id: String(documentId)}),
+            item => item.id ? `${item.nomor_label} — ${item.judul_bab}` : item.judul_bab,
+            item => {
+                wrapper.dataset.babId = String(item.id);
+                babGroup.dataset.selectedId = item.id ? String(item.id) : 'none';
+                babField.value = item.id ? `${item.nomor_label} — ${item.judul_bab}` : item.judul_bab;
+                pasalGroup.hidden = false;
+                pasalField.disabled = false;
+                pasalField.placeholder = 'Cari nomor atau judul Pasal...';
+                pasalField.focus();
+            }
+        );
+    };
+    const searchPasal = () => {
+        const documentId = Number(wrapper.dataset.documentId || 0);
+        const babId = Number(wrapper.dataset.babId || 0);
+        wrapper.dataset.targetPasalId = '';
+        wrapper.querySelector('.acuan-target-id').value = '';
+        if (!documentId || !babGroup.dataset.selectedId) return;
+        renderOptions(
+            pasalField,
+            pasalResults,
+            'pasal',
+            new URLSearchParams({
+                dokumen_id: String(documentId),
+                bab_id: String(babId),
+                anak_pasal_id: String(sourcePasalId)
+            }),
+            item => `${item.nomor_label}${item.judul_pasal ? ` — ${item.judul_pasal}` : ''}`,
+            item => {
+                wrapper.dataset.targetPasalId = String(item.id);
+                wrapper.querySelector('.acuan-target-id').value = String(item.id);
+                pasalField.value = `${item.nomor_label}${item.judul_pasal ? ` — ${item.judul_pasal}` : ''}`;
+                wrapper.dataset.targetLabel = pasalField.value;
+            }
+        );
+    };
+    documentField.addEventListener('input', searchDocuments);
+    babField.addEventListener('input', searchBab);
+    pasalField.addEventListener('input', searchPasal);
+    wrapper.querySelector('.remove-acuan').onclick = () => {
+        const pasalCard = wrapper.closest('.hukum-pasal-card');
+        wrapper.remove();
+        if (pasalCard) delete pasalCard.dataset.legacyAcuanConflict;
+        const addButton = pasalCard?.querySelector('.add-acuan');
+        if (addButton) addButton.hidden = false;
+        renderPreview();
+        refreshDraftSaveState();
+    };
+
+    wrapper.setTarget = target => {
+        const documentId = Number(target.dokumen_id || 0);
+        const babId = Number(target.bab_id || 0);
+        const pasalId = Number(target.id || 0);
+        if (!documentId || !pasalId) return;
+        wrapper.dataset.documentId = String(documentId);
+        wrapper.dataset.babId = String(babId);
+        wrapper.dataset.targetPasalId = String(pasalId);
+        documentGroup.dataset.selectedId = String(documentId);
+        documentField.value = `${target.dokumen_judul} (${target.dokumen_jenis})`;
+        babGroup.hidden = false;
+        babGroup.dataset.selectedId = babId ? String(babId) : 'none';
+        babField.disabled = false;
+        babField.value = babId ? `${target.bab_nomor} — ${target.judul_bab}` : 'Tanpa BAB';
+        pasalGroup.hidden = false;
+        pasalGroup.dataset.selectedId = String(pasalId);
+        pasalField.disabled = false;
+        pasalField.value = `${target.nomor_label}${target.judul_pasal ? ` — ${target.judul_pasal}` : ''}`;
+        wrapper.querySelector('.acuan-target-id').value = String(pasalId);
+        wrapper.dataset.targetLabel = pasalField.value;
+    };
+    return wrapper;
+}
 function nextPasalLabel() {
     const labels = [
         ...state.pasals.map(pasal => pasal.nomor_label || ''),
@@ -251,10 +431,21 @@ function nextPasalLabel() {
 }
 function makePasal() {
     const wrapper = document.createElement('article'); wrapper.className = 'hukum-pasal-card';
-    wrapper.innerHTML = '<div class="hukum-inline-heading"><div class="hukum-pasal-title"><label>Pasal <input class="pasal-number" placeholder="1"></label><input class="pasal-heading" placeholder="Judul pasal (opsional)"></div><button class="hukum-icon-btn danger remove-pasal" type="button" title="Hapus pasal"><i class="fas fa-trash"></i></button></div><textarea class="pasal-opening" rows="3" placeholder="Isi pembuka pasal (opsional)"></textarea><label class="hukum-field-label">Penjelasan (opsional)<textarea class="pasal-explanation" rows="3" placeholder="Tambahkan penjelasan untuk Pasal ini jika diperlukan."></textarea></label><div class="ayat-list"></div><button class="hukum-btn subtle add-ayat" type="button"><i class="fas fa-plus"></i> Tambah ayat</button>';
+    wrapper.innerHTML = '<div class="hukum-impact-warning" style="display:none; background:#fee2e2; border:1px solid #ef4444; padding:10px; border-radius:4px; margin-bottom:15px; color:#991b1b;"><p style="margin:0 0 10px 0; font-weight:bold;"><i class="fas fa-exclamation-triangle"></i> Pasal ini terdampak perubahan acuan</p><button class="hukum-btn subtle ignore-impact-btn" type="button" style="background:white; color:#991b1b; border:1px solid #fca5a5;">Tidak perlu berubah (isi alasan)</button></div><div class="hukum-inline-heading"><div class="hukum-pasal-title"><label>Pasal <input class="pasal-number" placeholder="1"></label><input class="pasal-heading" placeholder="Judul pasal (opsional)"></div><button class="hukum-icon-btn danger remove-pasal" type="button" title="Hapus pasal"><i class="fas fa-trash"></i></button></div><textarea class="pasal-opening" rows="3" placeholder="Isi pembuka pasal (opsional)"></textarea><label class="hukum-field-label">Penjelasan (opsional)<textarea class="pasal-explanation" rows="3" placeholder="Tambahkan penjelasan untuk Pasal ini jika diperlukan."></textarea></label><div class="acuan-list"></div><div class="ayat-list"></div><div class="hukum-actions" style="margin-top:10px;"><button class="hukum-btn subtle add-ayat" type="button"><i class="fas fa-plus"></i> Tambah ayat</button><button class="hukum-btn subtle add-acuan" type="button"><i class="fas fa-link"></i> Hubungkan Pasal</button></div>';
     wrapper.querySelector('.pasal-number').value = nextPasalLabel();
     wrapper.querySelector('.remove-pasal').hidden = !canRequestDeletions;
     wrapper.querySelector('.add-ayat').onclick = () => wrapper.querySelector('.ayat-list').appendChild(makeAyat());
+    wrapper.querySelector('.add-acuan').onclick = () => {
+        if (wrapper.querySelector('.hukum-acuan-card')) return;
+        wrapper.querySelector('.acuan-list').appendChild(makeAcuan(Number(wrapper.dataset.pasalId || 0)));
+        wrapper.querySelector('.add-acuan').hidden = true;
+        refreshDraftSaveState();
+    };
+    wrapper.querySelector('.ignore-impact-btn').onclick = () => {
+        document.getElementById('impactPasalId').value = wrapper.dataset.pasalId || '';
+        document.getElementById('ignoreReason').value = '';
+        document.getElementById('ignoreImpactDialog').showModal();
+    };
     wrapper.querySelector('.remove-pasal').onclick = () => {
         const pasalId = Number(wrapper.dataset.pasalId || 0);
         if (pasalId > 0) requestDeletion('pasal', pasalId, wrapper);
@@ -279,6 +470,17 @@ function collectStructure() {
         pasal: [...bab.querySelectorAll(':scope > .pasal-list > .hukum-pasal-card')].map(pasal => ({
             id: pasal.dataset.pasalId ? Number(pasal.dataset.pasalId) : null,
             nomor: pasal.querySelector('.pasal-number').value.trim(), judul: pasal.querySelector('.pasal-heading').value.trim(), pembuka: pasal.querySelector('.pasal-opening').value.trim(), penjelasan: pasal.querySelector('.pasal-explanation').value.trim(),
+            acuan: (() => {
+                const node = pasal.querySelector(':scope > .acuan-list > .hukum-acuan-card');
+                return node ? {
+                    dokumen_id: Number(node.dataset.documentId || 0) || null,
+                    bab_id: Number(node.dataset.babId || 0) || null,
+                    pasal_id: Number(node.querySelector('.acuan-target-id').value || 0) || null,
+                    label: node.dataset.targetLabel || '',
+                    started: [...node.querySelectorAll('input:not([type="hidden"])')].some(input => input.value.trim() !== ''),
+                } : null;
+            })(),
+            legacyAcuanConflict: pasal.dataset.legacyAcuanConflict === 'true',
             ayat: [...pasal.querySelectorAll(':scope > .ayat-list > .hukum-ayat-card')].map(ayat => ({
                 nomor: ayat.querySelector('.ayat-number').value.trim(), teks: ayat.querySelector('.ayat-text').value.trim(),
                 poin: [...ayat.querySelectorAll(':scope > .point-list > .hukum-point-row')].map(point => ({nomor: point.querySelector('.point-number').value.trim(), teks: point.querySelector('.point-text').value.trim()}))
@@ -291,7 +493,7 @@ function draftSignature() {
       structure: collectStructure().map(bab => ({
         nomor: bab.nomor, judul: bab.judul,
         pasal: bab.pasal.map(pasal => ({
-        nomor: pasal.nomor, judul: pasal.judul, pembuka: pasal.pembuka, penjelasan: pasal.penjelasan,
+        nomor: pasal.nomor, judul: pasal.judul, pembuka: pasal.pembuka, penjelasan: pasal.penjelasan, acuan: pasal.acuan, legacyAcuanConflict: pasal.legacyAcuanConflict,
             ayat: pasal.ayat.map(ayat => ({
                 nomor: ayat.nomor, teks: ayat.teks,
                 poin: ayat.poin.map(point => ({nomor: point.nomor, teks: point.teks}))
@@ -360,6 +562,11 @@ function validateStructure() {
                 seenPasalLabels.add(normalizedLabel);
             }
             if (!pasal.pembuka && !pasal.ayat.length) errors.push(`Pasal ${pasal.nomor || pi + 1} belum memiliki isi.`);
+            if (pasal.legacyAcuanConflict) {
+                errors.push(`Pilih satu Pasal acuan untuk Pasal ${pasal.nomor || pi + 1}; data lama memuat lebih dari satu acuan.`);
+            } else if (pasal.acuan?.started && !pasal.acuan.pasal_id) {
+                errors.push(`Pilih Pasal acuan secara lengkap untuk Pasal ${pasal.nomor || pi + 1}, atau hapus form Hubungkan Pasal.`);
+            }
             pasal.ayat.forEach((ayat, ai) => { if (!ayat.teks && !ayat.poin.length) errors.push(`Ayat ${ayat.nomor || ai + 1} pada Pasal ${pasal.nomor || pi + 1} belum memiliki isi.`); });
         });
     });
@@ -367,7 +574,7 @@ function validateStructure() {
 }
 function renderPreview() {
     const structure = collectStructure(); const preview = document.getElementById('preview');
-    preview.innerHTML = structure.length ? structure.map(bab => `<div class="preview-bab"><h3>BAB ${escapeHtml(bab.nomor)} <small>${escapeHtml(bab.judul)}</small></h3>${bab.pasal.map(pasal => `<div class="preview-pasal"><h4>Pasal ${escapeHtml(pasal.nomor)} ${escapeHtml(pasal.judul)}</h4>${pasal.pembuka ? `<p>${escapeHtml(pasal.pembuka)}</p>` : ''}${pasal.ayat.map(ayat => `<p><b>(${escapeHtml(ayat.nomor)})</b> ${escapeHtml(ayat.teks)}${ayat.poin.length ? '<ul>' + ayat.poin.map(point => `<li>${escapeHtml(point.nomor)}) ${escapeHtml(point.teks)}</li>`).join('') + '</ul>' : ''}</p>`).join('')}${pasal.penjelasan ? `<p class="preview-explanation"><strong>Penjelasan:</strong> ${escapeHtml(pasal.penjelasan)}</p>` : ''}</div>`).join('')}</div>`).join('') : '<div class="hukum-empty">Belum ada isi untuk dipratinjau.</div>';
+    preview.innerHTML = structure.length ? structure.map(bab => `<div class="preview-bab"><h3>BAB ${escapeHtml(bab.nomor)} <small>${escapeHtml(bab.judul)}</small></h3>${bab.pasal.map(pasal => `<div class="preview-pasal"><h4>Pasal ${escapeHtml(pasal.nomor)} ${escapeHtml(pasal.judul)}</h4>${pasal.pembuka ? `<p>${escapeHtml(pasal.pembuka)}</p>` : ''}${pasal.ayat.map(ayat => `<p><b>(${escapeHtml(ayat.nomor)})</b> ${escapeHtml(ayat.teks)}${ayat.poin.length ? '<ul>' + ayat.poin.map(point => `<li>${escapeHtml(point.nomor)}) ${escapeHtml(point.teks)}</li>`).join('') + '</ul>' : ''}</p>`).join('')}${pasal.acuan?.label ? `<p><strong>Mengacu ke:</strong> ${escapeHtml(pasal.acuan.label)}</p>` : ''}${pasal.penjelasan ? `<p class="preview-explanation"><strong>Penjelasan:</strong> ${escapeHtml(pasal.penjelasan)}</p>` : ''}</div>`).join('')}</div>`).join('') : '<div class="hukum-empty">Belum ada isi untuk dipratinjau.</div>';
     const errors = validateStructure();
     const statusMessage = state.workspace?.status === 'siap_commit'
         ? 'Struktur valid. Workspace sudah disetujui dan menunggu commit.'
@@ -381,6 +588,7 @@ function renderPreview() {
 async function loadDocument(id) {
     const documentId = Number(id || 0);
     state.documentId = documentId; state.workspace = null; state.babs = []; state.pasals = []; state.versions.clear();
+    state.impactNotifications = []; state.pendingAlignmentVersionIds = [];
     state.deletions = []; state.loadedSignature = null;
     state.savedSignature = null; state.savedVersionIds = [];
     refreshWorkflowActions();
@@ -529,6 +737,31 @@ async function hydratePasalContent() {
         }
         node.querySelector('.pasal-opening').value = content.teks_utama || '';
         node.querySelector('.pasal-explanation').value = content.penjelasan || '';
+        const oldReferences = Array.isArray(content.acuan)
+            ? content.acuan.filter(reference => typeof reference === 'string' && reference.trim() !== '')
+            : [];
+        let targetPasalId = Number(content.acuan_pasal_id || 0);
+        if (!targetPasalId && oldReferences.length === 1) {
+            const oldLabel = oldReferences[0].trim().replace(/^pasal\s*/i, '').toLowerCase();
+            const matches = state.pasals.filter(item =>
+                String(item.nomor_label || '').trim().replace(/^pasal\s*/i, '').toLowerCase() === oldLabel
+            );
+            if (matches.length === 1) targetPasalId = Number(matches[0].id);
+        }
+        if (oldReferences.length > 0 && !targetPasalId) {
+            node.dataset.legacyAcuanConflict = 'true';
+            const reason = oldReferences.length > 1
+                ? 'memiliki beberapa acuan teks lama'
+                : 'memiliki acuan teks lama yang belum dapat dipetakan ke ID Pasal';
+            notice(`Pasal ${pasal.nomor_label} ${reason}. Pilih satu acuan melalui Hubungkan Pasal sebelum menyimpan.`, 'error');
+        }
+        if (targetPasalId > 0) {
+            const targetResult = await request(`pasal-targets.php?level=pasal&pasal_id=${targetPasalId}`);
+            const acuanNode = makeAcuan(Number(pasal.id));
+            acuanNode.setTarget(targetResult.data);
+            node.querySelector('.acuan-list').appendChild(acuanNode);
+            node.querySelector('.add-acuan').hidden = true;
+        }
         const ayatList = node.querySelector('.ayat-list');
         ayatList.innerHTML = '';
         (content.ayat || []).forEach(ayat => {
@@ -556,6 +789,62 @@ async function hydratePasalContent() {
         state.savedVersionIds = orderedSavedVersions.map(version => Number(version.id));
     }
     state.loadedSignature = draftSignature();
+    await checkImpactNotifications();
+}
+async function checkImpactNotifications() {
+    if (!state.documentId) return;
+    const pasalNodes = [...document.querySelectorAll('.hukum-pasal-card')];
+    try {
+        const result = await request('notifications.php?status=perlu_ditinjau&dokumen_id=' + Number(state.documentId));
+        const notifications = result.data || [];
+        state.impactNotifications = notifications;
+        pasalNodes.forEach(node => {
+            const warning = node.querySelector('.hukum-impact-warning');
+            if (warning) { warning.style.display = 'none'; }
+            node.style.borderLeft = '';
+            delete node.dataset.impactNotifIds;
+        });
+        const byChild = new Map();
+        notifications.forEach(notif => {
+            const anakId = Number(notif.pasal_anak_id);
+            if (!byChild.has(anakId)) byChild.set(anakId, []);
+            byChild.get(anakId).push(notif);
+        });
+        byChild.forEach((childNotifications, anakId) => {
+            const node = pasalNodes.find(n => Number(n.dataset.pasalId) === anakId);
+            if (!node) return;
+            const warning = node.querySelector('.hukum-impact-warning');
+            if (warning) {
+                warning.style.display = 'block';
+                const msg = warning.querySelector('p');
+                if (msg) {
+                    const causes = childNotifications.map(notif =>
+                        '<strong>' + escapeHtml(notif.induk_nomor || 'pasal acuan') + '</strong> (' + escapeHtml(notif.induk_dokumen || '') + ')'
+                    );
+                    msg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Pasal ini terdampak perubahan acuan: ' + causes.join(', ');
+                }
+            }
+            node.style.borderLeft = '4px solid #ef4444';
+            node.dataset.impactNotifIds = JSON.stringify(childNotifications.map(notif => Number(notif.id)));
+        });
+        return true;
+    } catch (error) {
+        notice('Draft tersimpan, tetapi status dampak tidak dapat diperbarui: ' + error.message, 'error');
+        return false;
+    }
+}
+async function ignoreImpact(notificationIds, reason) {
+    if (!notificationIds.length) return;
+    try {
+        await request('notifications.php', {
+            method: 'POST',
+            body: JSON.stringify({ notification_ids: notificationIds.map(Number), decision: 'ignore', note: reason })
+        });
+        notice('Status terdampak berhasil diabaikan.');
+        await checkImpactNotifications();
+    } catch (e) {
+        notice(e.message, 'error');
+    }
 }
 async function createDocument(event) {
     event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget).entries());
@@ -613,9 +902,42 @@ async function persistStructure() {
                     serverPasal.judul_pasal = newJudul;
                 }
             }
-            const isi = {teks_utama:pasal.pembuka, penjelasan:pasal.penjelasan, ayat:pasal.ayat.map(ayat => ({nomor:ayat.nomor, teks:ayat.teks, poin:ayat.poin.map(point => ({nomor:point.nomor, teks:point.teks}))}))};
-            const result = await request('pasal.php', {method:'POST', body:JSON.stringify({pasal_id:serverPasal.id, workspace_id:state.workspace.id, isi})}); versionIds.push(Number(result.latest_version_id || result.id));
         }
+    }
+    for (const bab of babs) {
+        for (const pasal of bab.pasal) {
+            const serverPasal = state.pasals.find(item => Number(item.id) === Number(pasal.id));
+            if (!serverPasal) throw new Error(`Pasal ${pasal.nomor} belum tersimpan.`);
+            const isi = {
+                teks_utama: pasal.pembuka,
+                penjelasan: pasal.penjelasan,
+                acuan: pasal.acuan?.label ? [pasal.acuan.label] : [],
+                acuan_pasal_id: pasal.acuan?.pasal_id || null,
+                ayat: pasal.ayat.map(ayat => ({
+                    nomor: ayat.nomor,
+                    teks: ayat.teks,
+                    poin: ayat.poin.map(point => ({nomor: point.nomor, teks: point.teks}))
+                }))
+            };
+            const result = await request('pasal.php', {method:'POST', body:JSON.stringify({pasal_id:serverPasal.id, workspace_id:state.workspace.id, isi})});
+            const versionId = Number(result.latest_version_id || result.id);
+            versionIds.push(versionId);
+            if (!result.reused && result.status !== 'committed') {
+                state.pendingAlignmentVersionIds.push(versionId);
+                state.pendingAlignmentVersionIds = [...new Set(state.pendingAlignmentVersionIds)];
+            }
+        }
+    }
+    if (state.pendingAlignmentVersionIds.length) {
+        await request('notifications.php', {
+            method: 'POST',
+            body: JSON.stringify({
+                decision: 'align_versions',
+                workspace_id: Number(state.workspace.id),
+                version_ids: state.pendingAlignmentVersionIds
+            })
+        });
+        state.pendingAlignmentVersionIds = [];
     }
     return versionIds;
 }
@@ -628,7 +950,9 @@ async function saveDraft() {
         state.savedSignature = signature;
         state.savedVersionIds = versionIds;
         state.loadedSignature = signature;
-        notice('Seluruh dokumen berhasil disimpan sebagai draft.');
+        if (await checkImpactNotifications()) {
+            notice('Seluruh dokumen berhasil disimpan sebagai draft.');
+        }
     } catch (error) {
         state.savedSignature = null;
         state.savedVersionIds = [];
@@ -694,7 +1018,7 @@ document.getElementById('addBabBtn').addEventListener('click', () => { document.
 document.getElementById('babList').addEventListener('input', refreshDraftSaveState);
 document.getElementById('babList').addEventListener('change', refreshDraftSaveState);
 document.getElementById('babList').addEventListener('click', event => {
-    if (event.target.closest('.add-point, .remove-point, .add-ayat, .remove-ayat, .add-pasal, .remove-pasal, .remove-bab')) {
+    if (event.target.closest('.add-point, .remove-point, .add-ayat, .remove-ayat, .add-pasal, .remove-pasal, .remove-bab, .add-acuan, .remove-acuan')) {
         window.setTimeout(refreshDraftSaveState, 0);
     }
 });
@@ -713,6 +1037,18 @@ document.getElementById('submitCredentialsForm').addEventListener('submit', even
     const password = document.getElementById('submitPassword').value;
     const totpCode = document.getElementById('submitTotpCode')?.value || '';
     submitReview(password, totpCode);
+});
+document.getElementById('ignoreImpactForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const pasalId = document.getElementById('impactPasalId').value;
+    const reason = document.getElementById('ignoreReason').value.trim();
+    if (reason.length < 10) { notice('Alasan minimal 10 karakter.', 'error'); return; }
+    const card = document.querySelector(`.hukum-pasal-card[data-pasal-id="${pasalId}"]`);
+    let notificationIds = [];
+    try { notificationIds = JSON.parse(card?.dataset.impactNotifIds || '[]'); } catch (error) { notice('Daftar notifikasi tidak valid.', 'error'); return; }
+    if (!notificationIds.length) { notice('Notifikasi tidak ditemukan.', 'error'); return; }
+    document.getElementById('ignoreImpactDialog').close();
+    ignoreImpact(notificationIds, reason);
 });
 document.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', () => { if (!state.documentId) return notice('Pilih atau buat dokumen terlebih dahulu.', 'error'); setStep(Number(button.dataset.next)); }));
 document.querySelectorAll('[data-prev]').forEach(button => button.addEventListener('click', () => setStep(Number(button.dataset.prev))));

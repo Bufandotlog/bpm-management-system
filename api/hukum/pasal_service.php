@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/document_service.php';
+require_once __DIR__ . '/relationship_service.php';
 
 function hukum_create_pasal(PDO $pdo, array $input): array
 {
@@ -13,7 +14,7 @@ function hukum_create_pasal(PDO $pdo, array $input): array
         $documentId = (int) $ws['dokumen_id'];
         $doc = dbFetchOne('SELECT periode_id, status FROM hukum_dokumen WHERE id = ?', [$documentId]);
         if (!$doc) throw new RuntimeException('Dokumen tidak ditemukan.', 404);
-        if (!in_array((string) $ws['status'], ['aktif', 'diajukan'], true)) {
+        if ((string) $ws['status'] !== 'aktif') {
             throw new RuntimeException('Workspace tidak aktif untuk membuat Pasal.', 409);
         }
         if (isset($input['dokumen_id']) && (int) $input['dokumen_id'] !== $documentId) {
@@ -81,7 +82,7 @@ function hukum_update_pasal_metadata(PDO $pdo, array $input): array
     $workspaceId = (int) ($input['workspace_id'] ?? 0);
     $workspace = dbFetchOne('SELECT id, dokumen_id, status FROM hukum_workspace WHERE id = ?', [$workspaceId]);
     if (!$workspace || (int) $workspace['dokumen_id'] !== (int) $pasal['dokumen_id']
-        || !in_array((string) $workspace['status'], ['aktif', 'diajukan'], true)) {
+        || (string) $workspace['status'] !== 'aktif') {
         throw new RuntimeException('Workspace tidak valid untuk pasal ini.', 409);
     }
 
@@ -120,6 +121,26 @@ function hukum_update_pasal_metadata(PDO $pdo, array $input): array
 
 function hukum_create_pasal_draft(PDO $pdo, array $input): array
 {
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) {
+        $pdo->beginTransaction();
+    }
+    try {
+        $result = hukum_create_pasal_draft_internal($pdo, $input);
+        if ($ownsTransaction) {
+            $pdo->commit();
+        }
+        return $result;
+    } catch (Throwable $error) {
+        if ($ownsTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
+    }
+}
+
+function hukum_create_pasal_draft_internal(PDO $pdo, array $input): array
+{
     hukum_require_service_permission('hukum.pasal.update');
     $pasalId = (int) ($input['pasal_id'] ?? 0);
     $pasal = dbFetchOne(
@@ -131,11 +152,12 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
     }
     hukum_require_service_period((int) $pasal['periode_id']);
     $workspaceId = (int) ($input['workspace_id'] ?? 0);
-    $workspace = dbFetchOne('SELECT id, dokumen_id, status FROM hukum_workspace WHERE id = ?', [$workspaceId]);
+    $workspace = dbFetchOne('SELECT id, dokumen_id, status FROM hukum_workspace WHERE id = ? FOR UPDATE', [$workspaceId]);
     if (!$workspace || (int) $workspace['dokumen_id'] !== (int) $pasal['dokumen_id']
-        || !in_array((string) $workspace['status'], ['aktif', 'diajukan'], true)) {
+        || (string) $workspace['status'] !== 'aktif') {
         throw new RuntimeException('Workspace tidak valid untuk pasal ini.', 409);
     }
+    $pdo->prepare('SELECT id FROM hukum_dokumen WHERE id = ? FOR UPDATE')->execute([(int) $pasal['dokumen_id']]);
     $latest = dbFetchOne(
         'SELECT id, updated_at FROM hukum_pasal_versi WHERE pasal_id = ? ORDER BY created_at DESC, id DESC LIMIT 1',
         [$pasalId]
@@ -154,6 +176,7 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
     );
     if ($existing !== null) {
         if ((string) $existing['status'] === 'committed') {
+            hukum_sync_acuan_relasi($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents, (int) $existing['id']);
             return [
                 'id' => (int) $existing['id'],
                 'hash_konten' => $hash,
@@ -182,6 +205,7 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
                 'rejection_history_preserved' => true,
             ]);
             hukum_sync_inline_references($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents);
+            hukum_sync_acuan_relasi($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents, (int) $existing['id']);
             return [
                 'id' => (int) $existing['id'],
                 'hash_konten' => $hash,
@@ -204,6 +228,7 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
             );
         }
         hukum_sync_inline_references($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents);
+        hukum_sync_acuan_relasi($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents, (int) $existing['id']);
         return [
             'id' => (int) $existing['id'],
             'hash_konten' => $hash,
@@ -221,7 +246,9 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
     try {
         $stmt->execute([
             $pasalId, $workspaceId, $canonical, $hash, hukum_current_user_id(),
-            isset($input['dibuat_dari_versi_id']) ? (int) $input['dibuat_dari_versi_id'] : null,
+            isset($input['dibuat_dari_versi_id'])
+                ? (int) $input['dibuat_dari_versi_id']
+                : ($latest !== null ? (int) $latest['id'] : null),
         ]);
     } catch (PDOException $error) {
         $sqlState = (string) ($error->errorInfo[0] ?? $error->getCode());
@@ -242,6 +269,7 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
             throw $error;
         }
         hukum_sync_inline_references($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents);
+        hukum_sync_acuan_relasi($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents, (int) $existing['id']);
         return [
             'id' => (int) $existing['id'],
             'hash_konten' => $hash,
@@ -255,5 +283,13 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
         'pasal_id' => $pasalId,
         'hash_konten' => $hash,
     ]);
+    hukum_sync_acuan_relasi($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents, $id);
+    $committedBase = dbFetchOne(
+        'SELECT id FROM hukum_pasal_versi WHERE pasal_id = ? AND status = ? ORDER BY id DESC LIMIT 1',
+        [$pasalId, 'committed']
+    );
+    if ($committedBase !== null) {
+        hukum_create_impact_notifications($pdo, $pasalId, (int) $pasal['dokumen_id'], $id);
+    }
     return ['id' => $id, 'hash_konten' => $hash, 'latest_version_id' => $id, 'reused' => false];
 }
