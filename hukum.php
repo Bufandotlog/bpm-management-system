@@ -42,6 +42,12 @@ $documents = dbFetchAll($sql, $params);
     </div>
 
     <div class="container hukum-public-content">
+        <header class="hukum-catalog-heading">
+            <span class="hukum-catalog-eyebrow">Arsip resmi BPM</span>
+            <h2>Jelajahi Produk Hukum</h2>
+            <p>Temukan dokumen resmi berdasarkan jenis, lingkup, atau kata kunci.</p>
+        </header>
+
         <form class="hukum-public-filters" method="get">
             <label>
                 <span>Kata kunci</span>
@@ -65,7 +71,7 @@ $documents = dbFetchAll($sql, $params);
                     <?php endforeach; ?>
                 </select>
             </label>
-            <button class="btn btn-small" type="submit">Cari</button>
+            <button class="hukum-filter-submit" type="submit"><i class="fas fa-magnifying-glass"></i> Cari dokumen</button>
         </form>
 
         <?php if (!$documents): ?>
@@ -79,14 +85,16 @@ $documents = dbFetchAll($sql, $params);
                     <article class="hukum-public-card">
                         <div class="hukum-public-card-top">
                             <span class="hukum-public-badge"><?php echo htmlspecialchars($document['jenis']); ?></span>
-                            <span><?php echo htmlspecialchars($document['lingkup']); ?></span>
+                            <span class="hukum-public-scope"><?php echo htmlspecialchars($document['lingkup']); ?></span>
                         </div>
-                        <h2><?php echo htmlspecialchars($document['judul']); ?></h2>
-                        <?php if (!empty($document['nama_ormawa'])): ?>
-                            <p class="hukum-public-muted"><?php echo htmlspecialchars($document['nama_ormawa']); ?></p>
-                        <?php endif; ?>
-                        <p><?php echo htmlspecialchars($document['deskripsi'] ?: 'Dokumen hukum resmi BPM.'); ?></p>
-                        <a class="btn btn-small" href="<?php echo baseUrl('hukum-detail.php?slug=' . urlencode($document['slug'])); ?>">Baca Dokumen</a>
+                        <div class="hukum-public-card-body">
+                            <h2><?php echo htmlspecialchars($document['judul']); ?></h2>
+                            <?php if (!empty($document['nama_ormawa'])): ?>
+                                <p class="hukum-public-muted"><?php echo htmlspecialchars($document['nama_ormawa']); ?></p>
+                            <?php endif; ?>
+                            <p><?php echo htmlspecialchars($document['deskripsi'] ?: 'Dokumen hukum resmi BPM.'); ?></p>
+                        </div>
+                        <a class="hukum-public-card-link" href="<?php echo baseUrl('hukum-detail.php?slug=' . urlencode($document['slug'])); ?>">Baca dokumen <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
                     </article>
                 <?php endforeach; ?>
             </div>

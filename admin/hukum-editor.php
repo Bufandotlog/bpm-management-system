@@ -29,7 +29,6 @@ $canEditHukum = hukum_has_permission('hukum.document.update');
     <div class="page-header">
         <div>
             <h1><i class="fas fa-pen-ruler"></i> Editor Dokumen Hukum</h1>
-            <p>Buat dokumen dengan formulir sederhana. Format teknis disimpan otomatis oleh sistem.</p>
         </div>
         <a class="hukum-btn" href="<?php echo baseUrl('admin/hukum-dashboard.php'); ?>"><i class="fas fa-arrow-left"></i> Kembali</a>
     </div>
@@ -41,8 +40,9 @@ $canEditHukum = hukum_has_permission('hukum.document.update');
                 <span class="hukum-kicker">Dokumen aktif</span>
                 <h2 id="activeDocumentTitle">Pilih atau buat dokumen</h2>
             </div>
-            <div class="hukum-actions">
-                <select id="documentSelect" aria-label="Pilih dokumen">
+            <div class="hukum-actions hukum-document-picker">
+                <div class="hukum-floating-group">
+                <select class="hukum-floating-input" id="documentSelect" aria-label="Pilih dokumen">
                     <option value="">Pilih dokumen</option>
                     <?php foreach ($documents as $document): ?>
                         <option value="<?php echo (int) $document['id']; ?>" <?php echo $defaultDocId === (int) $document['id'] ? 'selected' : ''; ?>>
@@ -50,6 +50,8 @@ $canEditHukum = hukum_has_permission('hukum.document.update');
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <label class="hukum-floating-label" for="documentSelect">Pilih dokumen hukum</label>
+                </div>
             </div>
         </div>
         <div class="hukum-progress" aria-label="Langkah editor">
@@ -66,14 +68,14 @@ $canEditHukum = hukum_has_permission('hukum.document.update');
             <div class="hukum-actions"><span class="hukum-badge" id="workspaceBadge">Belum ada workspace</span><button class="hukum-btn subtle" id="createWorkspaceBtn" type="button" hidden>Buat workspace</button></div>
         </div>
         <form id="createDocumentForm" class="hukum-form-grid">
-            <div class="form-group"><label for="docTitle">Judul dokumen <span class="required">*</span></label><input id="docTitle" name="judul" required placeholder="Contoh: Anggaran Dasar BPM"></div>
-            <div class="form-group"><label for="docSlug">Identitas singkat <span class="required">*</span></label><input id="docSlug" name="slug" required placeholder="anggaran-dasar-bpm"></div>
-            <div class="form-group"><label for="docJenis">Jenis <span class="required">*</span></label><select id="docJenis" name="jenis"><option>AD</option><option>ART</option><option>GBHO</option><option>GBMO</option><option>PERATURAN</option><option>KEPUTUSAN</option></select></div>
-            <div class="form-group"><label for="docLingkup">Lingkup <span class="required">*</span></label><select id="docLingkup" name="lingkup"><option value="induk">Induk</option><option value="BEM">BEM</option><option value="BPM">BPM</option><option value="UKM">UKM</option></select></div>
-            <div class="form-group"><label for="docOrmawa">Nama organisasi</label><input id="docOrmawa" name="nama_ormawa" placeholder="Wajib untuk lingkup BEM/BPM/UKM"></div>
-            <div class="form-group"><label for="docPeriode">Periode <span class="required">*</span></label><select id="docPeriode" name="periode_id" required><option value="">Pilih periode</option><?php foreach ($periods as $period): ?><option value="<?php echo (int) $period['id']; ?>"><?php echo htmlspecialchars($period['nama'] . ' (' . $period['tahun_mulai'] . '/' . $period['tahun_selesai'] . ')', ENT_QUOTES, 'UTF-8'); ?></option><?php endforeach; ?></select></div>
-            <div class="form-group full"><label for="docOpening">Mukadimah / pembukaan</label><textarea id="docOpening" rows="5" placeholder="Tuliskan pembukaan dokumen dengan bahasa biasa."></textarea></div>
-            <div class="form-group full"><label for="docDescription">Deskripsi singkat</label><textarea id="docDescription" name="deskripsi" rows="3"></textarea></div>
+            <div class="hukum-floating-group"><input class="hukum-floating-input" id="docTitle" name="judul" required placeholder=" " aria-label="Judul dokumen"><label class="hukum-floating-label" for="docTitle">Judul dokumen <span class="required">*</span></label></div>
+            <div class="hukum-floating-group"><input class="hukum-floating-input" id="docSlug" name="slug" required placeholder=" " aria-label="Identitas singkat"><label class="hukum-floating-label" for="docSlug">Identitas singkat <span class="required">*</span></label></div>
+            <div class="hukum-floating-group"><select class="hukum-floating-input" id="docJenis" name="jenis" aria-label="Jenis"><option>AD</option><option>ART</option><option>GBHO</option><option>GBMO</option><option>PERATURAN</option><option>KEPUTUSAN</option></select><label class="hukum-floating-label" for="docJenis">Jenis <span class="required">*</span></label></div>
+            <div class="hukum-floating-group"><select class="hukum-floating-input" id="docLingkup" name="lingkup" aria-label="Lingkup"><option value="induk">Induk</option><option value="BEM">BEM</option><option value="BPM">BPM</option><option value="UKM">UKM</option></select><label class="hukum-floating-label" for="docLingkup">Lingkup <span class="required">*</span></label></div>
+            <div class="hukum-floating-group"><input class="hukum-floating-input" id="docOrmawa" name="nama_ormawa" placeholder=" " aria-label="Nama organisasi"><label class="hukum-floating-label" for="docOrmawa">Nama organisasi</label></div>
+            <div class="hukum-floating-group"><select class="hukum-floating-input" id="docPeriode" name="periode_id" required aria-label="Periode"><option value="">Pilih periode</option><?php foreach ($periods as $period): ?><option value="<?php echo (int) $period['id']; ?>"><?php echo htmlspecialchars($period['nama'] . ' (' . $period['tahun_mulai'] . '/' . $period['tahun_selesai'] . ')', ENT_QUOTES, 'UTF-8'); ?></option><?php endforeach; ?></select><label class="hukum-floating-label" for="docPeriode">Periode <span class="required">*</span></label></div>
+            <div class="hukum-floating-group full"><textarea class="hukum-floating-input hukum-floating-textarea" id="docOpening" rows="4" placeholder=" " aria-label="Mukadimah atau pembukaan"></textarea><label class="hukum-floating-label" for="docOpening">Mukadimah / pembukaan</label></div>
+            <div class="hukum-floating-group full"><textarea class="hukum-floating-input hukum-floating-textarea" id="docDescription" name="deskripsi" rows="3" placeholder=" " aria-label="Deskripsi singkat"></textarea><label class="hukum-floating-label" for="docDescription">Deskripsi singkat</label></div>
             <div class="hukum-actions full"><button class="hukum-btn gold" id="createDocumentSubmit" type="submit">Buat dokumen & workspace</button><button class="hukum-btn" id="continueToStructure" type="button" data-next="2" hidden>Lanjut ke struktur <i class="fas fa-arrow-right"></i></button></div>
         </form>
         <div id="step1Existing" class="hukum-empty" hidden>Informasi dokumen terisi otomatis dan hanya dapat dilihat di sini. Untuk membuat dokumen baru, pilih <strong>Pilih dokumen</strong> pada daftar di atas.</div>
@@ -135,11 +137,9 @@ $canEditHukum = hukum_has_permission('hukum.document.update');
             <h2 id="submitCredentialsTitle">Konfirmasi pengajuan</h2>
             <p id="submitCredentialsText" class="hukum-muted">Masukkan kata sandi akun Anda untuk mengirim workspace ke staging.</p>
         </div>
-        <label for="submitPassword">Kata sandi akun Anda</label>
-        <input id="submitPassword" name="password" type="password" autocomplete="current-password" required>
+        <div class="hukum-floating-group"><input class="hukum-floating-input" id="submitPassword" name="password" type="password" autocomplete="current-password" placeholder=" " aria-label="Kata sandi akun Anda" required><label class="hukum-floating-label" for="submitPassword">Kata sandi akun Anda</label></div>
         <?php if ($submitRequires2fa): ?>
-            <label for="submitTotpCode">Kode autentikator (2FA)</label>
-            <input id="submitTotpCode" name="totp_code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required>
+            <div class="hukum-floating-group"><input class="hukum-floating-input" id="submitTotpCode" name="totp_code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder=" " aria-label="Kode autentikator (2FA)" required><label class="hukum-floating-label" for="submitTotpCode">Kode autentikator (2FA)</label></div>
         <?php endif; ?>
         <p id="submitCredentialsError" class="hukum-commit-dialog-error" role="alert" hidden></p>
         <div class="hukum-actions">
@@ -157,8 +157,7 @@ $canEditHukum = hukum_has_permission('hukum.document.update');
             <p class="hukum-muted">Pasal ini ditandai terdampak oleh perubahan pasal acuannya. Jika perubahan acuan (misal: typo) tidak mengharuskan pasal ini diubah, berikan alasannya untuk menghapus status terdampak.</p>
         </div>
         <input type="hidden" id="impactPasalId" name="pasal_id">
-        <label for="ignoreReason">Alasan tidak perlu diubah <span class="required">*</span></label>
-        <textarea id="ignoreReason" name="alasan" rows="3" required placeholder="Contoh: Perubahan pada pasal acuan hanya berupa perbaikan ejaan..."></textarea>
+        <div class="hukum-floating-group"><textarea class="hukum-floating-input hukum-floating-textarea" id="ignoreReason" name="alasan" rows="3" required placeholder=" " aria-label="Alasan tidak perlu diubah"></textarea><label class="hukum-floating-label" for="ignoreReason">Alasan tidak perlu diubah <span class="required">*</span></label></div>
         <div class="hukum-actions" style="margin-top:15px;">
             <button id="confirmIgnoreButton" class="hukum-btn gold" type="submit">Simpan Alasan</button>
             <button id="cancelIgnoreButton" class="hukum-btn" type="button" onclick="document.getElementById('ignoreImpactDialog').close()">Batalkan</button>
@@ -186,7 +185,7 @@ function activeDoc() { return state.documents.find(item => Number(item.id) === N
 function setDocumentFormMode(existing) {
     const form = document.getElementById('createDocumentForm');
     if (!form) return;
-    form.querySelectorAll('.form-group input, .form-group select, .form-group textarea').forEach(field => {
+    form.querySelectorAll('.hukum-floating-group input, .hukum-floating-group select, .hukum-floating-group textarea').forEach(field => {
         field.disabled = existing;
     });
     document.getElementById('step1Existing').hidden = !existing;
@@ -243,19 +242,19 @@ function setStep(number) {
 function formValue(id) { return document.getElementById(id)?.value.trim() || ''; }
 function makePoint() {
     const wrapper = document.createElement('div'); wrapper.className = 'hukum-point-row';
-    wrapper.innerHTML = '<input class="point-number" placeholder="a" aria-label="Nomor poin"><textarea class="point-text" rows="2" placeholder="Isi poin"></textarea><button class="hukum-icon-btn danger remove-point" type="button" title="Hapus poin"><i class="fas fa-trash"></i></button>';
+    wrapper.innerHTML = '<div class="hukum-floating-group"><input class="hukum-floating-input point-number" placeholder=" " aria-label="Nomor poin"><label class="hukum-floating-label">Nomor poin</label></div><div class="hukum-floating-group"><textarea class="hukum-floating-input hukum-floating-textarea point-text" rows="2" placeholder=" " aria-label="Isi poin"></textarea><label class="hukum-floating-label">Isi poin</label></div><button class="hukum-icon-btn danger remove-point" type="button" title="Hapus poin"><i class="fas fa-trash"></i></button>';
     wrapper.querySelector('button').onclick = () => wrapper.remove(); return wrapper;
 }
 function makeAyat() {
     const wrapper = document.createElement('div'); wrapper.className = 'hukum-ayat-card';
-    wrapper.innerHTML = '<div class="hukum-inline-heading"><label>Ayat <input class="ayat-number" placeholder="1"></label><button class="hukum-btn subtle add-point" type="button"><i class="fas fa-plus"></i> Poin</button><button class="hukum-icon-btn danger remove-ayat" type="button" title="Hapus ayat"><i class="fas fa-trash"></i></button></div><textarea class="ayat-text" rows="3" placeholder="Tuliskan isi ayat"></textarea><div class="point-list"></div>';
+    wrapper.innerHTML = '<div class="hukum-inline-heading"><div class="hukum-floating-group ayat-number-field"><input class="hukum-floating-input ayat-number" placeholder=" " aria-label="Nomor ayat"><label class="hukum-floating-label">Nomor ayat</label></div><button class="hukum-btn subtle add-point" type="button"><i class="fas fa-plus"></i> Poin</button><button class="hukum-icon-btn danger remove-ayat" type="button" title="Hapus ayat"><i class="fas fa-trash"></i></button></div><div class="hukum-floating-group"><textarea class="hukum-floating-input hukum-floating-textarea ayat-text" rows="3" placeholder=" " aria-label="Isi ayat"></textarea><label class="hukum-floating-label">Isi ayat</label></div><div class="point-list"></div>';
     wrapper.querySelector('.add-point').onclick = () => wrapper.querySelector('.point-list').appendChild(makePoint());
     wrapper.querySelector('.remove-ayat').onclick = () => wrapper.remove(); return wrapper;
 }
 function makeAcuan(sourcePasalId = 0) {
     const wrapper = document.createElement('div');
     wrapper.className = 'hukum-acuan-card';
-    wrapper.innerHTML = '<div class="hukum-acuan-heading"><strong>Hubungkan Pasal</strong><button class="hukum-icon-btn danger remove-acuan" type="button" title="Hapus acuan"><i class="fas fa-trash"></i></button></div><div class="acuan-picker-field"><label>Nama dokumen</label><input class="acuan-document-search" autocomplete="off" placeholder="Cari nama dokumen..."><div class="acuan-picker-results" role="listbox"></div></div><div class="acuan-picker-field" hidden><label>Nama BAB</label><input class="acuan-bab-search" autocomplete="off" placeholder="Pilih dokumen terlebih dahulu..." disabled><div class="acuan-picker-results" role="listbox"></div></div><div class="acuan-picker-field" hidden><label>Nama Pasal</label><input class="acuan-pasal-search" autocomplete="off" placeholder="Pilih BAB terlebih dahulu..." disabled><div class="acuan-picker-results" role="listbox"></div></div><input class="acuan-target-id" type="hidden">';
+    wrapper.innerHTML = '<div class="hukum-acuan-heading"><strong>Hubungkan Pasal</strong><button class="hukum-icon-btn danger remove-acuan" type="button" title="Hapus acuan"><i class="fas fa-trash"></i></button></div><div class="acuan-picker-field hukum-floating-group"><input class="hukum-floating-input acuan-document-search" autocomplete="off" placeholder=" " aria-label="Nama dokumen acuan"><label class="hukum-floating-label">Nama dokumen</label><div class="acuan-picker-results" role="listbox"></div></div><div class="acuan-picker-field hukum-floating-group" hidden><input class="hukum-floating-input acuan-bab-search" autocomplete="off" placeholder=" " aria-label="Nama BAB acuan" disabled><label class="hukum-floating-label">Nama BAB</label><div class="acuan-picker-results" role="listbox"></div></div><div class="acuan-picker-field hukum-floating-group" hidden><input class="hukum-floating-input acuan-pasal-search" autocomplete="off" placeholder=" " aria-label="Nama Pasal acuan" disabled><label class="hukum-floating-label">Nama Pasal</label><div class="acuan-picker-results" role="listbox"></div></div><input class="acuan-target-id" type="hidden">';
     const documentField = wrapper.querySelector('.acuan-document-search');
     const babField = wrapper.querySelector('.acuan-bab-search');
     const pasalField = wrapper.querySelector('.acuan-pasal-search');
@@ -431,7 +430,7 @@ function nextPasalLabel() {
 }
 function makePasal() {
     const wrapper = document.createElement('article'); wrapper.className = 'hukum-pasal-card';
-    wrapper.innerHTML = '<div class="hukum-impact-warning" style="display:none; background:#fee2e2; border:1px solid #ef4444; padding:10px; border-radius:4px; margin-bottom:15px; color:#991b1b;"><p style="margin:0 0 10px 0; font-weight:bold;"><i class="fas fa-exclamation-triangle"></i> Pasal ini terdampak perubahan acuan</p><button class="hukum-btn subtle ignore-impact-btn" type="button" style="background:white; color:#991b1b; border:1px solid #fca5a5;">Tidak perlu berubah (isi alasan)</button></div><div class="hukum-inline-heading"><div class="hukum-pasal-title"><label>Pasal <input class="pasal-number" placeholder="1"></label><input class="pasal-heading" placeholder="Judul pasal (opsional)"></div><button class="hukum-icon-btn danger remove-pasal" type="button" title="Hapus pasal"><i class="fas fa-trash"></i></button></div><textarea class="pasal-opening" rows="3" placeholder="Isi pembuka pasal (opsional)"></textarea><label class="hukum-field-label">Penjelasan (opsional)<textarea class="pasal-explanation" rows="3" placeholder="Tambahkan penjelasan untuk Pasal ini jika diperlukan."></textarea></label><div class="acuan-list"></div><div class="ayat-list"></div><div class="hukum-actions" style="margin-top:10px;"><button class="hukum-btn subtle add-ayat" type="button"><i class="fas fa-plus"></i> Tambah ayat</button><button class="hukum-btn subtle add-acuan" type="button"><i class="fas fa-link"></i> Hubungkan Pasal</button></div>';
+    wrapper.innerHTML = '<div class="hukum-impact-warning" style="display:none; background:#fee2e2; border:1px solid #ef4444; padding:10px; border-radius:4px; margin-bottom:15px; color:#991b1b;"><p style="margin:0 0 10px 0; font-weight:bold;"><i class="fas fa-exclamation-triangle"></i> Pasal ini terdampak perubahan acuan</p><button class="hukum-btn subtle ignore-impact-btn" type="button" style="background:white; color:#991b1b; border:1px solid #fca5a5;">Tidak perlu berubah (isi alasan)</button></div><div class="hukum-inline-heading"><div class="hukum-pasal-title"><div class="hukum-floating-group pasal-number-field"><input class="hukum-floating-input pasal-number" placeholder=" " aria-label="Nomor Pasal"><label class="hukum-floating-label">Nomor Pasal</label></div><div class="hukum-floating-group"><input class="hukum-floating-input pasal-heading" placeholder=" " aria-label="Judul Pasal"><label class="hukum-floating-label">Judul Pasal (opsional)</label></div></div><button class="hukum-icon-btn danger remove-pasal" type="button" title="Hapus pasal"><i class="fas fa-trash"></i></button></div><div class="hukum-floating-group"><textarea class="hukum-floating-input hukum-floating-textarea pasal-opening" rows="3" placeholder=" " aria-label="Isi pembuka Pasal"></textarea><label class="hukum-floating-label">Isi pembuka Pasal (opsional)</label></div><div class="hukum-floating-group"><textarea class="hukum-floating-input hukum-floating-textarea pasal-explanation" rows="3" placeholder=" " aria-label="Penjelasan Pasal"></textarea><label class="hukum-floating-label">Penjelasan Pasal (opsional)</label></div><div class="acuan-list"></div><div class="ayat-list"></div><div class="hukum-actions" style="margin-top:10px;"><button class="hukum-btn subtle add-ayat" type="button"><i class="fas fa-plus"></i> Tambah ayat</button><button class="hukum-btn subtle add-acuan" type="button"><i class="fas fa-link"></i> Hubungkan Pasal</button></div>';
     wrapper.querySelector('.pasal-number').value = nextPasalLabel();
     wrapper.querySelector('.remove-pasal').hidden = !canRequestDeletions;
     wrapper.querySelector('.add-ayat').onclick = () => wrapper.querySelector('.ayat-list').appendChild(makeAyat());
@@ -454,7 +453,7 @@ function makePasal() {
 }
 function makeBab() {
     const wrapper = document.createElement('section'); wrapper.className = 'hukum-bab-card';
-    wrapper.innerHTML = '<div class="hukum-inline-heading"><div class="hukum-bab-title"><label>BAB <input class="bab-number" placeholder="I"></label><input class="bab-heading" placeholder="Judul BAB"></div><button class="hukum-icon-btn danger remove-bab" type="button" title="Hapus BAB"><i class="fas fa-trash"></i></button></div><div class="pasal-list"></div><button class="hukum-btn subtle add-pasal" type="button"><i class="fas fa-plus"></i> Tambah Pasal</button>';
+    wrapper.innerHTML = '<div class="hukum-inline-heading"><div class="hukum-bab-title"><div class="hukum-floating-group bab-number-field"><input class="hukum-floating-input bab-number" placeholder=" " aria-label="Nomor BAB"><label class="hukum-floating-label">Nomor BAB</label></div><div class="hukum-floating-group"><input class="hukum-floating-input bab-heading" placeholder=" " aria-label="Judul BAB"><label class="hukum-floating-label">Judul BAB</label></div></div><button class="hukum-icon-btn danger remove-bab" type="button" title="Hapus BAB"><i class="fas fa-trash"></i></button></div><div class="pasal-list"></div><button class="hukum-btn subtle add-pasal" type="button"><i class="fas fa-plus"></i> Tambah Pasal</button>';
     wrapper.querySelector('.remove-bab').hidden = !canRequestDeletions;
     wrapper.querySelector('.add-pasal').onclick = () => wrapper.querySelector('.pasal-list').appendChild(makePasal());
     wrapper.querySelector('.remove-bab').onclick = () => {

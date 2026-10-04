@@ -19,7 +19,8 @@ $graph = $commit ? hukum_public_relation_map_for_commit((int) $commit['id']) : [
 $page_title = 'Peta Relasi ' . $document['judul'];
 include __DIR__ . '/header.php';
 ?>
-<link rel="stylesheet" href="<?php echo assetUrl('css/hukum.css'); ?>">
+<?php $hukum_css_ver = file_exists(__DIR__ . '/assets/css/hukum.css') ? filemtime(__DIR__ . '/assets/css/hukum.css') : '1'; ?>
+<link rel="stylesheet" href="<?php echo assetUrl('css/hukum.css'); ?>?v=<?php echo $hukum_css_ver; ?>">
 <div class="container hukum-public-detail">
     <a class="hukum-public-back" href="<?php echo baseUrl('hukum-detail.php?slug=' . urlencode($document['slug'])); ?>">&larr; Kembali ke dokumen</a>
     <header class="hukum-document-header">

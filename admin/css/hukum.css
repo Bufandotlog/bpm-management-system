@@ -20,6 +20,22 @@
 .hukum-muted { color:#999; }
 .hukum-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .hukum-form-grid .full { grid-column:1/-1; }
+.hukum-floating-group { position:relative; min-width:0; margin:4px 0 8px; }
+.hukum-floating-group.full { grid-column:1/-1; }
+.hukum-floating-input { display:block; width:100%; min-height:54px; box-sizing:border-box; padding:19px 14px 8px; border:1px solid rgba(255,255,255,.18); border-radius:9px; color:#fff; background:#101a27; font:inherit; transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease; }
+.hukum-floating-input::placeholder { color:transparent; }
+.hukum-floating-input:focus { outline:none; border-color:#c9a227; box-shadow:0 0 0 3px rgba(201,162,39,.15); }
+.hukum-floating-input:disabled { color:#9299a3; background:#141d28; cursor:not-allowed; }
+.hukum-floating-label { position:absolute; top:50%; left:14px; z-index:1; max-width:calc(100% - 28px); overflow:hidden; color:#aeb8c5; font-size:.88rem; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; pointer-events:none; transform:translateY(-50%); transform-origin:left top; transition:top .18s ease,transform .18s ease,color .18s ease,background-color .18s ease; }
+.hukum-floating-input:focus ~ .hukum-floating-label,
+.hukum-floating-input:not(:placeholder-shown) ~ .hukum-floating-label,
+.hukum-floating-group select ~ .hukum-floating-label,
+.hukum-floating-input:disabled ~ .hukum-floating-label { top:0; padding:0 5px; color:#e6c95d; background:#101a27; font-size:.73rem; font-weight:700; transform:translateY(-50%); }
+.hukum-floating-textarea { min-height:96px; padding-top:24px; resize:vertical; }
+.hukum-floating-textarea ~ .hukum-floating-label { top:20px; transform:none; }
+.hukum-floating-textarea:focus ~ .hukum-floating-label,
+.hukum-floating-textarea:not(:placeholder-shown) ~ .hukum-floating-label { top:0; transform:translateY(-50%); }
+.hukum-floating-group select { padding-top:14px; padding-bottom:10px; }
 .hukum-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 .hukum-btn { border:1px solid rgba(255,255,255,.2); border-radius:7px; color:#fff; background:#1d2d42; padding:8px 12px; cursor:pointer; text-decoration:none; }
 .hukum-btn:hover { filter:brightness(1.2); }
@@ -37,6 +53,8 @@
 .hukum-section-heading p { margin:0; }
 .hukum-editor-context { margin-bottom:18px; }
 .hukum-editor-context h2 { margin:4px 0 0; }
+.hukum-document-picker .hukum-floating-group { width:min(360px,100%); }
+.hukum-document-picker .hukum-floating-input { min-height:50px; }
 .hukum-progress { display:flex; gap:8px; border-top:1px solid rgba(255,255,255,.08); padding-top:16px; margin-top:16px; }
 .hukum-step { display:flex; align-items:center; gap:8px; border:0; background:transparent; color:#999; padding:0 10px 0 0; cursor:pointer; }
 .hukum-step b { display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,.1); color:#bbb; }
@@ -45,21 +63,26 @@
 .hukum-step-panel { display:none; }
 .hukum-step-panel.active { display:block; }
 .required { color:#ef9a9a; }
-.hukum-structure-list { display:grid; gap:16px; margin-bottom:14px; }
-.hukum-bab-card, .hukum-pasal-card, .hukum-ayat-card { border:1px solid rgba(255,255,255,.11); border-radius:10px; padding:14px; background:rgba(0,0,0,.12); }
+.hukum-structure-list { display:grid; gap:24px; margin-bottom:20px; }
+.hukum-bab-card, .hukum-pasal-card, .hukum-ayat-card { border:1px solid rgba(255,255,255,.11); border-radius:10px; padding:18px; background:rgba(0,0,0,.12); }
 .hukum-bab-card { border-left:3px solid #c9a227; }
-.hukum-deletion-panel { margin-bottom:16px; padding:14px; border:1px solid rgba(198,40,40,.35); border-radius:10px; background:rgba(198,40,40,.06); }
+.hukum-deletion-panel { margin-bottom:24px; padding:18px; border:1px solid rgba(198,40,40,.35); border-radius:10px; background:rgba(198,40,40,.06); }
 .hukum-deletion-panel h3 { margin:0 0 6px; color:#ef9a9a; }
 .hukum-deletion-panel p { margin:0 0 10px; }
 .hukum-deletion-request { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; border-top:1px solid rgba(255,255,255,.08); }
 .hukum-deletion-request > span { overflow-wrap:anywhere; }
-.hukum-pasal-card { margin-top:12px; border-left:2px solid rgba(201,162,39,.55); }
-.hukum-ayat-card { margin-top:10px; background:rgba(255,255,255,.025); }
-.hukum-inline-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.hukum-pasal-card { margin-top:18px; border-left:2px solid rgba(201,162,39,.55); }
+.hukum-ayat-card { margin-top:16px; background:rgba(255,255,255,.025); }
+.hukum-inline-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
 .hukum-inline-heading label { color:#bbb; font-size:.8rem; }
 .hukum-bab-title, .hukum-pasal-title { display:flex; align-items:center; gap:10px; flex:1; }
-.hukum-bab-title input:first-child, .hukum-pasal-title input:first-child { max-width:90px; }
-.hukum-pasal-title input:last-child, .hukum-bab-title input:last-child { flex:1; }
+.hukum-bab-title .bab-number-field, .hukum-pasal-title .pasal-number-field { flex:0 0 100px; }
+.hukum-bab-title .hukum-floating-group:last-child, .hukum-pasal-title .hukum-floating-group:last-child { flex:1; }
+.hukum-structure-list .hukum-floating-input { min-height:50px; }
+.hukum-structure-list .hukum-floating-textarea { min-height:82px; }
+.hukum-structure-list .hukum-floating-group { flex:1; }
+.hukum-structure-list .hukum-floating-group { margin:8px 0 14px; }
+.hukum-ayat-card .ayat-number-field { flex:0 1 130px; }
 .hukum-ayat-card textarea, .hukum-pasal-card > textarea { width:100%; box-sizing:border-box; }
 .hukum-pasal-card > .hukum-field-label { display:block; margin-top:10px; color:#bbb; font-size:.82rem; }
 .hukum-pasal-card > .hukum-field-label textarea { display:block; width:100%; box-sizing:border-box; margin-top:6px; }
@@ -67,13 +90,16 @@
 .hukum-acuan-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; color:#b9d8ff; }
 .acuan-picker-field { position:relative; margin-top:9px; }
 .acuan-picker-field[hidden] { display:none !important; }
-.acuan-picker-field label { display:block; margin-bottom:5px; color:#bbb; font-size:.82rem; }
+.acuan-picker-field > label:not(.hukum-floating-label) { display:block; margin-bottom:5px; color:#bbb; font-size:.82rem; }
 .acuan-picker-field input { width:100%; box-sizing:border-box; }
+.hukum-acuan-card .hukum-floating-input:focus ~ .hukum-floating-label,
+.hukum-acuan-card .hukum-floating-input:not(:placeholder-shown) ~ .hukum-floating-label,
+.hukum-acuan-card .hukum-floating-input:disabled ~ .hukum-floating-label { background:#101a27; }
 .acuan-picker-results { position:absolute; z-index:30; top:100%; left:0; right:0; display:grid; max-height:220px; overflow:auto; border:1px solid rgba(255,255,255,.2); border-radius:0 0 8px 8px; background:#17212e; box-shadow:0 8px 20px rgba(0,0,0,.35); }
 .acuan-picker-option { padding:9px 11px; border:0; border-bottom:1px solid rgba(255,255,255,.08); color:#eee; background:transparent; text-align:left; cursor:pointer; }
 .acuan-picker-option:hover, .acuan-picker-option:focus { background:rgba(43,108,176,.3); }
 .acuan-picker-empty { padding:9px 11px; color:#bbb; font-size:.85rem; }
-.hukum-point-row { display:grid; grid-template-columns:60px 1fr 32px; gap:8px; align-items:start; margin-top:8px; }
+.hukum-point-row { display:grid; grid-template-columns:90px minmax(0,1fr) 32px; gap:8px; align-items:start; margin-top:8px; }
 .hukum-point-row textarea { width:100%; box-sizing:border-box; }
 .hukum-icon-btn { border:0; border-radius:6px; width:32px; height:32px; cursor:pointer; color:#ddd; background:rgba(255,255,255,.1); }
 .hukum-icon-btn.danger { color:#ef9a9a; background:rgba(198,40,40,.15); }
@@ -138,19 +164,59 @@
 .hukum-commit-readiness li { display:flex; align-items:center; gap:8px; color:#ef9a9a; }
 .hukum-commit-readiness li.ready { color:#a5d6a7; }
 .hukum-commit-readiness .hukum-actions { margin-top:12px; }
-.hukum-commit-dialog { width:min(520px,calc(100% - 32px)); max-height:calc(100% - 32px); padding:22px; border:1px solid rgba(201,162,39,.45); border-radius:12px; color:#eee; background:#172333; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.hukum-commit-dialog { position:fixed; inset:0; width:min(520px,calc(100% - 32px)); max-width:calc(100% - 32px); max-height:calc(100% - 32px); box-sizing:border-box; margin:auto; overflow:auto; padding:22px; border:1px solid rgba(201,162,39,.45); border-radius:14px; color:#eee; background:#172333; box-shadow:0 20px 60px rgba(0,0,0,.5); }
 .hukum-commit-dialog::backdrop { background:rgba(0,0,0,.72); }
 .hukum-commit-dialog form { display:grid; gap:12px; }
 .hukum-commit-dialog-heading h2 { margin:5px 0 6px; color:#fff; }
 .hukum-commit-dialog-heading p { margin:0; }
-.hukum-commit-dialog label { color:#ddd; font-weight:600; }
-.hukum-commit-dialog input { width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid rgba(255,255,255,.2); border-radius:7px; color:#fff; background:#0f1925; }
-.hukum-commit-dialog input:focus { outline:2px solid #c9a227; outline-offset:1px; }
+.hukum-commit-dialog .hukum-floating-input { background:#0f1925; }
+.hukum-commit-dialog .hukum-floating-input:focus ~ .hukum-floating-label,
+.hukum-commit-dialog .hukum-floating-input:not(:placeholder-shown) ~ .hukum-floating-label { background:#0f1925; }
+.hukum-commit-dialog .hukum-floating-textarea ~ .hukum-floating-label { top:20px; }
+.hukum-commit-dialog .hukum-floating-textarea:focus ~ .hukum-floating-label,
+.hukum-commit-dialog .hukum-floating-textarea:not(:placeholder-shown) ~ .hukum-floating-label { top:0; }
 .hukum-commit-dialog-error { margin:0; padding:9px 11px; border-radius:7px; color:#ffc0c0; background:rgba(198,40,40,.18); }
 .hukum-commit-dialog .hukum-actions { justify-content:flex-end; margin-top:6px; }
 .hukum-commit-dialog button:disabled { cursor:wait; opacity:.65; }
 .hukum-submit-warning-copy p { margin:10px 0; color:#ddd; line-height:1.55; }
 .hukum-submit-warning-copy p:last-child { margin-bottom:0; }
-.hukum-commit-dialog input[inputmode="numeric"] { max-width:220px; letter-spacing:.3em; text-align:center; }
-@media (max-width:700px) { .hukum-form-grid { grid-template-columns:1fr; } .hukum-form-grid .full { grid-column:auto; } }
-@media (max-width:700px) { .hukum-section-heading, .hukum-inline-heading, .hukum-bab-title, .hukum-pasal-title { align-items:stretch; flex-direction:column; } .hukum-point-row { grid-template-columns:1fr 32px; } .hukum-point-row .point-text { grid-column:1/-1; grid-row:1; } }
+.hukum-commit-dialog input[inputmode="numeric"] { letter-spacing:.3em; text-align:center; }
+@media (max-width:700px) {
+    .hukum-form-grid { grid-template-columns:1fr; }
+    .hukum-form-grid .full, .hukum-form-grid .hukum-floating-group.full { grid-column:auto; }
+    .hukum-commit-dialog { padding:18px; }
+    .hukum-section-heading, .hukum-inline-heading, .hukum-bab-title, .hukum-pasal-title { align-items:stretch; flex-direction:column; }
+    .hukum-bab-card, .hukum-pasal-card, .hukum-ayat-card { padding:16px; }
+    .hukum-deletion-panel { margin-bottom:22px; padding:16px; }
+    .hukum-structure-list { gap:22px; }
+    .hukum-pasal-card { margin-top:16px; }
+    .hukum-ayat-card { margin-top:14px; }
+    .hukum-inline-heading { margin-bottom:14px; }
+    .hukum-structure-list .hukum-floating-group { margin:7px 0 12px; }
+    .hukum-editor-context .hukum-toolbar { align-items:stretch; }
+    .hukum-editor-context .hukum-toolbar > div:first-child h2 { font-size:1.2rem; line-height:1.3; }
+    .hukum-document-picker { width:100%; }
+    .hukum-document-picker .hukum-floating-group { width:100%; }
+    .hukum-document-picker .hukum-floating-input { font-size:.88rem; }
+    .hukum-progress { gap:4px; justify-content:space-between; }
+    .hukum-step { gap:5px; padding-right:3px; font-size:.76rem; }
+    .hukum-step b { width:24px; height:24px; flex:0 0 24px; font-size:.76rem; }
+    .hukum-section-heading h2 { font-size:1.2rem; }
+    .hukum-structure-list .hukum-floating-input { min-height:46px; padding:17px 11px 7px; font-size:.9rem; }
+    .hukum-structure-list .hukum-floating-textarea { min-height:76px; padding-top:22px; }
+    .hukum-structure-list .hukum-floating-label { left:11px; font-size:.82rem; }
+    .hukum-structure-list .hukum-floating-input:focus ~ .hukum-floating-label,
+    .hukum-structure-list .hukum-floating-input:not(:placeholder-shown) ~ .hukum-floating-label,
+    .hukum-structure-list .hukum-floating-group select ~ .hukum-floating-label,
+    .hukum-structure-list .hukum-floating-input:disabled ~ .hukum-floating-label { font-size:.68rem; }
+    .hukum-bab-title .bab-number-field, .hukum-pasal-title .pasal-number-field { flex-basis:auto; }
+    .hukum-ayat-card .ayat-number-field { flex-basis:auto; }
+    .hukum-point-row { grid-template-columns:1fr 32px; }
+    .hukum-point-row .hukum-floating-group:first-child { grid-column:1/-1; }
+    .hukum-point-row .hukum-floating-group:nth-child(2) { grid-column:1; grid-row:2; }
+    .hukum-point-row .point-text { grid-column:1/-1; grid-row:auto; }
+    .wizard-actions .hukum-btn { padding:7px 9px; font-size:.82rem; }
+    .hukum-preview { padding:12px; font-size:.9rem; }
+    .hukum-preview h3 { font-size:1rem; }
+    .hukum-preview h4 { font-size:.92rem; }
+}

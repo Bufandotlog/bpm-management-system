@@ -78,7 +78,8 @@ function hukum_public_content($value): string
 $page_title = $document['judul'];
 include __DIR__ . '/header.php';
 ?>
-<link rel="stylesheet" href="<?php echo assetUrl('css/hukum.css'); ?>">
+<?php $hukum_css_ver = file_exists(__DIR__ . '/assets/css/hukum.css') ? filemtime(__DIR__ . '/assets/css/hukum.css') : '1'; ?>
+<link rel="stylesheet" href="<?php echo assetUrl('css/hukum.css'); ?>?v=<?php echo $hukum_css_ver; ?>">
 <div class="container hukum-public-detail">
     <a class="hukum-public-back" href="<?php echo baseUrl('hukum.php'); ?>">&larr; Kembali ke Produk Hukum</a>
     <header class="hukum-document-header">
@@ -175,19 +176,19 @@ include __DIR__ . '/header.php';
                         <h3><?php echo htmlspecialchars($pasal['nomor_label'] . (!empty($pasal['judul_pasal']) ? ' — ' . $pasal['judul_pasal'] : '')); ?></h3>
                         <div><?php echo hukum_public_content($pasalContent); ?></div>
 
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: flex-start;">
+                        <div class="hukum-pasal-tools">
                             <?php if ($explanation !== ''): ?>
-                                <details class="hukum-pasal-explanation" style="margin-top: 0; width: 100%;">
-                                    <summary style="display: inline-block; padding: 6px 12px; background: #c53030; color: white; border-radius: 4px; cursor: pointer;">Penjelasan +</summary>
+                                <details class="hukum-pasal-explanation hukum-pasal-toggle">
+                                    <summary><i class="fas fa-circle-info" aria-hidden="true"></i><span>Penjelasan</span></summary>
                                     <div class="hukum-pasal-explanation-content"><div><?php echo nl2br(htmlspecialchars($explanation)); ?></div></div>
                                 </details>
                             <?php else: ?>
-                                <p class="hukum-pasal-clear" style="margin-bottom: 0;">Cukup Jelas</p>
+                                <p class="hukum-pasal-clear">Cukup Jelas</p>
                             <?php endif; ?>
 
                             <?php if (!empty($acuanByPasal[(int) $pasal['id']]) || (!$hasPasalAcuanId && !empty($acuan))): ?>
-                                <details class="hukum-pasal-explanation" style="margin-top: 0; width: 100%;">
-                                    <summary style="display: inline-block; padding: 6px 12px; background: #2b6cb0; color: white; border-radius: 4px; cursor: pointer;">Acuan +</summary>
+                                <details class="hukum-pasal-explanation hukum-pasal-toggle hukum-pasal-reference">
+                                    <summary><i class="fas fa-link" aria-hidden="true"></i><span>Acuan</span></summary>
                                     <div class="hukum-pasal-explanation-content">
                                         <ul style="margin: 0; padding-left: 20px;">
                                         <?php foreach (($acuanByPasal[(int) $pasal['id']] ?? []) as $acu): ?>
