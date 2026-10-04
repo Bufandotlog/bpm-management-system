@@ -54,21 +54,39 @@ function hukum_review_resolve_role_on(PDO $pdo, int $documentId, int $userId, in
 function hukum_review_approval_rows(PDO $pdo, int $stagingId): array
 {
     $stmt = $pdo->prepare(
-        'SELECT id, staging_id, user_id, peran, status, note, approved_at, rejected_at, created_at
-         FROM hukum_staging_approval
-         WHERE staging_id = ?
-         ORDER BY CASE peran WHEN \'komisi_i\' THEN 1 WHEN \'admin\' THEN 2 ELSE 3 END, id ASC'
+        'SELECT a.id, a.staging_id, a.user_id, a.peran, a.status, a.note, a.approved_at,
+                a.rejected_at, a.created_at, u.nama AS user_name, u.username
+         FROM hukum_staging_approval a
+         LEFT JOIN users u ON u.id = a.user_id
+         WHERE a.staging_id = ?
+         ORDER BY CASE a.peran WHEN \'komisi_i\' THEN 1 WHEN \'admin\' THEN 2 ELSE 3 END, a.id ASC'
     );
     $stmt->execute([$stagingId]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $summary = ['komisi_i' => ['status' => 'menunggu', 'user_id' => null, 'note' => null], 'admin' => ['status' => 'menunggu', 'user_id' => null, 'note' => null], 'approved' => 0, 'total' => 2];
+    $emptyApproval = [
+        'status' => 'menunggu',
+        'user_id' => null,
+        'user_name' => null,
+        'username' => null,
+        'note' => null,
+        'approved_at' => null,
+        'rejected_at' => null,
+    ];
+    $summary = [
+        'komisi_i' => $emptyApproval,
+        'admin' => $emptyApproval,
+        'approved' => 0,
+        'total' => 2,
+    ];
     foreach ($rows as $row) {
         $role = (string) ($row['peran'] ?? '');
         if (isset($summary[$role])) {
             $summary[$role] = [
                 'status' => (string) $row['status'],
                 'user_id' => $row['user_id'] !== null ? (int) $row['user_id'] : null,
+                'user_name' => $row['user_name'] ?? null,
+                'username' => $row['username'] ?? null,
                 'note' => $row['note'] ?? null,
                 'approved_at' => $row['approved_at'] ?? null,
                 'rejected_at' => $row['rejected_at'] ?? null,
@@ -125,8 +143,13 @@ function hukum_review_apply_decision(PDO $pdo, int $stagingId, string $decision,
         )->execute([$stagingId, $actorId, $role]);
     }
 
-    if ((string) $staging['status'] === 'ditolak') {
-        throw new RuntimeException('Staging sudah ditolak.', 409);
+    $ownApprovalStmt = $pdo->prepare(
+        'SELECT status FROM hukum_staging_approval WHERE staging_id = ? AND peran = ?' . hukum_review_for_update($pdo),
+    );
+    $ownApprovalStmt->execute([$stagingId, $role]);
+    $ownApproval = $ownApprovalStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$ownApproval || (string) $ownApproval['status'] !== 'menunggu') {
+        throw new RuntimeException('Keputusan review untuk peran Anda sudah diproses.', 409);
     }
 
     if ($decision === 'reject') {
@@ -147,11 +170,6 @@ function hukum_review_apply_decision(PDO $pdo, int $stagingId, string $decision,
             'UPDATE hukum_staging_approval
              SET user_id = ?, status = \'ditolak\', note = ?, rejected_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
              WHERE staging_id = ? AND peran = ?'
-        )->execute([$actorId, trim((string) $note), $stagingId, $role]);
-        $pdo->prepare(
-            'UPDATE hukum_staging_approval
-             SET user_id = ?, status = \'ditolak\', note = ?, rejected_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-             WHERE staging_id = ? AND peran <> ?'
         )->execute([$actorId, trim((string) $note), $stagingId, $role]);
         $pdo->prepare(
             'UPDATE hukum_staging
@@ -175,14 +193,6 @@ function hukum_review_apply_decision(PDO $pdo, int $stagingId, string $decision,
         return ['status' => 'ditolak', 'role' => $role, 'note' => trim((string) $note)];
     }
 
-    $ownApprovalStmt = $pdo->prepare(
-        'SELECT * FROM hukum_staging_approval WHERE staging_id = ? AND peran = ?' . hukum_review_for_update($pdo),
-    );
-    $ownApprovalStmt->execute([$stagingId, $role]);
-    $ownApproval = $ownApprovalStmt->fetch(PDO::FETCH_ASSOC);
-    if (!$ownApproval || (string) $ownApproval['status'] !== 'menunggu') {
-        throw new RuntimeException('Approval untuk peran Anda sudah diproses.', 409);
-    }
     $otherApprovalStmt = $pdo->prepare(
         'SELECT user_id FROM hukum_staging_approval
          WHERE staging_id = ? AND peran <> ? AND status = \'disetujui\' LIMIT 1'

@@ -40,6 +40,8 @@ $stagingId = (int) ($_GET['staging_id'] ?? 0);
                 <div>
                     <h2>Status Persetujuan</h2>
                     <p id="stagingStatus" class="hukum-muted"></p>
+                    <p id="stagingDecision" class="hukum-muted" hidden></p>
+                    <p id="stagingCommitInfo" class="hukum-muted" hidden></p>
                 </div>
                 <span id="approvalProgress" class="hukum-badge"></span>
             </div>
@@ -220,12 +222,45 @@ function renderDocument(documentData) {
 function renderApprovals(item) {
     const summary = item.approval_summary || {};
     document.getElementById('approvalProgress').textContent = summary.progress || '0/2';
-    document.getElementById('stagingStatus').textContent = 'Status staging: ' + (item.status || 'tidak diketahui');
+    const statusLabels = {
+        menunggu_review:'Menunggu review',
+        ditolak:'Ditolak',
+        disetujui:'Disetujui'
+    };
+    document.getElementById('stagingStatus').textContent = 'Status staging: ' + (statusLabels[item.status] || item.status || 'tidak diketahui');
+    const decision = document.getElementById('stagingDecision');
+    if (item.status === 'ditolak') {
+        const reviewer = item.decision_by_name || item.decision_by_username || 'Akun tidak tercatat';
+        decision.textContent = `Ditolak oleh ${reviewer}${item.direview_at ? ' pada ' + item.direview_at : ''}. Alasan: ${item.review_note || 'Tidak ada alasan tercatat.'}`;
+        decision.hidden = false;
+    } else {
+        decision.hidden = true;
+        decision.textContent = '';
+    }
+    const commitInfo = document.getElementById('stagingCommitInfo');
+    if (item.commit_id) {
+        const commitStatus = item.commit_status === 'aktif' ? 'aktif' : 'digantikan';
+        commitInfo.textContent = `Commit #${item.commit_id} (${commitStatus})${item.commit_created_at ? ' · ' + item.commit_created_at : ''}`;
+        commitInfo.hidden = false;
+    } else if (item.status === 'disetujui') {
+        commitInfo.textContent = 'Disetujui; belum ada commit final.';
+        commitInfo.hidden = false;
+    } else {
+        commitInfo.hidden = true;
+        commitInfo.textContent = '';
+    }
     document.getElementById('approvalRows').innerHTML = ['komisi_i', 'admin'].map(role => {
         const approval = summary[role] || {status:'menunggu'};
         const label = role === 'komisi_i' ? 'Komisi I' : 'Admin';
+        const status = item.status === 'ditolak' && approval.status === 'menunggu'
+            ? 'Tidak ditinjau (staging ditolak)'
+            : approval.status || 'menunggu';
+        const reviewer = approval.user_name || approval.username;
+        const actor = reviewer ? `<p class="hukum-muted">${approval.status === 'ditolak' ? 'Menolak' : approval.status === 'disetujui' ? 'Menyetujui' : 'Reviewer'}: ${hukumEscape(reviewer)}</p>` : '';
+        const timestamp = approval.rejected_at || approval.approved_at;
+        const date = timestamp ? `<small class="hukum-muted">${hukumEscape(timestamp)}</small>` : '';
         const note = approval.note ? `<p class="hukum-muted">Catatan: ${hukumEscape(approval.note)}</p>` : '';
-        return `<div class="hukum-review-approval"><strong>${label}</strong><span class="hukum-badge">${hukumEscape(approval.status || 'menunggu')}</span>${note}</div>`;
+        return `<div class="hukum-review-approval"><strong>${label}</strong><span class="hukum-badge">${hukumEscape(status)}</span>${actor}${date}${note}</div>`;
     }).join('');
 }
 

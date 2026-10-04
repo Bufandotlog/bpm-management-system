@@ -7,6 +7,27 @@ $pdo = getConnection();
 
 if ($method === 'GET') {
     hukum_require_permission('hukum.view');
+    if (($_GET['action'] ?? '') === 'history') {
+        $actor = hukum_current_user();
+        $documentId = (int) ($_GET['dokumen_id'] ?? 0);
+        $periodId = null;
+        if ($documentId > 0) {
+            $document = dbFetchOne('SELECT periode_id FROM hukum_dokumen WHERE id = ? LIMIT 1', [$documentId]);
+            if (!$document) {
+                hukum_json_response(['success' => false, 'message' => 'Dokumen tidak ditemukan.'], 404);
+            }
+            hukum_require_document_period((int) $document['periode_id']);
+        } elseif (!$actor['can_access_all'] && $actor['role'] !== 'superadmin') {
+            $periodId = (int) $actor['periode_id'];
+            if ($periodId <= 0) {
+                hukum_json_response(['success' => false, 'message' => 'Periode akun tidak valid.'], 403);
+            }
+        }
+        hukum_json_response([
+            'success' => true,
+            'data' => hukum_commit_history_rows($pdo, $documentId > 0 ? $documentId : null, $periodId),
+        ]);
+    }
     if (($_GET['action'] ?? '') === 'ready_to_finalize') {
         $actor = hukum_current_user();
         $params = [];
@@ -60,12 +81,7 @@ if ($method === 'GET') {
     hukum_require_document_period((int) $doc['periode_id']);
     hukum_json_response([
         'success' => true,
-        'data' => dbFetchAll(
-            'SELECT id, dokumen_id, staging_id, parent_commit_id, hash_commit, forum_tipe, tanggal_forum,
-                    status, dibuat_oleh, created_at, replaced_at
-             FROM hukum_commit WHERE dokumen_id = ? ORDER BY created_at DESC, id DESC',
-            [$dokumenId]
-        )
+        'data' => hukum_commit_history_rows($pdo, $dokumenId),
     ]);
 }
 

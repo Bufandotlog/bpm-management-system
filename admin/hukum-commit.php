@@ -21,20 +21,49 @@ $hukumCssVersion = file_exists(__DIR__ . '/css/hukum.css') ? filemtime(__DIR__ .
     </div>
 
     <div id="commitNotice" class="hukum-notice" role="status" aria-live="polite"></div>
-    <section class="hukum-card">
-        <div class="hukum-toolbar">
-            <div>
-                <h2>Siap Difinalisasi</h2>
-                <p class="hukum-muted">Staging tampil di sini setelah persetujuan Komisi I dan Admin lengkap.</p>
+    <div class="hukum-tabs" role="tablist" aria-label="Daftar commit">
+        <button id="readyCommitTab" class="hukum-tab active" type="button" role="tab" aria-selected="true" aria-controls="readyCommitPanel">
+            Siap Difinalisasi
+        </button>
+        <button id="commitHistoryTab" class="hukum-tab" type="button" role="tab" aria-selected="false" aria-controls="commitHistoryPanel">
+            Riwayat Commit
+        </button>
+    </div>
+
+    <section id="readyCommitPanel" class="hukum-panel active" role="tabpanel" aria-labelledby="readyCommitTab">
+        <section class="hukum-card">
+            <div class="hukum-toolbar">
+                <div>
+                    <h2>Siap Difinalisasi</h2>
+                    <p class="hukum-muted">Staging tampil di sini setelah persetujuan Komisi I dan Admin lengkap.</p>
+                </div>
+                <span id="commitCount" class="hukum-badge">Memuat...</span>
             </div>
-            <span id="commitCount" class="hukum-badge">Memuat...</span>
-        </div>
-        <div class="hukum-table-wrap">
-            <table class="hukum-table">
-                <thead><tr><th>Dokumen</th><th>Persetujuan</th><th>Verifikasi</th><th>Diajukan</th><th>Aksi</th></tr></thead>
-                <tbody id="readyCommitBody"><tr><td colspan="5" class="hukum-empty">Memuat staging...</td></tr></tbody>
-            </table>
-        </div>
+            <div class="hukum-table-wrap">
+                <table class="hukum-table">
+                    <thead><tr><th>Dokumen</th><th>Persetujuan</th><th>Verifikasi</th><th>Diajukan</th><th>Aksi</th></tr></thead>
+                    <tbody id="readyCommitBody"><tr><td colspan="5" class="hukum-empty">Memuat staging...</td></tr></tbody>
+                </table>
+            </div>
+        </section>
+    </section>
+
+    <section id="commitHistoryPanel" class="hukum-panel" role="tabpanel" aria-labelledby="commitHistoryTab" hidden>
+        <section class="hukum-card">
+            <div class="hukum-toolbar">
+                <div>
+                    <h2>Riwayat Commit</h2>
+                    <p class="hukum-muted">Hanya commit yang sudah terbentuk ditampilkan. Status commit dan status staging dicatat terpisah.</p>
+                </div>
+                <span id="commitHistoryCount" class="hukum-badge">Memuat...</span>
+            </div>
+            <div class="hukum-table-wrap">
+                <table class="hukum-table">
+                    <thead><tr><th>Dokumen</th><th>Status Commit</th><th>Status Staging</th><th>Finalisasi</th><th>Persetujuan</th><th>Aksi</th></tr></thead>
+                    <tbody id="commitHistoryBody"><tr><td colspan="6" class="hukum-empty">Memuat riwayat commit...</td></tr></tbody>
+                </table>
+            </div>
+        </section>
     </section>
 
     <section id="commitDetail" class="hukum-card hukum-commit-detail" hidden>
@@ -90,6 +119,7 @@ const hukumActorRole = <?php echo json_encode((string) $actor['role'], JSON_HEX_
 const hukumCanVerifyCommit = <?php echo $canVerifyCommit ? 'true' : 'false'; ?>;
 const hukumCanFinalizeCommit = <?php echo $canFinalizeCommit ? 'true' : 'false'; ?>;
 let readyCommitRows = [];
+let commitHistoryRows = [];
 let selectedCommit = null;
 let selectedReview = null;
 let dialogAction = null;
@@ -121,6 +151,27 @@ function displayStatus(value) {
 function verificationLabel(value) { return isActive(value) ? 'Aktif' : 'Belum diverifikasi'; }
 function approvalFor(role) { return selectedReview?.approval_summary?.[role] || {status:'menunggu', user_id:null}; }
 function roleLabel(role) { return role === 'komisi_i' ? 'Komisi I' : 'Admin'; }
+function commitStatusLabel(value) {
+    const labels = {aktif:'Aktif', digantikan:'Digantikan'};
+    return labels[value] || value || 'Tidak diketahui';
+}
+function stagingStatusLabel(value) {
+    const labels = {menunggu_review:'Menunggu review', ditolak:'Ditolak', disetujui:'Disetujui'};
+    return labels[value] || value || 'Tidak diketahui';
+}
+
+function setCommitTab(tab) {
+    const showHistory = tab === 'history';
+    document.getElementById('readyCommitTab').classList.toggle('active', !showHistory);
+    document.getElementById('readyCommitTab').setAttribute('aria-selected', String(!showHistory));
+    document.getElementById('commitHistoryTab').classList.toggle('active', showHistory);
+    document.getElementById('commitHistoryTab').setAttribute('aria-selected', String(showHistory));
+    document.getElementById('readyCommitPanel').classList.toggle('active', !showHistory);
+    document.getElementById('commitHistoryPanel').classList.toggle('active', showHistory);
+    document.getElementById('readyCommitPanel').hidden = showHistory;
+    document.getElementById('commitHistoryPanel').hidden = !showHistory;
+    if (showHistory && selectedCommit) closeCommitDetail();
+}
 
 function renderReadyCommitList() {
     const body = document.getElementById('readyCommitBody');
@@ -139,6 +190,34 @@ function renderReadyCommitList() {
     body.querySelectorAll('[data-open-staging]').forEach(button => {
         button.addEventListener('click', () => openCommitDetail(Number(button.dataset.openStaging)));
     });
+}
+
+function renderCommitHistory() {
+    const body = document.getElementById('commitHistoryBody');
+    document.getElementById('commitHistoryCount').textContent = commitHistoryRows.length + ' commit';
+    if (!commitHistoryRows.length) {
+        body.innerHTML = '<tr><td colspan="6" class="hukum-empty">Belum ada commit final pada periode yang dapat Anda akses.</td></tr>';
+        return;
+    }
+    body.innerHTML = commitHistoryRows.map(item => {
+        const finalizer = item.finalizer_name || item.finalizer_username || 'Akun tidak tercatat';
+        const komisiName = item.komisi_i_name || item.komisi_i_username || 'Tidak tercatat';
+        const adminName = item.admin_name || item.admin_username || 'Tidak tercatat';
+        const reviewNote = item.staging_review_note
+            ? `<br><small class="hukum-muted">Catatan staging: ${hukumEscape(item.staging_review_note)}</small>`
+            : '';
+        const replacementDate = item.replaced_at
+            ? `<br><small class="hukum-muted">Digantikan: ${hukumEscape(item.replaced_at)}</small>`
+            : '';
+        return `<tr>
+            <td><strong>${hukumEscape(item.judul || 'Dokumen tanpa judul')}</strong><br><small class="hukum-muted">${hukumEscape(item.jenis || '')} · Commit #${Number(item.commit_id || item.id)} · Staging #${Number(item.staging_id)}</small></td>
+            <td><span class="hukum-badge">${hukumEscape(commitStatusLabel(item.commit_status || item.status))}</span></td>
+            <td><span class="hukum-badge">${hukumEscape(stagingStatusLabel(item.staging_status))}</span>${reviewNote}</td>
+            <td>${hukumEscape(finalizer)}<br><small class="hukum-muted">${hukumEscape(item.created_at || '—')}</small>${replacementDate}</td>
+            <td>Komisi I: ${hukumEscape(komisiName)} (${hukumEscape(displayStatus(item.komisi_i_approval_status))})<br>Admin: ${hukumEscape(adminName)} (${hukumEscape(displayStatus(item.admin_approval_status))})</td>
+            <td><a class="hukum-btn" target="_blank" rel="noopener" href="hukum-staging-detail.php?staging_id=${Number(item.staging_id)}">Detail staging</a></td>
+        </tr>`;
+    }).join('');
 }
 
 function approvalCardsMarkup() {
@@ -224,6 +303,21 @@ async function loadReadyCommitList() {
             `<tr><td colspan="5" class="hukum-empty">${hukumEscape(error.message)}</td></tr>`;
         document.getElementById('commitCount').textContent = 'Gagal memuat';
         commitNotice(error.message, 'error');
+        return false;
+    }
+}
+
+async function loadCommitHistory() {
+    try {
+        const result = await hukumRequest('commit.php?action=history');
+        commitHistoryRows = result.data || [];
+        renderCommitHistory();
+        return true;
+    } catch (error) {
+        document.getElementById('commitHistoryBody').innerHTML =
+            `<tr><td colspan="6" class="hukum-empty">${hukumEscape(error.message)}</td></tr>`;
+        document.getElementById('commitHistoryCount').textContent = 'Gagal memuat';
+        commitNotice('Riwayat commit gagal dimuat: ' + error.message, 'error');
         return false;
     }
 }
@@ -327,6 +421,9 @@ document.getElementById('commitPasswordForm').addEventListener('submit', async e
         commitNotice(successMessage + ' Daftar tidak dapat diperbarui; muat ulang halaman untuk melihat status terbaru.', 'error');
         return;
     }
+    if (!(await loadCommitHistory())) {
+        commitNotice(successMessage + ' Antrean sudah diperbarui, tetapi riwayat commit gagal dimuat.', 'error');
+    }
     const selectedStillReady = readyCommitRows.find(row => Number(row.staging_id) === selectedStagingId);
     if (selectedStillReady) {
         selectedCommit = selectedStillReady;
@@ -351,8 +448,11 @@ document.getElementById('commitPasswordCancel').addEventListener('click', () => 
     document.getElementById('commitPasswordDialog').close();
     dialogAction = null;
 });
+document.getElementById('readyCommitTab').addEventListener('click', () => setCommitTab('ready'));
+document.getElementById('commitHistoryTab').addEventListener('click', () => setCommitTab('history'));
 document.getElementById('refreshCommitList').addEventListener('click', async () => {
-    if (await loadReadyCommitList() && selectedCommit) {
+    const [readyLoaded] = await Promise.all([loadReadyCommitList(), loadCommitHistory()]);
+    if (readyLoaded && selectedCommit) {
         const refreshed = readyCommitRows.find(row => Number(row.staging_id) === Number(selectedCommit.staging_id));
         if (refreshed) {
             selectedCommit = refreshed;
@@ -378,7 +478,7 @@ document.getElementById('commitPasswordDialog').addEventListener('close', () => 
 });
 
 (async () => {
-    await loadReadyCommitList();
+    await Promise.all([loadReadyCommitList(), loadCommitHistory()]);
     const requestedId = <?php echo $stagingId; ?>;
     if (requestedId > 0) {
         if (readyCommitRows.some(row => Number(row.staging_id) === requestedId)) {

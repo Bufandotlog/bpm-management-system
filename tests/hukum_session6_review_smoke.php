@@ -103,7 +103,7 @@ $GLOBALS['pdo']->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $GLOBALS['pdo']->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 $pdo = $GLOBALS['pdo'];
 
-$pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT NOT NULL)');
+$pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT NOT NULL, nama TEXT NULL)');
 $pdo->exec('CREATE TABLE periode_kepengurusan (id INTEGER PRIMARY KEY, nama TEXT NOT NULL)');
 $pdo->exec('CREATE TABLE hukum_keanggotaan (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, periode_id INTEGER NOT NULL, jabatan TEXT NOT NULL, mulai_pada TEXT NOT NULL DEFAULT CURRENT_DATE, selesai_pada TEXT NULL, aktif INTEGER NOT NULL DEFAULT 1)');
 $pdo->exec('CREATE TABLE hukum_dokumen (id INTEGER PRIMARY KEY, judul TEXT NOT NULL, periode_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "draft")');
@@ -113,7 +113,7 @@ $pdo->exec('CREATE TABLE hukum_staging_approval (id INTEGER PRIMARY KEY, staging
 $pdo->exec('CREATE TABLE hukum_pasal_versi (id INTEGER PRIMARY KEY, pasal_id INTEGER NOT NULL, workspace_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "draft", rejected_at TEXT NULL, rejected_by INTEGER NULL, rejection_reason TEXT NULL)');
 $pdo->exec('CREATE TABLE hukum_staging_versi (staging_id INTEGER NOT NULL, pasal_versi_id INTEGER NOT NULL, PRIMARY KEY (staging_id, pasal_versi_id))');
 
-$pdo->exec("INSERT INTO users (id, username) VALUES (1, 'pengaju'), (2, 'komisi1'), (3, 'ketum')");
+$pdo->exec("INSERT INTO users (id, username, nama) VALUES (1, 'pengaju', 'Pengaju'), (2, 'komisi1', 'Komisi I'), (3, 'ketum', 'Ketua Umum')");
 $pdo->exec("INSERT INTO periode_kepengurusan (id, nama) VALUES (1, '2026-2027')");
 $pdo->exec("INSERT INTO hukum_keanggotaan (user_id, periode_id, jabatan, mulai_pada, aktif) VALUES (2, 1, 'komisi_i', '2026-01-01', 1)");
 $pdo->exec("INSERT INTO hukum_keanggotaan (user_id, periode_id, jabatan, mulai_pada, aktif) VALUES (3, 1, 'ketua_umum', '2026-01-01', 1)");
@@ -147,27 +147,98 @@ $pdo->exec("INSERT INTO hukum_staging (id, workspace_id, status, diajukan_oleh) 
 $pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (2, 2, 'komisi_i', 'menunggu', NULL)");
 $pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (2, 3, 'admin', 'menunggu', NULL)");
 
-$_SESSION['admin_id'] = 2;
+$_SESSION['admin_id'] = 3;
 $_SESSION['admin_role'] = 'admin';
 try {
-    hukum_review_apply_decision($pdo, 2, 'reject', '', 2);
+    hukum_review_apply_decision($pdo, 2, 'reject', '', 3);
     fwrite(STDERR, "reject without note should fail\n");
     exit(1);
 } catch (RuntimeException $e) {
     // expected
 }
 
-$_SESSION['admin_id'] = 2;
-$result = hukum_review_apply_decision($pdo, 2, 'reject', 'invalid content', 2);
+$_SESSION['admin_id'] = 3;
+$result = hukum_review_apply_decision($pdo, 2, 'reject', 'invalid content', 3);
 if ($result['status'] !== 'ditolak') {
     fwrite(STDERR, "reject should mark staging rejected\n");
     exit(1);
 }
 
-$slot = dbFetchOne('SELECT status FROM hukum_staging_approval WHERE staging_id = 2 AND peran = ?', ['komisi_i']);
-if (($slot['status'] ?? '') !== 'ditolak') {
-    fwrite(STDERR, "reject should update all approval slots\n");
+$slots = dbFetchAll('SELECT peran, user_id, status, note FROM hukum_staging_approval WHERE staging_id = ?', [2]);
+$slotsByRole = [];
+foreach ($slots as $slot) {
+    $slotsByRole[$slot['peran']] = $slot;
+}
+if (($slotsByRole['admin']['status'] ?? '') !== 'ditolak'
+    || (int) ($slotsByRole['admin']['user_id'] ?? 0) !== 3
+    || ($slotsByRole['admin']['note'] ?? '') !== 'invalid content'
+    || ($slotsByRole['komisi_i']['status'] ?? '') !== 'menunggu'
+    || (int) ($slotsByRole['komisi_i']['user_id'] ?? 0) !== 2) {
+    fwrite(STDERR, "rejection must preserve the other role's approval slot\n");
     exit(1);
+}
+$approvalSummary = hukum_review_approval_rows($pdo, 2)['summary'];
+if (($approvalSummary['admin']['user_name'] ?? '') !== 'Ketua Umum'
+    || ($approvalSummary['admin']['note'] ?? '') !== 'invalid content'
+    || ($approvalSummary['komisi_i']['status'] ?? '') !== 'menunggu') {
+    throw new RuntimeException('Approval API summary must attribute rejection to the actual reviewer.');
+}
+
+$pdo->exec("INSERT INTO hukum_staging (id, workspace_id, status, diajukan_oleh) VALUES (3, 1, 'menunggu_review', 1)");
+$pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (3, 2, 'komisi_i', 'menunggu', NULL)");
+$pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (3, 3, 'admin', 'menunggu', NULL)");
+$_SESSION['admin_id'] = 2;
+$_SESSION['admin_role'] = 'komisi_i';
+$approvedFirst = hukum_review_apply_decision($pdo, 3, 'approve', null, 2);
+if ($approvedFirst['status'] !== 'menunggu_review') {
+    throw new RuntimeException('Single approval should leave staging waiting for review.');
+}
+$_SESSION['admin_id'] = 3;
+$_SESSION['admin_role'] = 'admin';
+$rejectedAfterApproval = hukum_review_apply_decision($pdo, 3, 'reject', 'revisi diperlukan', 3);
+$slots = dbFetchAll('SELECT peran, user_id, status, note FROM hukum_staging_approval WHERE staging_id = ?', [3]);
+$slotsByRole = [];
+foreach ($slots as $slot) {
+    $slotsByRole[$slot['peran']] = $slot;
+}
+if ($rejectedAfterApproval['status'] !== 'ditolak'
+    || ($slotsByRole['komisi_i']['status'] ?? '') !== 'disetujui'
+    || (int) ($slotsByRole['komisi_i']['user_id'] ?? 0) !== 2
+    || ($slotsByRole['admin']['status'] ?? '') !== 'ditolak'
+    || (int) ($slotsByRole['admin']['user_id'] ?? 0) !== 3
+    || ($slotsByRole['admin']['note'] ?? '') !== 'revisi diperlukan') {
+    throw new RuntimeException('Rejecting after the other role approved must preserve accurate reviewer attribution.');
+}
+$approvalRows = hukum_review_approval_rows($pdo, 3);
+if (($approvalRows['summary']['admin']['user_name'] ?? '') !== 'Ketua Umum'
+    || ($approvalRows['summary']['komisi_i']['user_name'] ?? '') !== 'Komisi I') {
+    throw new RuntimeException('Approval summary must return reviewer names by role.');
+}
+
+$pdo->exec("INSERT INTO hukum_staging (id, workspace_id, status, diajukan_oleh) VALUES (4, 1, 'menunggu_review', 1)");
+$pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (4, 2, 'komisi_i', 'menunggu', NULL)");
+$pdo->exec("INSERT INTO hukum_staging_approval (staging_id, user_id, peran, status, note) VALUES (4, 3, 'admin', 'menunggu', NULL)");
+$_SESSION['admin_id'] = 3;
+$_SESSION['admin_role'] = 'admin';
+$adminApprovedFirst = hukum_review_apply_decision($pdo, 4, 'approve', null, 3);
+if ($adminApprovedFirst['status'] !== 'menunggu_review') {
+    throw new RuntimeException('Single Admin approval should leave staging waiting for review.');
+}
+$_SESSION['admin_id'] = 2;
+$_SESSION['admin_role'] = 'komisi_i';
+$rejectedByKomisi = hukum_review_apply_decision($pdo, 4, 'reject', 'perlu koreksi', 2);
+$slots = dbFetchAll('SELECT peran, user_id, status, note FROM hukum_staging_approval WHERE staging_id = ?', [4]);
+$slotsByRole = [];
+foreach ($slots as $slot) {
+    $slotsByRole[$slot['peran']] = $slot;
+}
+if ($rejectedByKomisi['status'] !== 'ditolak'
+    || ($slotsByRole['admin']['status'] ?? '') !== 'disetujui'
+    || (int) ($slotsByRole['admin']['user_id'] ?? 0) !== 3
+    || ($slotsByRole['komisi_i']['status'] ?? '') !== 'ditolak'
+    || (int) ($slotsByRole['komisi_i']['user_id'] ?? 0) !== 2
+    || ($slotsByRole['komisi_i']['note'] ?? '') !== 'perlu koreksi') {
+    throw new RuntimeException('Komisi I rejection must preserve prior Admin approval and record the rejecting actor.');
 }
 
 $_SESSION['admin_id'] = 99;

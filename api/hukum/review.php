@@ -11,10 +11,17 @@ if ($method === 'GET') {
     $stagingId = (int) ($_GET['staging_id'] ?? $_GET['id'] ?? 0);
     if ($stagingId > 0) {
         $row = dbFetchOne(
-            'SELECT s.*, w.dokumen_id, w.judul_perubahan, d.judul, d.periode_id
+            'SELECT s.*, w.dokumen_id, w.judul_perubahan, d.judul, d.periode_id,
+                    decision_user.nama AS decision_by_name, decision_user.username AS decision_by_username,
+                    commit_info.id AS commit_id, commit_info.status AS commit_status,
+                    commit_info.created_at AS commit_created_at, commit_info.dibuat_oleh AS commit_created_by
              FROM hukum_staging s
              JOIN hukum_workspace w ON w.id = s.workspace_id
              JOIN hukum_dokumen d ON d.id = w.dokumen_id
+             LEFT JOIN users decision_user ON decision_user.id = s.direview_oleh
+             LEFT JOIN hukum_commit commit_info ON commit_info.id = (
+                 SELECT MAX(c.id) FROM hukum_commit c WHERE c.staging_id = s.id
+             )
              WHERE s.id = ?',
             [$stagingId]
         );
@@ -40,19 +47,41 @@ if ($method === 'GET') {
         hukum_json_response(['success' => true, 'data' => $row]);
     }
     $user = hukum_current_user();
-    $sql = 'SELECT s.*, w.dokumen_id, w.judul_perubahan, d.judul, d.periode_id
+    $status = strtolower(trim((string) ($_GET['status'] ?? '')));
+    $allowedStatuses = ['menunggu_review', 'ditolak', 'disetujui'];
+    if ($status !== '' && !in_array($status, $allowedStatuses, true)) {
+        hukum_json_response(['success' => false, 'message' => 'Filter status staging tidak valid.'], 400);
+    }
+    $sql = 'SELECT s.*, w.dokumen_id, w.judul_perubahan, d.judul, d.periode_id,
+                   decision_user.nama AS decision_by_name, decision_user.username AS decision_by_username,
+                   commit_info.id AS commit_id, commit_info.status AS commit_status,
+                   commit_info.created_at AS commit_created_at, commit_info.dibuat_oleh AS commit_created_by
             FROM hukum_staging s
             JOIN hukum_workspace w ON w.id = s.workspace_id
-            JOIN hukum_dokumen d ON d.id = w.dokumen_id';
+            JOIN hukum_dokumen d ON d.id = w.dokumen_id
+            LEFT JOIN users decision_user ON decision_user.id = s.direview_oleh
+            LEFT JOIN hukum_commit commit_info ON commit_info.id = (
+                SELECT MAX(c.id) FROM hukum_commit c WHERE c.staging_id = s.id
+            )';
     $params = [];
+    $filters = [];
     if (!$user['can_access_all'] && $user['role'] !== 'superadmin') {
-        $sql .= ' WHERE d.periode_id = ?';
+        $filters[] = 'd.periode_id = ?';
         $params[] = $user['periode_id'];
+    }
+    if ($status !== '') {
+        $filters[] = 's.status = ?';
+        $params[] = $status;
+    }
+    if ($filters !== []) {
+        $sql .= ' WHERE ' . implode(' AND ', $filters);
     }
     $sql .= ' ORDER BY s.diajukan_at DESC, s.id DESC';
     $rows = dbFetchAll($sql, $params);
     foreach ($rows as &$item) {
-        $item['approval_summary'] = hukum_review_approval_rows($pdo, (int) $item['id'])['summary'];
+        $approval = hukum_review_approval_rows($pdo, (int) $item['id']);
+        $item['approval_summary'] = $approval['summary'];
+        $item['approval_rows'] = $approval['rows'];
     }
     unset($item);
     hukum_json_response(['success' => true, 'data' => $rows]);

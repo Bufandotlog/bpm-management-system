@@ -10,6 +10,75 @@ function hukum_commit_for_update(PDO $pdo): string
         : ' FOR UPDATE';
 }
 
+function hukum_commit_history_rows(PDO $pdo, ?int $documentId = null, ?int $periodId = null): array
+{
+    if ($documentId !== null && $documentId <= 0) {
+        throw new InvalidArgumentException('dokumen_id harus lebih dari 0.', 400);
+    }
+    if ($periodId !== null && $periodId <= 0) {
+        throw new InvalidArgumentException('periode_id harus lebih dari 0.', 400);
+    }
+
+    $filters = [];
+    $params = [];
+    if ($documentId !== null) {
+        $filters[] = 'c.dokumen_id = ?';
+        $params[] = $documentId;
+    }
+    if ($periodId !== null) {
+        $filters[] = 'd.periode_id = ?';
+        $params[] = $periodId;
+    }
+    $where = $filters === [] ? '' : ' WHERE ' . implode(' AND ', $filters);
+    $stmt = $pdo->prepare(
+        'SELECT c.id, c.id AS commit_id, c.dokumen_id, c.staging_id, c.parent_commit_id,
+                c.hash_commit, c.forum_tipe, c.tanggal_forum, c.status, c.status AS commit_status,
+                c.dibuat_oleh, c.created_at, c.replaced_at,
+                d.periode_id, d.judul, d.jenis, d.slug,
+                finalizer.nama AS finalizer_name, finalizer.username AS finalizer_username,
+                s.status AS staging_status, s.diajukan_at AS staging_submitted_at,
+                s.direview_at AS staging_reviewed_at, s.review_note AS staging_review_note,
+                decision_user.nama AS staging_decision_by_name,
+                decision_user.username AS staging_decision_by_username,
+                (SELECT a.user_id FROM hukum_staging_approval a
+                 WHERE a.staging_id = s.id AND a.peran = \'komisi_i\' LIMIT 1) AS komisi_i_user_id,
+                (SELECT u.nama FROM hukum_staging_approval a
+                 LEFT JOIN users u ON u.id = a.user_id
+                 WHERE a.staging_id = s.id AND a.peran = \'komisi_i\' LIMIT 1) AS komisi_i_name,
+                (SELECT u.username FROM hukum_staging_approval a
+                 LEFT JOIN users u ON u.id = a.user_id
+                 WHERE a.staging_id = s.id AND a.peran = \'komisi_i\' LIMIT 1) AS komisi_i_username,
+                (SELECT a.status FROM hukum_staging_approval a
+                 WHERE a.staging_id = s.id AND a.peran = \'komisi_i\' LIMIT 1) AS komisi_i_approval_status,
+                (SELECT a.note FROM hukum_staging_approval a
+                 WHERE a.staging_id = s.id AND a.peran = \'komisi_i\' LIMIT 1) AS komisi_i_note,
+                (SELECT a.approved_at FROM hukum_staging_approval a
+                 WHERE a.staging_id = s.id AND a.peran = \'komisi_i\' LIMIT 1) AS komisi_i_approved_at,
+                (SELECT a.user_id FROM hukum_staging_approval a
+                 WHERE a.staging_id = s.id AND a.peran = \'admin\' LIMIT 1) AS admin_user_id,
+                (SELECT u.nama FROM hukum_staging_approval a
+                 LEFT JOIN users u ON u.id = a.user_id
+                 WHERE a.staging_id = s.id AND a.peran = \'admin\' LIMIT 1) AS admin_name,
+                (SELECT u.username FROM hukum_staging_approval a
+                 LEFT JOIN users u ON u.id = a.user_id
+                 WHERE a.staging_id = s.id AND a.peran = \'admin\' LIMIT 1) AS admin_username,
+                (SELECT a.status FROM hukum_staging_approval a
+                 WHERE a.staging_id = s.id AND a.peran = \'admin\' LIMIT 1) AS admin_approval_status,
+                (SELECT a.note FROM hukum_staging_approval a
+                 WHERE a.staging_id = s.id AND a.peran = \'admin\' LIMIT 1) AS admin_note,
+                (SELECT a.approved_at FROM hukum_staging_approval a
+                 WHERE a.staging_id = s.id AND a.peran = \'admin\' LIMIT 1) AS admin_approved_at
+         FROM hukum_commit c
+         JOIN hukum_dokumen d ON d.id = c.dokumen_id
+         JOIN hukum_staging s ON s.id = c.staging_id
+         LEFT JOIN users finalizer ON finalizer.id = c.dibuat_oleh
+         LEFT JOIN users decision_user ON decision_user.id = s.direview_oleh'
+        . $where . ' ORDER BY c.created_at DESC, c.id DESC'
+    );
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 function hukum_commit_test_failure_inject(string $point): void
 {
     $environment = strtolower((string) (getenv('APP_ENV') ?: ($_ENV['APP_ENV'] ?? '')));
