@@ -30,7 +30,11 @@ if ($method === 'GET') {
 
 $input = hukum_input();
 try {
-    $result = hukum_create_bab($pdo, $input);
+    if (isset($input['bab_id']) && (isset($input['nomor_label']) || isset($input['judul_bab'])) && !isset($input['urutan'])) {
+        $result = hukum_update_bab_metadata($pdo, $input);
+    } else {
+        $result = hukum_create_bab($pdo, $input);
+    }
     hukum_json_response(['success' => true] + $result, 201);
 } catch (Throwable $error) {
     hukum_json_response(['success' => false, 'message' => $error->getMessage()], $error->getCode() >= 400 && $error->getCode() < 600 ? $error->getCode() : 500);

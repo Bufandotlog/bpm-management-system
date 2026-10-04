@@ -443,7 +443,7 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
     unset($deletedPasalIds[0]);
 
     $stmt = $pdo->prepare(
-        'SELECT id AS pasal_id, nomor_label
+        'SELECT id AS pasal_id, nomor_label, judul_pasal
          FROM hukum_pasal
          WHERE dokumen_id = ?
          ORDER BY id ASC'
@@ -468,6 +468,7 @@ function hukum_commit_snapshot_graph(PDO $pdo, int $commitId, int $documentId): 
             json_encode([
                 'pasal_id' => $pasalId,
                 'nomor_label' => $node['nomor_label'] ?? null,
+                'judul_pasal' => $node['judul_pasal'] ?? null,
                 'pasal_version_id' => $versionId,
                 'is_active' => $isActive,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),

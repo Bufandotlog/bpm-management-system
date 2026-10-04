@@ -16,7 +16,24 @@ if ($method === 'GET') {
         hukum_json_response(['success' => true, 'data' => dbFetchAll(
             'SELECT p.*, v.id AS active_version_id, v.hash_konten AS active_hash
              FROM hukum_pasal p
-             LEFT JOIN hukum_pasal_versi v ON v.pasal_id = p.id AND v.status = \'committed\'
+             LEFT JOIN hukum_pasal_versi v ON v.id = COALESCE(
+                 (
+                     SELECT gs.pasal_version_id
+                     FROM hukum_graph_snapshot gs
+                     JOIN hukum_commit c ON c.id = gs.commit_id AND c.status = \'aktif\'
+                     WHERE gs.dokumen_id = p.dokumen_id
+                       AND gs.pasal_id = p.id
+                       AND gs.is_active = 1
+                     ORDER BY c.id DESC
+                     LIMIT 1
+                 ),
+                 (
+                     SELECT MAX(previous.id)
+                     FROM hukum_pasal_versi previous
+                     WHERE previous.pasal_id = p.id
+                       AND previous.status = \'committed\'
+                 )
+             )
              WHERE p.dokumen_id = ?
                AND (NOT EXISTS (SELECT 1 FROM hukum_commit c WHERE c.dokumen_id = p.dokumen_id AND c.status = \'aktif\')
                     OR EXISTS (
@@ -31,7 +48,7 @@ if ($method === 'GET') {
                       WHERE pv.pasal_id = p.id
                         AND w.dokumen_id = p.dokumen_id
                         AND w.status IN (\'aktif\', \'diajukan\', \'siap_commit\')
-                        AND pv.status IN (\'draft\', \'staged\')
+                        AND pv.status IN (\'draft\', \'staged\', \'rejected\')
                     ))
              ORDER BY p.urutan, p.id',
             [$documentId]
@@ -47,9 +64,26 @@ if ($method === 'GET') {
     );
     if (!$pasal) hukum_json_response(['success' => false, 'message' => 'Pasal tidak ditemukan.'], 404);
     hukum_require_document_period((int) $pasal['periode_id']);
-    if (hukum_deletion_active_commit($pdo, (int) $pasal['dokumen_id']) !== null
-        && !hukum_pasal_is_active($pdo, (int) $pasal['dokumen_id'], $pasalId)) {
-        hukum_json_response(['success' => false, 'message' => 'Pasal tidak lagi menjadi bagian dari dokumen aktif.'], 404);
+    $activeCommitId = hukum_deletion_active_commit($pdo, (int) $pasal['dokumen_id']);
+    if ($activeCommitId !== null && !hukum_pasal_is_active($pdo, (int) $pasal['dokumen_id'], $pasalId)) {
+        $workspaceVersion = dbFetchOne(
+            'SELECT pv.id
+             FROM hukum_pasal_versi pv
+             JOIN hukum_workspace w ON w.id = pv.workspace_id
+             WHERE pv.pasal_id = ?
+               AND w.dokumen_id = ?
+               AND w.status IN (\'aktif\', \'diajukan\', \'siap_commit\')
+               AND pv.status IN (\'draft\', \'staged\', \'rejected\')
+               AND NOT EXISTS (
+                   SELECT 1 FROM hukum_graph_snapshot gs
+                   WHERE gs.commit_id = ? AND gs.pasal_id = pv.pasal_id AND gs.is_active = 0
+               )
+             LIMIT 1',
+            [$pasalId, (int) $pasal['dokumen_id'], $activeCommitId]
+        );
+        if ($workspaceVersion === null) {
+            hukum_json_response(['success' => false, 'message' => 'Pasal tidak lagi menjadi bagian dari dokumen aktif.'], 404);
+        }
     }
     hukum_json_response(['success' => true, 'data' => dbFetchAll(
         'SELECT id, pasal_id, workspace_id, isi, hash_konten, status, dibuat_oleh, dibuat_dari_versi_id, created_at, updated_at
@@ -60,7 +94,11 @@ if ($method === 'GET') {
 
 $input = hukum_input();
 try {
-    if (isset($input['isi']) || isset($input['pasal_id'])) {
+    if (isset($input['isi'])) {
+        $result = hukum_create_pasal_draft($pdo, $input);
+    } elseif (isset($input['pasal_id']) && (isset($input['nomor_label']) || isset($input['judul_pasal'])) && !isset($input['urutan'])) {
+        $result = hukum_update_pasal_metadata($pdo, $input);
+    } elseif (isset($input['pasal_id'])) {
         $result = hukum_create_pasal_draft($pdo, $input);
     } else {
         $result = hukum_create_pasal($pdo, $input);

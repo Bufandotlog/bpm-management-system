@@ -77,8 +77,8 @@ function hukum_review_preview_pasals(PDO $pdo, int $stagingId): array
         $snapshotCountStmt->execute([$baseCommitId, $documentId]);
         $hasBaseSnapshot = (int) $snapshotCountStmt->fetchColumn() > 0;
         $baseStmt = $pdo->prepare(
-            'SELECT gs.pasal_id, gs.pasal_version_id, gs.nomor_label AS snapshot_nomor_label,
-                    p.dokumen_id, p.bab_id, p.judul_pasal, p.urutan,
+            'SELECT gs.pasal_id, gs.pasal_version_id, gs.nomor_label AS snapshot_nomor_label, gs.payload_json,
+                    p.dokumen_id, p.bab_id, p.judul_pasal AS current_judul_pasal, p.urutan,
                     b.nomor_label AS bab_nomor_label, b.judul_bab, b.urutan AS bab_urutan,
                     pv.isi
              FROM hukum_graph_snapshot gs
@@ -91,6 +91,9 @@ function hukum_review_preview_pasals(PDO $pdo, int $stagingId): array
         $baseStmt->execute([$baseCommitId, $documentId]);
         foreach ($baseStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $pasalId = (int) $row['pasal_id'];
+            $payload = json_decode((string) ($row['payload_json'] ?? '{}'), true);
+            $snapshotJudulPasal = is_array($payload) && isset($payload['judul_pasal']) ? $payload['judul_pasal'] : ($row['current_judul_pasal'] ?? '');
+            
             $basePasals[$pasalId] = [
                 'pasal_id' => $pasalId,
                 'bab_id' => $row['bab_id'] !== null ? (int) $row['bab_id'] : null,
@@ -98,7 +101,9 @@ function hukum_review_preview_pasals(PDO $pdo, int $stagingId): array
                 'bab_judul' => $row['judul_bab'],
                 'bab_urutan' => (int) ($row['bab_urutan'] ?? 0),
                 'nomor_label' => $row['snapshot_nomor_label'] ?? '',
-                'judul_pasal' => $row['judul_pasal'] ?? '',
+                'judul_pasal' => $snapshotJudulPasal,
+                'base_nomor_label' => $row['snapshot_nomor_label'] ?? '',
+                'base_judul_pasal' => $snapshotJudulPasal,
                 'urutan' => (int) $row['urutan'],
                 'before' => $row['pasal_version_id'] !== null && $row['isi'] !== null
                     ? [
@@ -136,6 +141,8 @@ function hukum_review_preview_pasals(PDO $pdo, int $stagingId): array
                 'bab_urutan' => (int) ($row['bab_urutan'] ?? 0),
                 'nomor_label' => $row['nomor_label'],
                 'judul_pasal' => $row['judul_pasal'] ?? '',
+                'base_nomor_label' => $row['nomor_label'],
+                'base_judul_pasal' => $row['judul_pasal'] ?? '',
                 'urutan' => (int) $row['urutan'],
                 'before' => [
                     'versi_id' => (int) $row['pasal_version_id'],
@@ -165,6 +172,13 @@ function hukum_review_preview_pasals(PDO $pdo, int $stagingId): array
             'pasal_id' => $pasalId,
             'before' => null,
         ];
+
+        // Carry base metadata into 'before' so frontend can diff nomor/judul
+        if (isset($pasal['before']) && $pasal['before'] !== null) {
+            $pasal['before']['nomor_label'] = $pasal['base_nomor_label'] ?? $row['nomor_label'];
+            $pasal['before']['judul_pasal'] = $pasal['base_judul_pasal'] ?? $row['judul_pasal'] ?? '';
+        }
+
         $pasal['bab_id'] = $row['bab_id'] !== null ? (int) $row['bab_id'] : null;
         $pasal['bab_nomor_label'] = $row['bab_nomor_label'];
         $pasal['bab_judul'] = $row['judul_bab'];
@@ -175,6 +189,8 @@ function hukum_review_preview_pasals(PDO $pdo, int $stagingId): array
         $pasal['after'] = [
             'versi_id' => (int) $row['pasal_version_id'],
             'isi' => hukum_review_preview_decode_content((string) $row['isi']),
+            'nomor_label' => $row['nomor_label'],
+            'judul_pasal' => $row['judul_pasal'] ?? '',
         ];
         $pasal['staged'] = true;
         $pasals[$pasalId] = $pasal;
@@ -225,16 +241,24 @@ function hukum_review_preview_pasals(PDO $pdo, int $stagingId): array
 
     foreach ($pasals as &$pasal) {
         $pasal['after'] = !empty($pasal['removed']) ? null : ($pasal['after'] ?? $pasal['before']);
-        $pasal['change'] = !empty($pasal['removed'])
-            ? 'removed'
-            : (!$pasal['staged']
-            ? 'unchanged'
-            : ($pasal['before'] === null
-                ? 'added'
-                : ($pasal['before']['versi_id'] === $pasal['after']['versi_id']
-                    ? 'unchanged'
-                    : 'modified')));
-        unset($pasal['staged']);
+        if (!empty($pasal['removed'])) {
+            $pasal['change'] = 'removed';
+        } elseif (!$pasal['staged']) {
+            $pasal['change'] = 'unchanged';
+        } elseif ($pasal['before'] === null) {
+            $pasal['change'] = 'added';
+        } else {
+            $versionChanged = $pasal['before']['versi_id'] !== $pasal['after']['versi_id'];
+            $metadataChanged = false;
+            if (isset($pasal['base_nomor_label']) && (string) $pasal['base_nomor_label'] !== (string) $pasal['nomor_label']) {
+                $metadataChanged = true;
+            }
+            if (isset($pasal['base_judul_pasal']) && (string) $pasal['base_judul_pasal'] !== (string) $pasal['judul_pasal']) {
+                $metadataChanged = true;
+            }
+            $pasal['change'] = ($versionChanged || $metadataChanged) ? 'modified' : 'unchanged';
+        }
+        unset($pasal['staged'], $pasal['base_nomor_label'], $pasal['base_judul_pasal']);
     }
     unset($pasal);
 

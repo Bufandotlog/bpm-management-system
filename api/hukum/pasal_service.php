@@ -64,6 +64,60 @@ function hukum_create_pasal(PDO $pdo, array $input): array
     return ['id' => $id];
 }
 
+function hukum_update_pasal_metadata(PDO $pdo, array $input): array
+{
+    hukum_require_service_permission('hukum.pasal.update');
+    $pasalId = (int) ($input['pasal_id'] ?? 0);
+    $pasal = dbFetchOne(
+        'SELECT p.id, p.dokumen_id, p.nomor_label, p.judul_pasal, d.periode_id
+         FROM hukum_pasal p JOIN hukum_dokumen d ON d.id = p.dokumen_id WHERE p.id = ?',
+        [$pasalId]
+    );
+    if (!$pasal) {
+        throw new RuntimeException('Pasal tidak ditemukan.', 404);
+    }
+    hukum_require_service_period((int) $pasal['periode_id']);
+
+    $workspaceId = (int) ($input['workspace_id'] ?? 0);
+    $workspace = dbFetchOne('SELECT id, dokumen_id, status FROM hukum_workspace WHERE id = ?', [$workspaceId]);
+    if (!$workspace || (int) $workspace['dokumen_id'] !== (int) $pasal['dokumen_id']
+        || !in_array((string) $workspace['status'], ['aktif', 'diajukan'], true)) {
+        throw new RuntimeException('Workspace tidak valid untuk pasal ini.', 409);
+    }
+
+    $newLabel = isset($input['nomor_label']) ? trim((string) $input['nomor_label']) : null;
+    $newJudul = isset($input['judul_pasal']) ? trim((string) $input['judul_pasal']) : null;
+
+    $changed = false;
+    $oldValues = ['nomor_label' => $pasal['nomor_label'], 'judul_pasal' => $pasal['judul_pasal']];
+
+    if ($newLabel !== null && $newLabel !== '' && $newLabel !== (string) $pasal['nomor_label']) {
+        $duplicate = dbFetchOne(
+            'SELECT id FROM hukum_pasal WHERE dokumen_id = ? AND nomor_label = ? AND id <> ? LIMIT 1',
+            [(int) $pasal['dokumen_id'], $newLabel, $pasalId]
+        );
+        if ($duplicate) {
+            throw new RuntimeException("Nomor pasal '{$newLabel}' sudah digunakan dalam dokumen ini.", 409);
+        }
+        $pdo->prepare('UPDATE hukum_pasal SET nomor_label = ? WHERE id = ?')->execute([$newLabel, $pasalId]);
+        $changed = true;
+    }
+
+    if ($newJudul !== null && $newJudul !== (string) ($pasal['judul_pasal'] ?? '')) {
+        $pdo->prepare('UPDATE hukum_pasal SET judul_pasal = ? WHERE id = ?')->execute([$newJudul ?: null, $pasalId]);
+        $changed = true;
+    }
+
+    if ($changed) {
+        hukum_audit($pdo, 'hukum_pasal', $pasalId, 'update_metadata', $oldValues, [
+            'nomor_label' => $newLabel ?? $pasal['nomor_label'],
+            'judul_pasal' => $newJudul ?? $pasal['judul_pasal'],
+        ]);
+    }
+
+    return ['id' => $pasalId, 'updated' => $changed];
+}
+
 function hukum_create_pasal_draft(PDO $pdo, array $input): array
 {
     hukum_require_service_permission('hukum.pasal.update');
@@ -94,12 +148,56 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
     $canonical = hukum_canonical_json($contents);
     $hash = hash('sha256', $canonical);
     $existing = dbFetchOne(
-        'SELECT id, workspace_id, status FROM hukum_pasal_versi WHERE pasal_id = ? AND hash_konten = ? LIMIT 1',
+        'SELECT id, workspace_id, status, rejected_at, rejected_by, rejection_reason
+         FROM hukum_pasal_versi WHERE pasal_id = ? AND hash_konten = ? LIMIT 1',
         [$pasalId, $hash]
     );
     if ($existing !== null) {
-        if ((int) $existing['workspace_id'] !== $workspaceId
-            || !in_array((string) $existing['status'], ['draft', 'staged'], true)) {
+        if ((string) $existing['status'] === 'committed') {
+            return [
+                'id' => (int) $existing['id'],
+                'hash_konten' => $hash,
+                'latest_version_id' => (int) $existing['id'],
+                'reused' => true,
+                'status' => 'committed',
+            ];
+        }
+        if ((string) $existing['status'] === 'rejected') {
+            $updated = $pdo->prepare(
+                'UPDATE hukum_pasal_versi SET status = \'draft\', workspace_id = ? WHERE id = ? AND status = \'rejected\''
+            );
+            $updated->execute([$workspaceId, (int) $existing['id']]);
+            if ($updated->rowCount() !== 1) {
+                throw new RuntimeException('Status versi berubah. Muat ulang dokumen lalu coba lagi.', 409);
+            }
+            hukum_audit($pdo, 'hukum_pasal_versi', (int) $existing['id'], 'reopen_rejected_draft', [
+                'status' => 'rejected',
+                'workspace_id' => $existing['workspace_id'],
+                'rejected_at' => $existing['rejected_at'],
+                'rejected_by' => $existing['rejected_by'] !== null ? (int) $existing['rejected_by'] : null,
+                'rejection_reason' => $existing['rejection_reason'],
+            ], [
+                'status' => 'draft',
+                'workspace_id' => $workspaceId,
+                'rejection_history_preserved' => true,
+            ]);
+            hukum_sync_inline_references($pdo, $pasalId, (int) $pasal['dokumen_id'], $contents);
+            return [
+                'id' => (int) $existing['id'],
+                'hash_konten' => $hash,
+                'latest_version_id' => (int) $existing['id'],
+                'reused' => true,
+                'reopened' => true,
+                'status' => 'draft',
+            ];
+        }
+        if ((int) $existing['workspace_id'] !== $workspaceId) {
+            throw new RuntimeException(
+                'Konten identik sudah tercatat pada versi dengan status ' . (string) $existing['status'] . '.',
+                409
+            );
+        }
+        if (!in_array((string) $existing['status'], ['draft', 'staged'], true)) {
             throw new RuntimeException(
                 'Konten identik sudah tercatat pada versi dengan status ' . (string) $existing['status'] . '.',
                 409
@@ -111,6 +209,7 @@ function hukum_create_pasal_draft(PDO $pdo, array $input): array
             'hash_konten' => $hash,
             'latest_version_id' => (int) $existing['id'],
             'reused' => true,
+            'status' => (string) $existing['status'],
         ];
     }
 

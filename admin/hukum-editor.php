@@ -578,20 +578,40 @@ async function persistStructure() {
         const bab = babs[bi]; const babNode = babNodes[bi]; let serverBab = bab.id ? state.babs.find(item => Number(item.id) === bab.id) : null;
         if (!serverBab) {
             const result = await request('bab.php', {method:'POST', body:JSON.stringify({dokumen_id:state.documentId, workspace_id:state.workspace.id, nomor_label:bab.nomor, judul_bab:bab.judul, urutan:state.babs.length + bi + 1})});
-            serverBab = {id:result.id, nomor_label:bab.nomor};
+            serverBab = {id:result.id, nomor_label:bab.nomor, judul_bab:bab.judul};
             state.babs.push(serverBab);
             bab.id = Number(result.id);
             babNode.dataset.babId = String(result.id);
+        } else {
+            const oldNomor = String(serverBab.nomor_label || '').trim();
+            const oldJudul = String(serverBab.judul_bab || '').trim();
+            const newNomor = bab.nomor.trim();
+            const newJudul = bab.judul.trim();
+            if (oldNomor !== newNomor || oldJudul !== newJudul) {
+                await request('bab.php', {method:'POST', body:JSON.stringify({bab_id:serverBab.id, workspace_id:state.workspace.id, nomor_label:newNomor, judul_bab:newJudul})});
+                serverBab.nomor_label = newNomor;
+                serverBab.judul_bab = newJudul;
+            }
         }
         for (let pi = 0; pi < bab.pasal.length; pi++) {
             const pasal = bab.pasal[pi]; const pasalNode = babNode.querySelectorAll(':scope > .pasal-list > .hukum-pasal-card')[pi]; let serverPasal = pasal.id ? state.pasals.find(item => Number(item.id) === pasal.id) : null;
             if (!serverPasal) {
                 const result = await request('pasal.php', {method:'POST', body:JSON.stringify({dokumen_id:state.documentId, workspace_id:state.workspace.id, bab_id:serverBab.id, nomor_label:pasal.nomor, judul_pasal:pasal.judul, urutan:nextPasalOrder})});
-                serverPasal = {id:result.id, dokumen_id:state.documentId, bab_id:serverBab.id, nomor_label:pasal.nomor, urutan:nextPasalOrder};
+                serverPasal = {id:result.id, dokumen_id:state.documentId, bab_id:serverBab.id, nomor_label:pasal.nomor, judul_pasal:pasal.judul, urutan:nextPasalOrder};
                 state.pasals.push(serverPasal);
                 pasal.id = Number(result.id);
                 pasalNode.dataset.pasalId = String(result.id);
                 nextPasalOrder++;
+            } else {
+                const oldLabel = String(serverPasal.nomor_label || '').trim();
+                const oldJudul = String(serverPasal.judul_pasal || '').trim();
+                const newLabel = pasal.nomor.trim();
+                const newJudul = pasal.judul.trim();
+                if (oldLabel !== newLabel || oldJudul !== newJudul) {
+                    await request('pasal.php', {method:'POST', body:JSON.stringify({pasal_id:serverPasal.id, workspace_id:state.workspace.id, nomor_label:newLabel, judul_pasal:newJudul})});
+                    serverPasal.nomor_label = newLabel;
+                    serverPasal.judul_pasal = newJudul;
+                }
             }
             const isi = {teks_utama:pasal.pembuka, penjelasan:pasal.penjelasan, ayat:pasal.ayat.map(ayat => ({nomor:ayat.nomor, teks:ayat.teks, poin:ayat.poin.map(point => ({nomor:point.nomor, teks:point.teks}))}))};
             const result = await request('pasal.php', {method:'POST', body:JSON.stringify({pasal_id:serverPasal.id, workspace_id:state.workspace.id, isi})}); versionIds.push(Number(result.latest_version_id || result.id));

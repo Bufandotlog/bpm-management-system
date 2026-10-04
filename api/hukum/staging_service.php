@@ -51,13 +51,36 @@ function hukum_staging_validate_submission(PDO $pdo, int $workspaceId, array $ve
     $pasalIds = [];
     foreach ($versionIds as $versionId) {
         $versionStmt = $pdo->prepare(
-            'SELECT pv.id, pv.pasal_id, pv.isi, pv.status, pv.hash_konten, p.dokumen_id, p.nomor_label
+            'SELECT pv.id, pv.pasal_id, pv.isi, pv.status, pv.hash_konten, p.dokumen_id, p.nomor_label, pv.workspace_id
              FROM hukum_pasal_versi pv JOIN hukum_pasal p ON p.id = pv.pasal_id
-             WHERE pv.id = ? AND pv.workspace_id = ? FOR UPDATE',
+             WHERE pv.id = ? FOR UPDATE',
         );
-        $versionStmt->execute([$versionId, $workspaceId]);
+        $versionStmt->execute([$versionId]);
         $version = $versionStmt->fetch(PDO::FETCH_ASSOC);
-        if (!$version || (string) $version['status'] !== 'draft') {
+        
+        if (!$version) {
+            throw new RuntimeException("Versi {$versionId} tidak valid untuk staging.", 409);
+        }
+
+        if ((string) $version['status'] === 'committed') {
+            // Committed version: content unchanged but may have metadata changes.
+            // Include in staging so review_preview can detect name/title changes.
+            $decoded = json_decode((string) $version['isi'], true);
+            if (is_array($decoded)) {
+                $versions[] = [
+                    'id' => (int) $version['id'],
+                    'pasal_id' => (int) $version['pasal_id'],
+                    'hash_konten' => (string) $version['hash_konten'],
+                    'isi' => $decoded,
+                    'nomor_label' => (string) $version['nomor_label'],
+                    'committed_reuse' => true,
+                ];
+            }
+            $pasalIds[] = (int) $version['pasal_id'];
+            continue;
+        }
+        
+        if ((string) $version['status'] !== 'draft' || (int) $version['workspace_id'] !== $workspaceId) {
             throw new RuntimeException("Versi {$versionId} tidak valid untuk staging.", 409);
         }
         if ((int) $version['dokumen_id'] !== $documentId) {
@@ -170,11 +193,14 @@ function hukum_submit_staging(PDO $pdo, int $workspaceId, array $versionIds, ?in
         foreach (['komisi_i', 'admin'] as $role) {
             $approval->execute([$stagingId, $actorId, $role]);
         }
-        $link = $pdo->prepare('INSERT INTO hukum_staging_versi (staging_id, pasal_versi_id) VALUES (?, ?)');
-        $mark = $pdo->prepare('UPDATE hukum_pasal_versi SET status = \'staged\' WHERE id = ?');
+        $link = $pdo->prepare('INSERT IGNORE INTO hukum_staging_versi (staging_id, pasal_versi_id) VALUES (?, ?)');
+        $mark = $pdo->prepare('UPDATE hukum_pasal_versi SET status = \'staged\' WHERE id = ? AND status = \'draft\'');
         foreach ($submission['versions'] as $version) {
             $link->execute([$stagingId, $version['id']]);
-            $mark->execute([$version['id']]);
+            // Never touch committed versions - only mark fresh drafts as staged
+            if (empty($version['committed_reuse'])) {
+                $mark->execute([$version['id']]);
+            }
         }
         hukum_deletion_copy_to_staging($pdo, $workspaceId, $stagingId, (int) $submission['dokumen_id']);
         if (!empty($submission['impact']['relations'])) {

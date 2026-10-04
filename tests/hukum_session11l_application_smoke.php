@@ -58,6 +58,17 @@ $duplicateDraft = hukum_create_pasal_draft($pdo, [
 if ((int) $duplicateDraft['id'] !== (int) $draft['id'] || empty($duplicateDraft['reused'])) {
     throw new RuntimeException('Saving identical draft content should reuse the existing version.');
 }
+$pdo->prepare(
+    'UPDATE hukum_pasal_versi SET status = \'rejected\', rejected_at = CURRENT_TIMESTAMP, rejection_reason = ? WHERE id = ?'
+)->execute(['Retry with the same content', (int) $draft['id']]);
+$reopenedDraft = hukum_create_pasal_draft($pdo, [
+    'pasal_id' => $pasal['id'],
+    'workspace_id' => $workspace['id'],
+    'isi' => ['blocks' => [['type' => 'paragraph', 'text' => 'Draft valid']]],
+]);
+if ((int) $reopenedDraft['id'] !== (int) $draft['id'] || empty($reopenedDraft['reopened'])) {
+    throw new RuntimeException('A rejected version should reopen when identical content is saved again.');
+}
 
 if (!$pdo->query('SELECT id FROM hukum_dokumen WHERE id = ' . $documentId)->fetchColumn()
     || !$pdo->query('SELECT id FROM hukum_bab WHERE id = ' . (int) $bab['id'])->fetchColumn()

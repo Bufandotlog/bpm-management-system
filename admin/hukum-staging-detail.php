@@ -97,8 +97,8 @@ function reviewNotice(message, type = 'success') {
     node.className = 'hukum-notice show ' + type;
 }
 
-function reviewContentLines(content) {
-    if (!content || typeof content !== 'object') return [];
+function reviewContentLines(data) {
+    if (!data || typeof data !== 'object') return [];
     const lines = [];
     const appendText = (label, value) => {
         const text = String(value ?? '').trim();
@@ -106,14 +106,21 @@ function reviewContentLines(content) {
         const parts = text.split(/\r?\n/);
         parts.forEach((part, index) => lines.push((index === 0 ? label : '  ') + part));
     };
-    appendText('Isi utama: ', content.teks_utama || content.teks || content.text);
-    appendText('Penjelasan: ', content.penjelasan);
-    (Array.isArray(content.ayat) ? content.ayat : []).forEach((ayat, index) => {
-        appendText('Ayat ' + String(ayat.nomor || index + 1) + ': ', ayat.teks);
-        (Array.isArray(ayat.poin) ? ayat.poin : []).forEach((poin, pointIndex) => {
-            appendText('  Poin ' + String(poin.nomor || pointIndex + 1) + ': ', poin.teks);
+    // Include metadata (nomor/judul) so renames are visible in diff
+    appendText('Nomor: ', data.nomor_label);
+    appendText('Judul: ', data.judul_pasal);
+    
+    const content = data.isi || data;
+    if (content && typeof content === 'object') {
+        appendText('Isi utama: ', content.teks_utama || content.teks || content.text);
+        appendText('Penjelasan: ', content.penjelasan);
+        (Array.isArray(content.ayat) ? content.ayat : []).forEach((ayat, index) => {
+            appendText('Ayat ' + String(ayat.nomor || index + 1) + ': ', ayat.teks);
+            (Array.isArray(ayat.poin) ? ayat.poin : []).forEach((poin, pointIndex) => {
+                appendText('  Poin ' + String(poin.nomor || pointIndex + 1) + ': ', poin.teks);
+            });
         });
-    });
+    }
     if (!lines.length) {
         return JSON.stringify(content, null, 2).split(/\r?\n/);
     }
@@ -121,8 +128,8 @@ function reviewContentLines(content) {
 }
 
 function reviewDiff(before, after, change) {
-    const oldLines = before ? reviewContentLines(before.isi) : [];
-    const newLines = after ? reviewContentLines(after.isi) : [];
+    const oldLines = before ? reviewContentLines(before) : [];
+    const newLines = after ? reviewContentLines(after) : [];
     if (change === 'unchanged') {
         return newLines.map(line => ({type:'unchanged', text:line}));
     }
@@ -167,7 +174,7 @@ function renderDocument(documentData) {
     const html = pasals.map(pasal => {
         counts[pasal.change] = (counts[pasal.change] || 0) + 1;
         const babTitle = pasal.bab_nomor_label
-            ? `BAB ${hukumEscape(pasal.bab_nomor_label)}${pasal.bab_judul ? ' — ' + hukumEscape(pasal.bab_judul) : ''}`
+            ? `${hukumEscape(pasal.bab_nomor_label)}${pasal.bab_judul ? ' — ' + hukumEscape(pasal.bab_judul) : ''}`
             : 'Bagian tanpa BAB';
         const stateLabel = pasal.change === 'added' ? 'Ditambahkan'
             : pasal.change === 'removed' ? 'Akan dihapus'
@@ -182,7 +189,7 @@ function renderDocument(documentData) {
         return `<article class="hukum-review-pasal ${pasal.change}">
             <div class="hukum-review-bab">${babTitle}</div>
             <div class="hukum-review-pasal-heading">
-                <h3>Pasal ${hukumEscape(pasal.nomor_label)}${pasal.judul_pasal ? ' — ' + hukumEscape(pasal.judul_pasal) : ''}</h3>
+                <h3>${hukumEscape(pasal.nomor_label)}${pasal.judul_pasal ? ' — ' + hukumEscape(pasal.judul_pasal) : ''}</h3>
                 <span class="hukum-diff-legend ${pasal.change}">${stateLabel}</span>
             </div>
             ${deletionReason}
@@ -192,7 +199,7 @@ function renderDocument(documentData) {
     const deletedBabHtml = (documentData.deleted_babs || []).map(entry => {
         const bab = entry.bab || {};
         return `<article class="hukum-review-pasal removed">
-            <div class="hukum-review-bab">BAB ${hukumEscape(bab.nomor_label || '')}</div>
+            <div class="hukum-review-bab">${hukumEscape(bab.nomor_label || '')}</div>
             <div class="hukum-review-pasal-heading"><h3>${hukumEscape(bab.judul_bab || 'BAB')}</h3><span class="hukum-diff-legend removed">BAB akan dihapus</span></div>
             <p class="hukum-review-deletion-reason"><strong>Alasan penghapusan:</strong> ${hukumEscape(entry.reason)}</p>
         </article>`;
