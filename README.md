@@ -5,7 +5,7 @@
 [![Secondary DB](https://img.shields.io/badge/Secondary-PostgreSQL%2012%2B-blue.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Sistem informasi manajemen organisasi Badan Eksekutif Mahasiswa (BPM) yang dirancang untuk mengotomatisasi administrasi surat-menyurat, pengarsipan rundown acara, serta sinkronisasi logistik inventaris secara cerdas dan responsif.
+Sistem informasi manajemen organisasi Badan Perwakilan Mahasiswa (BPM) yang dirancang untuk mengotomatisasi administrasi surat-menyurat, pengarsipan rundown acara, serta sinkronisasi logistik inventaris secara cerdas dan responsif.
 
 ---
 

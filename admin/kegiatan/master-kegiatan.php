@@ -957,8 +957,8 @@ $list_kegiatan = dbFetchAll("
                                 <input type="text" id="input_pelaksana" name="pelaksana" class="floating-input tpl-floating-input" placeholder=" " value="<?php echo htmlspecialchars($edit_data['pelaksana'] ?? ''); ?>" required autocomplete="off" onfocus="showTplResults('pelaksana')" onkeyup="filterTpl('pelaksana')">
                                 <label for="input_pelaksana" class="floating-label tpl-floating-label">Menteri / Pelaksana</label>
                                 <div class="tpl-results" id="results-pelaksana">
-                                    <div class="tpl-item" onclick='selectPelaksana("Badan Eksekutif Mahasiswa (BPM)")'>
-                                        <div class="tpl-item-label">Badan Eksekutif Mahasiswa (BPM)</div>
+                                    <div class="tpl-item" onclick='selectPelaksana("Badan Perwakilan Mahasiswa (BPM)")'>
+                                        <div class="tpl-item-label">Badan Perwakilan Mahasiswa (BPM)</div>
                                     </div>
                                     <div class="tpl-item" onclick='selectPelaksana("Badan Pengurus Harian (BPH) BPM")'>
                                         <div class="tpl-item-label">Badan Pengurus Harian (BPH) BPM</div>
@@ -1564,7 +1564,7 @@ function selectPelaksana(nama) {
     let options = [];
     if (prokerMap[nama]) {
         options = prokerMap[nama];
-    } else if (nama === 'Badan Eksekutif Mahasiswa (BPM)' || nama === 'Badan Pengurus Harian (BPH) BPM') {
+    } else if (nama === 'Badan Perwakilan Mahasiswa (BPM)' || nama === 'Badan Pengurus Harian (BPH) BPM') {
         options = []; // Usually no specific proker mapped here, but can add if needed
     }
     

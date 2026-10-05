@@ -465,7 +465,7 @@ if (!function_exists('cleanPointPrefix')) {
             <!-- IV. EVALUASI PENCAPAIAN VISI DAN MISI (Mubesma Only) -->
             <?php if ($is_mubesma): ?>
                 <div class="section-header">IV. EVALUASI PENCAPAIAN VISI DAN MISI</div>
-                <div class="subsection-header" style="margin-left: 0.5cm;">Visi dan Misi Badan Eksekutif Mahasiswa INSTBUNAS Majalengka</div>
+                <div class="subsection-header" style="margin-left: 0.5cm;">Visi dan Misi Badan Perwakilan Mahasiswa INSTBUNAS Majalengka</div>
                 
                 <div class="subsection-header">A. Visi</div>
                 <p class="narrative-p" style="text-indent: 0; margin-left: 1cm;"><?php echo htmlspecialchars($visi ?: '(Belum diatur)'); ?></p>

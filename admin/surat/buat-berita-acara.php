@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $kolaborasi_instbunas = isset($_POST['kolaborasi_instbunas']) ? '1' : '0';
         
         if ($pelaksana_tipe === 'BPM') {
-            $base_pelaksana = 'Badan Eksekutif Mahasiswa (BPM)';
+            $base_pelaksana = 'Badan Perwakilan Mahasiswa (BPM)';
         } elseif ($pelaksana_tipe === 'BPH') {
             $base_pelaksana = 'Badan Pengurus Harian (BPH) BPM';
         } else {
@@ -476,7 +476,7 @@ $def = [
     'warek_nuptk' => '7756762662200002',
     'use_ttd_warek' => '1',
     'use_cap_warek' => '1',
-    'pelaksana_kegiatan' => 'Badan Eksekutif Mahasiswa (BPM) & INSTBUNAS Majalengka',
+    'pelaksana_kegiatan' => 'Badan Perwakilan Mahasiswa (BPM) & INSTBUNAS Majalengka',
     'tujuan' => [
         'Meningkatkan tali persaudaraan antar mahasiswa.',
         'Meningkatkan jiwa kepemimpinan dan rasa tanggung jawab.'
@@ -513,7 +513,7 @@ if (!isset($edit_data['pelaksana_tipe']) && isset($edit_data['pelaksana_kegiatan
         $base = trim($pk);
     }
     
-    if ($base === 'Badan Eksekutif Mahasiswa (BPM)') {
+    if ($base === 'Badan Perwakilan Mahasiswa (BPM)' || $base === 'Badan Eksekutif Mahasiswa (BPM)') {
         $pelaksana_tipe_val = 'BPM';
     } elseif ($base === 'Badan Pengurus Harian (BPH) BPM') {
         $pelaksana_tipe_val = 'BPH';
@@ -1201,7 +1201,7 @@ if (!empty($tanggal_kegiatan_val)) {
                             <input type="text" id="pelaksana_tipe_input" name="pelaksana_tipe" class="tpl-search-input" placeholder="Pilih Pelaksana Kegiatan..." value="<?php echo htmlspecialchars($pelaksana_tipe_val); ?>" required readonly onclick="showTplResults('pelaksana')" style="cursor:pointer; background-color: var(--input-bg);">
                             <div class="tpl-results" id="results-pelaksana">
                                 <div class="tpl-item" onclick="selectPelaksana('BPM')">
-                                    <div class="tpl-item-label">Badan Eksekutif Mahasiswa (BPM)</div>
+                                    <div class="tpl-item-label">Badan Perwakilan Mahasiswa (BPM)</div>
                                 </div>
                                 <div class="tpl-item" onclick="selectPelaksana('BPH')">
                                     <div class="tpl-item-label">Badan Pengurus Harian (BPH)</div>

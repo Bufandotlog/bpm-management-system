@@ -426,7 +426,7 @@ function format_paragraphs($text) {
                                 telah dilaksanakan kegiatan <?php echo htmlspecialchars($ba['nama_kegiatan'] ?? ''); ?> 
                                 dengan tema <i>"<?php echo htmlspecialchars($konten['tema_kegiatan'] ?? ''); ?>"</i>, 
                                 yang berlangsung dari pukul <?php echo htmlspecialchars($konten['waktu_mulai'] ?? ''); ?> WIB hingga selesai. 
-                                Kegiatan ini diselenggarakan oleh Badan Eksekutif Mahasiswa (BPM) bekerja sama dengan pihak rektorat Institut Budi Utomo Nasional Majalengka. 
+                                Kegiatan ini diselenggarakan oleh Badan Perwakilan Mahasiswa (BPM) bekerja sama dengan pihak rektorat Institut Budi Utomo Nasional Majalengka.
                                 Adapun rincian kegiatan yang telah dilaksanakan adalah:
                             </p>
 
@@ -583,7 +583,7 @@ function format_paragraphs($text) {
                             <tr>
                                 <td class="label-col">Pelaksana Kegiatan</td>
                                 <td class="colon-col">:</td>
-                                <td><?php echo htmlspecialchars($konten['pelaksana_kegiatan'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars(str_replace('Badan Eksekutif Mahasiswa (BPM)', 'Badan Perwakilan Mahasiswa (BPM)', $konten['pelaksana_kegiatan'] ?? '')); ?></td>
                             </tr>
                             <?php if (!empty($konten['penanggung_jawab'])): ?>
                             <tr>
