@@ -464,7 +464,7 @@ function format_paragraphs($text) {
                                     </div>
                                     
                                     <?php if (!empty($pengaturan['cap_presma_image']) && ($konten['use_cap_presma'] ?? '1') === '1'): ?>
-                                        <img src="<?php echo uploadUrl($pengaturan['cap_presma_image']); ?>" class="sig-stamp" style="bottom: 25px; left: 18%; max-width: 120px; max-height: 100px;">
+                                        <img src="<?php echo uploadUrl($pengaturan['cap_presma_image']); ?>" class="sig-stamp" style="bottom: 25px; left: 18%; max-width: 220px; max-height: 170px;">
                                     <?php endif; ?>
                                     
                                     <?php if (($konten['use_ttd_presma'] ?? '1') === '1'): ?>
