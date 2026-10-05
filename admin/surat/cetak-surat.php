@@ -756,7 +756,7 @@ if ($is_pdf_mode) {
                         <td style="position:relative; z-index:0;">
                             Ketua BPM
                             <?php if(!empty($cap_bpm_img) && $use_cap_bpm_flag): ?>
-                                <img src="<?php echo uploadUrl($cap_bpm_img); ?>" style="position:absolute; bottom:-25px; left:50%; transform:translateX(-50%); max-width:190px; max-height:145px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:-2;">
+                                <img src="<?php echo uploadUrl($cap_bpm_img); ?>" style="position:absolute; bottom:-25px; left:45%; transform:translateX(-50%); max-width:190px; max-height:145px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:-2;">
                             <?php endif; ?>
                             <?php if(!empty($ttd_bpm_img) && $use_ttd_bpm_flag): ?>
                                 <img src="<?php echo uploadUrl($ttd_bpm_img); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:100px; mix-blend-mode:multiply; pointer-events:none; z-index:-1;">
@@ -784,7 +784,7 @@ if ($is_pdf_mode) {
                             Ketua BPM<br>
                             <span class="ttd-jabatan">INSTBUNAS Majalengka</span>
                             <?php if(!empty($cap_bpm_img) && $use_cap_bpm_flag): ?>
-                                <img src="<?php echo uploadUrl($cap_bpm_img); ?>" style="position:absolute; bottom:-25px; left:50%; transform:translateX(-50%); max-width:190px; max-height:145px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:-2;">
+                                <img src="<?php echo uploadUrl($cap_bpm_img); ?>" style="position:absolute; bottom:-25px; left:45%; transform:translateX(-50%); max-width:190px; max-height:145px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:-2;">
                             <?php endif; ?>
                             <?php if(!empty($ttd_bpm_img) && $use_ttd_bpm_flag): ?>
                                 <img src="<?php echo uploadUrl($ttd_bpm_img); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:100px; mix-blend-mode:multiply; pointer-events:none; z-index:-1;">
@@ -868,7 +868,7 @@ if ($is_pdf_mode) {
                             Ketua BPM<br>
                             <span class="ttd-jabatan">INSTBUNAS Majalengka</span>
                             <?php if(!empty($cap_bpm_img) && $use_cap_bpm_flag): ?>
-                                <img src="<?php echo uploadUrl($cap_bpm_img); ?>" style="position:absolute; bottom:-25px; left:50%; transform:translateX(-50%); max-width:190px; max-height:145px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:-2;">
+                                <img src="<?php echo uploadUrl($cap_bpm_img); ?>" style="position:absolute; bottom:-25px; left:45%; transform:translateX(-50%); max-width:190px; max-height:145px; mix-blend-mode:multiply; pointer-events:none; opacity:0.85; z-index:-2;">
                             <?php endif; ?>
                             <?php if(!empty($ttd_bpm_img) && $use_ttd_bpm_flag): ?>
                                 <img src="<?php echo uploadUrl($ttd_bpm_img); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:100px; mix-blend-mode:multiply; pointer-events:none; z-index:-1;">
