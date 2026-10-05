@@ -337,13 +337,21 @@ if ($is_pdf_mode) {
 
         @media print {
             body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
+            .page-container {
+                display: block;
+                width: auto;
+                overflow: visible;
+                padding: 0;
+                background: white;
+            }
             .page { 
                 margin: 0 !important; 
                 padding: 10mm 15mm; 
+                box-sizing: content-box !important;
                 border: none !important; 
                 border-radius: 0 !important; 
-                width: 210mm; 
-                min-height: 295mm; /* Mengurangi toleransi PDF driver */
+                width: 180mm;
+                min-height: 277mm;
                 box-shadow: none !important; 
                 outline: none !important;
                 background: white !important; 
