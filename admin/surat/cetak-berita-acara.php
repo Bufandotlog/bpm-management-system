@@ -242,13 +242,6 @@ function format_paragraphs($text) {
             max-width: 150px;
             object-fit: contain;
         }
-        .sig-image-wrap.bpm-sig-wrap {
-            height: 85px;
-        }
-        .sig-image-wrap.bpm-sig-wrap img {
-            max-height: 85px;
-            max-width: 180px;
-        }
         .warek-sig-wrap {
             height: 160px;
             margin: -100px 0 -15px 0;
@@ -471,16 +464,16 @@ function format_paragraphs($text) {
                                     </div>
                                     
                                     <?php if (!empty($pengaturan['cap_presma_image']) && ($konten['use_cap_presma'] ?? '1') === '1'): ?>
-                                        <img src="<?php echo uploadUrl($pengaturan['cap_presma_image']); ?>" class="sig-stamp" style="bottom: -25px; left: 45%; transform: translateX(-50%); max-width: 190px; max-height: 145px;">
+                                        <img src="<?php echo uploadUrl($pengaturan['cap_presma_image']); ?>" class="sig-stamp" style="bottom: -35px; left: -2%; max-width: 280px; max-height: 220px;">
                                     <?php endif; ?>
-                                    
+
                                     <?php if (($konten['use_ttd_presma'] ?? '1') === '1'): ?>
                                         <?php if (!empty($pengaturan['ttd_presma_image'])): ?>
-                                            <div class="sig-image-wrap bpm-sig-wrap">
+                                            <div class="sig-image-wrap">
                                                 <img src="<?php echo uploadUrl($pengaturan['ttd_presma_image']); ?>" alt="TTD Ketua BPM">
                                             </div>
                                         <?php elseif (!empty($konten['ketua_bpm_ttd'])): ?>
-                                            <div class="sig-image-wrap bpm-sig-wrap">
+                                            <div class="sig-image-wrap">
                                                 <img src="<?php echo uploadUrl($konten['ketua_bpm_ttd']); ?>" alt="TTD Ketua BPM">
                                             </div>
                                         <?php endif; ?>
