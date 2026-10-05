@@ -1574,7 +1574,6 @@ class DrumPicker {
         this.values   = values;
         this.idx      = Math.max(0, values.indexOf(initVal));
         this.onChange = onChange;
-        this.ITEM     = 40;
         this._build();
         this._bind();
         this._render(false);
@@ -1596,7 +1595,10 @@ class DrumPicker {
         this.el.appendChild(this.inner);
     }
     _render(animate = true) {
-        const offset = -56 - this.idx * this.ITEM;
+        const selected = this.inner.querySelector(`[data-i="${this.idx}"]`);
+        const highlight = this.el.querySelector('.drum-highlight');
+        const offset = highlight.offsetTop + highlight.offsetHeight / 2
+            - selected.offsetTop - selected.offsetHeight / 2;
         this.inner.style.transition = animate ? 'transform 0.18s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none';
         this.inner.style.transform  = `translateY(${offset}px)`;
         this.inner.querySelectorAll('[data-i]').forEach(el => {
