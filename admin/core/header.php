@@ -831,7 +831,7 @@ if (isset($page_css)) {
 
             <!-- Informasi BPM (Dropdown) -->
             <?php if (in_array($admin_role, ['superadmin', 'admin', 'kominfo'])): ?>
-            <div class="sidebar-dropdown <?php echo $is_info_bpm_active ? 'active open' : ''; ?> <?php echo $admin_role === 'kominfo' ? 'mobile-nav-redundant' : ''; ?>">
+            <div class="sidebar-dropdown <?php echo $is_info_bpm_active ? 'active open' : ''; ?>">
                 <button type="button" class="sidebar-dropdown-toggle" onclick="toggleSidebarDropdown(this)">
                     <i class="fas fa-university"></i>
                     <span>Informasi BPM</span>
