@@ -34,6 +34,21 @@ hukum_set_actor_context_provider($provider);
 if (!hukum_has_permission('hukum.commit.verify') || hukum_has_permission('hukum.commit.create')) {
     throw new RuntimeException('Komisi I commit permissions are not separated from finalization.');
 }
+$kominfoActor = new HukumAuthenticatedActorContext(
+    $sourceKomisiActor->id,
+    $sourceKomisiActor->username,
+    $sourceKomisiActor->displayName,
+    'kominfo',
+    $sourceKomisiActor->periodId,
+    $sourceKomisiActor->canAccessAll,
+    'test_fixture',
+    true
+);
+hukum_set_actor_context_provider(new HukumTestActorProvider(['kominfo' => $kominfoActor], 'kominfo'));
+if (hukum_has_permission('hukum.view')) {
+    throw new RuntimeException('Kominfo must not have access to the hukum module.');
+}
+hukum_set_actor_context_provider($provider);
 if (!hukum_actor_has_technical_role_for_period('komisi_i', $technicalKomisiActor->id, $fixture['period_id'])
     || hukum_actor_has_technical_role_for_period('komisi_i', $technicalKomisiActor->id, $fixture['period_id'] + 1)
     || hukum_actor_has_technical_role_for_period('admin', $technicalKomisiActor->id, $fixture['period_id'])) {

@@ -953,8 +953,8 @@ document.addEventListener('DOMContentLoaded', function() {
         formTambah.addEventListener('submit', function(e) {
             var roleSelect = document.getElementById('roleSelect');
             var role = roleSelect ? roleSelect.value : '';
-            var selectPeriode = document.querySelector('select[name="periode_id"]');
-            var periodeId = selectPeriode ? selectPeriode.value : '';
+            var periodeInput = document.querySelector('[name="periode_id"]');
+            var periodeId = periodeInput ? periodeInput.value : '';
             
             if ((role === 'kominfo' || role === 'admin' || role === 'sekretaris' || role === 'komisi_i' || role === 'anggota') && !periodeId) {
                 e.preventDefault();

@@ -230,7 +230,6 @@ function hukum_role_permissions(): array
             'hukum.audit.view',
         ],
         'sekretaris' => ['hukum.view', 'hukum.audit.view'],
-        'kominfo' => ['hukum.view'],
         'anggota' => ['hukum.view'],
     ];
 }

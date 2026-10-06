@@ -899,7 +899,7 @@ if (isset($page_css)) {
             <?php endif; ?>
 
             <?php
-            $hukum_roles = ['superadmin', 'admin', 'sekretaris', 'komisi_i', 'kominfo', 'anggota'];
+            $hukum_roles = ['superadmin', 'admin', 'sekretaris', 'komisi_i', 'anggota'];
             $is_hukum_active = in_array($current_page, ['hukum-dashboard.php', 'hukum-editor.php', 'hukum-staging.php', 'hukum-staging-detail.php', 'hukum-commit.php'], true);
             ?>
             <?php if (in_array($admin_role, $hukum_roles, true)): ?>
