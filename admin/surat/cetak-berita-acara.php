@@ -360,7 +360,8 @@ function format_paragraphs($text) {
             $kop_exists = downloadFromS3('kop_surat.png', $kop_path);
         }
         if ($kop_exists): 
-            $kop_url = uploadUrl('kop_surat.png');
+            $v = file_exists($kop_path) ? filemtime($kop_path) : time();
+            $kop_url = uploadUrl('kop_surat.png') . '?v=' . $v;
         ?>
             <div style="margin: -20mm -20mm 15px -20mm; text-align: center;">
                 <img src="<?php echo htmlspecialchars($kop_url); ?>" style="width:100%; height:auto; display:block;" alt="Kop Surat">
