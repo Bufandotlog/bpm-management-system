@@ -328,18 +328,19 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
 
         @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 10mm 15mm; /* Margin otomatis untuk setiap lembar kertas cetak */
         }
 
         @media print {
             body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
             .page { 
                 margin: 0 !important; 
-                padding: 10mm 15mm; 
+                padding: 0 !important; /* Gunakan margin @page daripada padding */
                 border: none !important; 
                 border-radius: 0 !important; 
-                width: 210mm;
-                min-height: 295mm; /* Mengurangi toleransi PDF driver */
+                width: 100% !important;
+                min-height: 0 !important; /* Hapus min-height untuk mencegah blank page */
+                height: auto !important;
                 box-shadow: none !important; 
                 outline: none !important;
                 background: white !important; 
@@ -389,8 +390,12 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
     <?php endif; ?>
 
     <div class="page">
-        <!-- 1. KOP SURAT -->
-        <?php 
+        <table style="width: 100%; border-collapse: collapse; border: none;">
+            <thead>
+                <tr>
+                    <td style="border: none; padding: 0;">
+                        <!-- 1. KOP SURAT -->
+                        <?php 
         $kop_path = rtrim(UPLOAD_PATH, '/\\') . '/kop_surat.png';
         $kop_exists = file_exists($kop_path);
         if (!$kop_exists && ($_ENV['STORAGE_METHOD'] ?? 'local') === 's3') {
@@ -425,6 +430,12 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 </div>
             </div>
         <?php endif; ?>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="border: none; padding: 0;">
 
         <!-- 2. META SURAT -->
         <!-- 
@@ -875,6 +886,10 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             <?php endif; ?>
         </div>
 
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <!-- RENDER LAMPIRAN INTERNAL (DATA DARI DATABASE) -->
