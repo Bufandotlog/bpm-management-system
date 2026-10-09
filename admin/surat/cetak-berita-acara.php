@@ -62,7 +62,7 @@ function format_paragraphs($text) {
         .page {
             width: 210mm;
             min-height: 297mm;
-            padding: 30mm;
+            padding: 30mm 30mm 5mm 30mm;
             margin: 10mm auto;
             border: 1px solid #D3D3D3;
             border-radius: 5px;
@@ -326,7 +326,7 @@ function format_paragraphs($text) {
             body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
             .page { 
                 margin: 0 !important; 
-                padding: 30mm; 
+                padding: 30mm 30mm 5mm 30mm !important; 
                 border: none !important; 
                 border-radius: 0 !important; 
                 width: 210mm; 
