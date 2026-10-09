@@ -70,18 +70,7 @@ function format_paragraphs($text) {
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
             position: relative;
             page-break-after: always;
-        }
-        table.page-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: none;
-            background: transparent;
-        }
-        table.page-table > thead > tr > td,
-        table.page-table > tbody > tr > td {
-            border: none;
-            padding: 0;
-            background: transparent;
+            z-index: 0;
         }
         .sig-block, .meta-table, .doc-item, .section-header {
             page-break-inside: avoid;
@@ -351,7 +340,6 @@ function format_paragraphs($text) {
                 page-break-after: avoid !important;
             }
             .no-print { display: none !important; }
-            thead { display: table-header-group; }
         }
     </style>
 </head>
@@ -403,20 +391,17 @@ function format_paragraphs($text) {
     ?>
 
     <!-- PAGE 1: BERITA ACARA KEGIATAN -->
+    <?php
+    $rincian = $konten['rincian_kegiatan'] ?? [];
+    $jml_rincian = count($rincian);
+    // Logika Pintar: Jika rincian > 3, Tanda Tangan dipisah ke halaman baru
+    $pecah_halaman = ($jml_rincian > 3);
+    ?>
     <div class="page">
-        <table class="page-table">
-            <thead>
-                <tr>
-                    <td>
-                        <?php renderKop(); ?>
-                    </td>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <div class="doc-title">BERITA ACARA KEGIATAN</div>
-                        <div class="doc-number">Nomor: <?php echo htmlspecialchars($ba['nomor_berita']); ?></div>
+        <?php renderKop(); ?>
+
+        <div class="doc-title">BERITA ACARA KEGIATAN</div>
+        <div class="doc-number">Nomor: <?php echo htmlspecialchars($ba['nomor_berita']); ?></div>
 
                         <div class="doc-body">
                             <p>
@@ -447,6 +432,14 @@ function format_paragraphs($text) {
                                 Demikian berita acara ini dibuat dengan sebenarnya untuk digunakan sebagaimana mestinya.
                             </p>
                         </div>
+
+                        <?php if ($pecah_halaman): ?>
+    </div>
+    <!-- PAGE 1 Lanjutan: Tanda Tangan -->
+    <div class="page">
+        <?php renderKop(); ?>
+        <div style="margin-top: 30px;"></div>
+                        <?php endif; ?>
 
                         <div class="date-creation">
                             <?php echo htmlspecialchars($konten['tempat_pembuatan'] ?? 'Majalengka'); ?>, <?php echo htmlspecialchars($konten['tanggal_pembuatan'] ?? ''); ?>
@@ -531,26 +524,13 @@ function format_paragraphs($text) {
                                 </td>
                             </tr>
                         </table>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
     </div>
 
     <!-- PAGE 2: LAPORAN KEGIATAN -->
     <div class="page">
-        <table class="page-table">
-            <thead>
-                <tr>
-                    <td>
-                        <?php renderKop(); ?>
-                    </td>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <div class="doc-title" style="text-decoration:none; margin-bottom: 30px;">LAPORAN KEGIATAN <?php echo strtoupper(htmlspecialchars($ba['nama_kegiatan'])); ?></div>
+        <?php renderKop(); ?>
+        
+        <div class="doc-title" style="text-decoration:none; margin-bottom: 30px;">LAPORAN KEGIATAN <?php echo strtoupper(htmlspecialchars($ba['nama_kegiatan'])); ?></div>
 
                         <table class="meta-table">
                             <tr>
@@ -624,26 +604,13 @@ function format_paragraphs($text) {
                                 Demikian Laporan Kegiatan ini kami buat, semoga dapat dipergunakan sebagaimana mestinya.
                             </p>
                         </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
     </div>
 
     <!-- PAGE 3: DOKUMENTASI -->
     <div class="page">
-        <table class="page-table">
-            <thead>
-                <tr>
-                    <td>
-                        <?php renderKop(); ?>
-                    </td>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <div class="section-header" style="font-size: 18px; margin-bottom: 20px;">D. Dokumentasi :</div>
+        <?php renderKop(); ?>
+        
+        <div class="section-header" style="font-size: 18px; margin-bottom: 20px;">D. Dokumentasi :</div>
 
                         <?php if (!empty($konten['dokumentasi'])): ?>
                             <div class="doc-grid">
@@ -661,10 +628,6 @@ function format_paragraphs($text) {
                                 (tidak ada dokumentasi dalam kegiatan ini)
                             </p>
                         <?php endif; ?>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
     </div>
 
     <script>
