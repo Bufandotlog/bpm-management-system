@@ -338,24 +338,35 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
 
         @page {
             size: A4 portrait;
-            margin: 10mm 15mm; /* Margin otomatis untuk setiap lembar kertas cetak */
+            margin: 0;
         }
 
         @media print {
             body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
             .page { 
                 margin: 0 !important; 
-                padding: 0 !important; /* Gunakan margin @page daripada padding */
+                padding: 0 !important;
                 border: none !important; 
                 border-radius: 0 !important; 
                 width: 100% !important;
-                min-height: 0 !important; /* Hapus min-height untuk mencegah blank page */
+                min-height: 0 !important;
                 height: auto !important;
                 box-shadow: none !important; 
                 outline: none !important;
                 background: white !important; 
                 page-break-after: always; 
             }
+            <?php if (!isset($_GET['bulk'])): ?>
+            .page.surat-page {
+                padding: 15mm 20mm !important;
+                width: 210mm !important;
+                min-height: 297mm !important;
+            }
+            .page.lampiran-page {
+                padding: 10mm 15mm !important;
+                width: 210mm !important;
+            }
+            <?php endif; ?>
             * { 
                 box-shadow: none !important; 
                 outline: none !important; 
@@ -399,7 +410,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
     </div>
     <?php endif; ?>
 
-    <div class="page">
+    <div class="page surat-page">
         <table style="width: 100%; border-collapse: collapse; border: none;">
             <thead>
                 <tr>
@@ -1232,7 +1243,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                         canvas.className = 'pdf-page-canvas';
                         
                         const pageWrapper = document.createElement('div');
-                        pageWrapper.className = 'page';
+                        pageWrapper.className = 'page lampiran-page';
                         pageWrapper.style.padding = '0';
                         pageWrapper.style.margin = '10mm auto';
                         pageWrapper.style.overflow = 'hidden';
