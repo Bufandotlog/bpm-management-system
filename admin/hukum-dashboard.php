@@ -2,6 +2,7 @@
 require_once __DIR__ . '/core/header.php';
 require_once __DIR__ . '/core/hukum-auth.php';
 
+requireHukumAccess();
 hukum_require_permission('hukum.view');
 $hukumUser = hukum_current_user();
 $hukumDefaultPeriodeId = $hukumUser['periode_id'] > 0

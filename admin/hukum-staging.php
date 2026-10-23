@@ -2,6 +2,7 @@
 require_once __DIR__ . '/core/header.php';
 require_once __DIR__ . '/core/hukum-auth.php';
 
+requireHukumAccess();
 hukum_require_permission('hukum.view');
 ?>
 <link rel="stylesheet" href="<?php echo baseUrl('admin/css/hukum.css'); ?>?v=1">

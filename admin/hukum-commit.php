@@ -2,6 +2,7 @@
 require_once __DIR__ . '/core/header.php';
 require_once __DIR__ . '/core/hukum-auth.php';
 
+requireHukumAccess();
 hukum_require_permission('hukum.view');
 $canVerifyCommit = hukum_has_permission('hukum.commit.verify');
 $canFinalizeCommit = hukum_has_permission('hukum.commit.create');

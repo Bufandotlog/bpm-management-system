@@ -1376,6 +1376,17 @@ function requireSekretaris() {
     }
 }
 
+function isHukumAccess(): bool {
+    $role = normalizeAppRole($_SESSION['admin_role'] ?? '');
+    return in_array($role, ['superadmin', 'admin', 'komisi_i'], true) || !empty($_SESSION['admin_can_access_all']);
+}
+
+function requireHukumAccess(): void {
+    if (!isHukumAccess()) {
+        redirect('admin/core/dashboard.php', 'Akses ditolak: Fitur Hukum hanya dapat diakses oleh Superadmin, Admin Periode Aktif, dan Komisi I.', 'error');
+    }
+}
+
 function isKetuplat() {
     $role = $_SESSION['admin_role'] ?? '';
     if (in_array($role, ['superadmin', 'admin', 'sekretaris']) || !empty($_SESSION['admin_can_access_all'])) {

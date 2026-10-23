@@ -913,9 +913,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Sekretaris 2 (Sekum BPM 2)</label>
-                            <select name="sekretaris_2" id="sekretaris_2" required onchange="updateLivePreview()">
-                                <option value="">-- Pilih Sekum 2 --</option>
+                            <label>Sekretaris 2 (Sekum BPM 2) <span style="color:#f39c12; font-weight:400; text-transform:none; letter-spacing:0;">(Opsional)</span></label>
+                            <select name="sekretaris_2" id="sekretaris_2" onchange="updateLivePreview()">
+                                <option value="">-- Pilih Sekum 2 (Opsional) --</option>
                                 <?php foreach ($sekre_umum_candidates as $name): ?>
                                     <?php 
                                     $selected = '';
@@ -966,9 +966,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Bendahara 2 (Bendum BPM 2)</label>
-                            <select name="bendahara_2" id="bendahara_2" required onchange="updateLivePreview()">
-                                <option value="">-- Pilih Bendum 2 --</option>
+                            <label>Bendahara 2 (Bendum BPM 2) <span style="color:#f39c12; font-weight:400; text-transform:none; letter-spacing:0;">(Opsional)</span></label>
+                            <select name="bendahara_2" id="bendahara_2" onchange="updateLivePreview()">
+                                <option value="">-- Pilih Bendum 2 (Opsional) --</option>
                                 <?php foreach ($bendum_candidates as $name): ?>
                                     <?php 
                                     $selected = '';

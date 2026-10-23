@@ -2,6 +2,7 @@
 require_once __DIR__ . '/core/header.php';
 require_once __DIR__ . '/core/hukum-auth.php';
 
+requireHukumAccess();
 hukum_require_permission('hukum.view');
 $defaultDocId = (int) ($_GET['dokumen_id'] ?? 0);
 $actor = hukum_current_user();

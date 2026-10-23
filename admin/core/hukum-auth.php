@@ -229,8 +229,6 @@ function hukum_role_permissions(): array
             'hukum.commit.verify',
             'hukum.audit.view',
         ],
-        'sekretaris' => ['hukum.view', 'hukum.audit.view'],
-        'anggota' => ['hukum.view'],
     ];
 }
 
@@ -292,11 +290,19 @@ function hukum_json_response(array $payload, int $status = 200): void
 function hukum_require_login(): void
 {
     if (hukum_authenticated_actor() === null) {
-        hukum_json_response([
-            'success' => false,
-            'code' => 'UNAUTHENTICATED',
-            'message' => 'Sesi habis. Silakan login ulang.',
-        ], 401);
+        $isApi = str_contains($_SERVER['REQUEST_URI'] ?? '', '/api/')
+            || (!empty($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+            || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+        if ($isApi) {
+            hukum_json_response([
+                'success' => false,
+                'code' => 'UNAUTHENTICATED',
+                'message' => 'Sesi habis. Silakan login ulang.',
+            ], 401);
+        } else {
+            redirect('astawidya/bpm.php', 'Sesi habis. Silakan login ulang.', 'error');
+        }
     }
 }
 
@@ -305,11 +311,19 @@ function hukum_require_permission(string $permission): void
     hukum_require_login();
 
     if (!hukum_has_permission($permission)) {
-        hukum_json_response([
-            'success' => false,
-            'code' => 'FORBIDDEN',
-            'message' => 'Anda tidak memiliki izin untuk aksi ini.',
-        ], 403);
+        $isApi = str_contains($_SERVER['REQUEST_URI'] ?? '', '/api/')
+            || (!empty($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+            || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+        if ($isApi) {
+            hukum_json_response([
+                'success' => false,
+                'code' => 'FORBIDDEN',
+                'message' => 'Anda tidak memiliki izin untuk aksi ini.',
+            ], 403);
+        } else {
+            redirect('admin/core/dashboard.php', 'Akses ditolak: Fitur Hukum hanya dapat diakses oleh Superadmin, Admin Periode Aktif, dan Komisi I.', 'error');
+        }
     }
 }
 
