@@ -737,26 +737,28 @@ input.barang-qty::-webkit-outer-spin-button {
 </div>
 
 <?php
-// Siapkan rekomendasi pemateri
+// Siapkan rekomendasi tamu yang menjadi pemateri atau penyampai sambutan
 $tamu_arr = json_decode($kegiatan['tamu_undangan'], true) ?: [];
-$pemateri_list = [];
 $acara_recommendations = [];
-$ket_pemateri_recommendations = [];
+$ket_tamu_recommendations = [];
 
 foreach ($tamu_arr as $t) {
-    if (stripos($t['perihal'] ?? '', 'pemateri') !== false) {
+    $perihal_tamu = $t['perihal'] ?? '';
+    if (stripos($perihal_tamu, 'pemateri') !== false || stripos($perihal_tamu, 'sambutan') !== false) {
         $nama_raw = trim($t['nama'] ?? '');
         $parts = explode(',', $nama_raw);
         $nama_pendek = trim($parts[0]);
         if (!empty($nama_pendek)) {
-            $pemateri_list[] = $nama_pendek;
-            $acara_recommendations[] = "Penyampaian Materi (....)";
-            $ket_pemateri_recommendations[] = "Yang disampaikan oleh " . $nama_pendek;
+            $ket_tamu_recommendations[] = "Yang disampaikan oleh " . $nama_pendek;
+            if (stripos($perihal_tamu, 'pemateri') !== false) {
+                $acara_recommendations[] = "Penyampaian Materi (....)";
+            }
         }
     }
 }
-// Remove duplicates in case of multiple pemateris resulting in same placeholder
+// Remove duplicates in case of multiple guests have the same name or role
 $acara_recommendations = array_values(array_unique($acara_recommendations));
+$ket_tamu_recommendations = array_values(array_unique($ket_tamu_recommendations));
 
 $def_jam = '07';
 $def_menit = '00';
@@ -772,12 +774,39 @@ $rundown_durasi_hari = isset($edit_data['durasi_hari']) ? (int)$edit_data['duras
 const ketList = <?php echo json_encode(array_column($ket_list, 'nama_keterangan')); ?>;
 const tempatList = <?php echo json_encode(array_column($tempat_list, 'nama_tempat')); ?>;
 const pjList = <?php echo json_encode(array_column($pj_list, 'nama_pj')); ?>;
-const acaraRecommendations = <?php echo json_encode(array_values($acara_recommendations)); ?>;
-const ketPemateriRecommendations = <?php echo json_encode(array_values($ket_pemateri_recommendations)); ?>;
+const acaraRecommendations = <?php echo json_encode(array_values($acara_recommendations), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+const ketTamuRecommendations = <?php echo json_encode(array_values($ket_tamu_recommendations), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
 const defaultStartHour = '<?php echo $def_jam; ?>';
 const defaultStartMinute = '<?php echo $def_menit; ?>';
 
 let dayCount = 0;
+
+function getKetTempatOptions(type) {
+    return type === 'ket' ? [...ketTamuRecommendations, ...ketList] : tempatList;
+}
+
+function setPickerOptions(results, values) {
+    if (!results) return;
+
+    results.replaceChildren(...values.map(value => {
+        const item = document.createElement('div');
+        item.className = 'tpl-item';
+        item.dataset.val = value;
+        item.textContent = value;
+        return item;
+    }));
+}
+
+function initializeRowPickers(row) {
+    const acaraInput = row.querySelector('input[name^="acara"]');
+    const keteranganInput = row.querySelector('input[name^="keterangan"]');
+    const pjInput = row.querySelector('input[name^="penanggung_jawab"]');
+    const tipeKet = row.querySelector('.ket-tempat-select')?.value || 'ket';
+
+    setPickerOptions(acaraInput?.closest('.tpl-picker')?.querySelector('.tpl-results'), acaraRecommendations);
+    setPickerOptions(keteranganInput?.closest('.tpl-picker')?.querySelector('.tpl-results'), getKetTempatOptions(tipeKet));
+    setPickerOptions(pjInput?.closest('.tpl-picker')?.querySelector('.tpl-results'), pjList);
+}
 
 function addDay() {
     dayCount++;
@@ -1018,7 +1047,6 @@ function addRow(dayId, afterRow = null) {
             <div class="tpl-picker" style="width: 100%;">
                 <input type="text" name="acara[${dayId}][]" class="tpl-search-input" placeholder="Nama Acara/Materi" required autocomplete="off" style="padding: 14px; border-radius: 10px; font-size: 0.95rem; width: 100%;">
                 <div class="tpl-results">
-                    ${acaraRecommendations.map(v => `<div class="tpl-item" data-val="${v}">${v}</div>`).join('')}
                 </div>
             </div>
         </td>
@@ -1031,7 +1059,6 @@ function addRow(dayId, afterRow = null) {
                 <div class="tpl-picker" style="flex: 1; min-width: 150px;">
                     <input type="text" name="keterangan[${dayId}][]" class="tpl-search-input" placeholder="Pilih/Ketik..." required autocomplete="off" style="padding: 14px; border-radius: 10px; font-size: 0.95rem;">
                     <div class="tpl-results">
-                        ${[...ketPemateriRecommendations, ...ketList].map(v => `<div class="tpl-item" data-val="${v}">${v}</div>`).join('')}
                     </div>
                 </div>
             </div>
@@ -1040,7 +1067,6 @@ function addRow(dayId, afterRow = null) {
             <div class="tpl-picker" style="width: 100%;">
                 <input type="text" name="penanggung_jawab[${dayId}][]" class="tpl-search-input" placeholder="Pilih/Ketik PJ" required autocomplete="off" style="padding: 14px; border-radius: 10px; font-size: 0.95rem;">
                 <div class="tpl-results">
-                    ${pjList.map(v => `<div class="tpl-item" data-val="${v}">${v}</div>`).join('')}
                 </div>
             </div>
         </td>
@@ -1070,6 +1096,8 @@ function addRow(dayId, afterRow = null) {
     `;
     
     // Support insert-after mode: if afterRow is provided, insert after it instead of appending
+    initializeRowPickers(tr);
+
     if (afterRow) {
         // Find the last parallel-row after the reference row
         let insertAfterEl = afterRow;
@@ -1103,7 +1131,6 @@ function addParallelRow(btn, dayId) {
             <div class="tpl-picker" style="width: 100%;">
                 <input type="text" name="acara[${dayId}][]" class="tpl-search-input" placeholder="Kegiatan Paralel..." required autocomplete="off" style="padding: 14px; border-radius: 10px; font-size: 0.95rem; width: 100%; border-color: rgba(74, 144, 226, 0.4); box-shadow: inset 0 0 10px rgba(74, 144, 226, 0.05);">
                 <div class="tpl-results">
-                    ${acaraRecommendations.map(v => `<div class="tpl-item" data-val="${v}">${v}</div>`).join('')}
                 </div>
             </div>
         </td>
@@ -1116,7 +1143,6 @@ function addParallelRow(btn, dayId) {
                 <div class="tpl-picker" style="flex: 1; min-width: 150px;">
                     <input type="text" name="keterangan[${dayId}][]" class="tpl-search-input" placeholder="Pilih/Ketik..." required autocomplete="off" style="padding: 14px; border-radius: 10px; font-size: 0.95rem;">
                     <div class="tpl-results">
-                        ${[...ketPemateriRecommendations, ...ketList].map(v => `<div class="tpl-item" data-val="${v}">${v}</div>`).join('')}
                     </div>
                 </div>
             </div>
@@ -1125,7 +1151,6 @@ function addParallelRow(btn, dayId) {
             <div class="tpl-picker" style="width: 100%;">
                 <input type="text" name="penanggung_jawab[${dayId}][]" class="tpl-search-input" placeholder="Pilih/Ketik PJ" required autocomplete="off" style="padding: 14px; border-radius: 10px; font-size: 0.95rem;">
                 <div class="tpl-results">
-                    ${pjList.map(v => `<div class="tpl-item" data-val="${v}">${v}</div>`).join('')}
                 </div>
             </div>
         </td>
@@ -1135,6 +1160,8 @@ function addParallelRow(btn, dayId) {
             </button>
         </td>
     `;
+
+    initializeRowPickers(tr);
     
     insertAfter.insertAdjacentElement('afterend', tr);
     
@@ -1333,7 +1360,7 @@ function recalculateTimes(dayId) {
 // Autocomplete Logic
 function switchKetTempat(selectElem) {
     const type = selectElem.value;
-    const list = type === 'ket' ? ketList : tempatList;
+    const list = getKetTempatOptions(type);
     
     const dayCard = selectElem.closest('.day-card');
     if (!dayCard) return;
@@ -1356,7 +1383,7 @@ function switchKetTempat(selectElem) {
         if (picker && picker.classList.contains('tpl-picker')) {
             const results = picker.querySelector('.tpl-results');
             if (results) {
-                results.innerHTML = list.map(v => `<div class="tpl-item" data-val="${v}">${v}</div>`).join('');
+                setPickerOptions(results, list);
             }
         }
     });
@@ -1521,8 +1548,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const picker = sel.nextElementSibling;
                     if (picker) {
                         const results = picker.querySelector('.tpl-results');
-                        const list = dayTipeKet === 'ket' ? ketList : tempatList;
-                        if (results) results.innerHTML = list.map(v => `<div class="tpl-item" data-val="${v}">${v}</div>`).join('');
+                        const list = getKetTempatOptions(dayTipeKet);
+                        setPickerOptions(results, list);
                     }
                 });
 
