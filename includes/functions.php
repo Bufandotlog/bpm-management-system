@@ -2296,6 +2296,29 @@ function saveLogistikPeminjamanAndDraftLetter($kegiatan_id, $periode_id, $acara,
             $kegiatan = dbFetchOne("SELECT * FROM kegiatan WHERE id = ?", [$kegiatan_id]);
             if (!$kegiatan) return $saved_lampiran_id;
 
+            $pelaksanaan_hari_tanggal = $tanggal;
+            $tanggal_mulai = $kegiatan['tanggal_mulai'] ?? '';
+            $tanggal_selesai = $kegiatan['tanggal_selesai'] ?? '';
+            if (
+                preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_mulai)
+                && checkdate((int)substr($tanggal_mulai, 5, 2), (int)substr($tanggal_mulai, 8, 2), (int)substr($tanggal_mulai, 0, 4))
+            ) {
+                $tanggal_mulai_obj = new DateTimeImmutable($tanggal_mulai);
+                $pelaksanaan_hari_tanggal = tanggalIndonesia($tanggal_mulai_obj->getTimestamp(), true);
+                if (
+                    preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_selesai)
+                    && checkdate((int)substr($tanggal_selesai, 5, 2), (int)substr($tanggal_selesai, 8, 2), (int)substr($tanggal_selesai, 0, 4))
+                    && $tanggal_selesai > $tanggal_mulai
+                ) {
+                    $tanggal_selesai_obj = new DateTimeImmutable($tanggal_selesai);
+                    $pelaksanaan_hari_tanggal .= ' - ' . tanggalIndonesia($tanggal_selesai_obj->getTimestamp(), true);
+                }
+            }
+            $pelaksanaan_waktu = !empty($kegiatan['waktu_pelaksanaan']) ? $kegiatan['waktu_pelaksanaan'] : '08.00 s.d Selesai';
+            $pelaksanaan_tempat = !empty($kegiatan['tempat_pelaksanaan'])
+                ? $kegiatan['tempat_pelaksanaan']
+                : 'Lingkungan Kampus INSTBUNAS Majalengka';
+
             // Cari Ketuplak & Sekretaris
             $kp_row = dbFetchOne("SELECT u.nama FROM kegiatan_panitia kp JOIN users u ON kp.user_id = u.id WHERE kp.kegiatan_id = ? AND kp.event_role IN ('ketuplat', 'ketua_pelaksana') LIMIT 1", [$kegiatan_id]);
             $ketuplat_nama = $kp_row ? strtoupper($kp_row['nama']) : '';
@@ -2326,9 +2349,9 @@ function saveLogistikPeminjamanAndDraftLetter($kegiatan_id, $periode_id, $acara,
                 'nama_kegiatan'            => $kegiatan['nama_kegiatan'],
                 'tema'                     => $kegiatan['deskripsi'] ?? '',
                 'tema_kegiatan'            => $kegiatan['deskripsi'] ?? '',
-                'pelaksanaan_hari_tanggal' => $tanggal,
-                'pelaksanaan_waktu'        => '08.00 s.d Selesai',
-                'pelaksanaan_tempat'       => 'Lingkungan Kampus INSTBUNAS Majalengka',
+                'pelaksanaan_hari_tanggal' => $pelaksanaan_hari_tanggal,
+                'pelaksanaan_waktu'        => $pelaksanaan_waktu,
+                'pelaksanaan_tempat'       => $pelaksanaan_tempat,
                 'konteks'                  => 'untuk dapat menggunakan fasilitas tersebut',
                 'label_panitia'            => '',
                 'panitia_ketua'            => $ketuplat_nama,
@@ -2343,6 +2366,11 @@ function saveLogistikPeminjamanAndDraftLetter($kegiatan_id, $periode_id, $acara,
 
             if ($existing_surat) {
                 $ex_konten = json_decode($existing_surat['konten_surat'], true) ?: [];
+                foreach (['nama_kegiatan', 'tema', 'tema_kegiatan', 'pelaksanaan_hari_tanggal', 'pelaksanaan_waktu', 'pelaksanaan_tempat'] as $snapshot_key) {
+                    if (array_key_exists($snapshot_key, $ex_konten)) {
+                        $konten_data[$snapshot_key] = $ex_konten[$snapshot_key];
+                    }
+                }
                 $existing_ids = $ex_konten['lampiran_internal_ids'] ?? [];
                 if (!in_array((string)$saved_lampiran_id, $existing_ids)) {
                     $existing_ids[] = (string)$saved_lampiran_id;

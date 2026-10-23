@@ -6,6 +6,19 @@ $kegiatan_id = isset($_GET['kegiatan_id']) ? (int)$_GET['kegiatan_id'] : 0;
 if (!$kegiatan_id) redirect('admin/core/dashboard.php', 'ID Kegiatan tidak valid.', 'error');
 requireEventAccess($kegiatan_id, ['ketuplat', 'sie_acara']);
 $kegiatan = dbFetchOne("SELECT * FROM kegiatan WHERE id = ?", [$kegiatan_id], "i");
+$master_tanggal_mulai = $kegiatan['tanggal_mulai'] ?? '';
+$master_tanggal_selesai = $kegiatan['tanggal_selesai'] ?? '';
+$master_durasi_hari = 1;
+if (
+    preg_match('/^\d{4}-\d{2}-\d{2}$/', $master_tanggal_mulai)
+    && preg_match('/^\d{4}-\d{2}-\d{2}$/', $master_tanggal_selesai)
+    && checkdate((int)substr($master_tanggal_mulai, 5, 2), (int)substr($master_tanggal_mulai, 8, 2), (int)substr($master_tanggal_mulai, 0, 4))
+    && checkdate((int)substr($master_tanggal_selesai, 5, 2), (int)substr($master_tanggal_selesai, 8, 2), (int)substr($master_tanggal_selesai, 0, 4))
+    && $master_tanggal_selesai >= $master_tanggal_mulai
+) {
+    $master_durasi_hari = (int)(new DateTimeImmutable($master_tanggal_mulai))->diff(new DateTimeImmutable($master_tanggal_selesai))->days + 1;
+}
+$max_durasi_rundown = max(365, $master_durasi_hari);
 
 $periode_id = getUserPeriode();
 
@@ -37,11 +50,10 @@ if ($edit_id > 0) {
     
     // 3. Fallback: Cek berdasarkan nama_acara
     if (!$edit_data && !empty($kegiatan['nama_kegiatan'])) {
-        $edit_data = dbFetchOne("SELECT * FROM arsip_rundown WHERE (nama_acara = ? OR nama_acara LIKE ?) AND periode_id = ? ORDER BY id DESC LIMIT 1", [
+        $edit_data = dbFetchOne("SELECT * FROM arsip_rundown WHERE nama_acara = ? AND kegiatan_id IS NULL AND periode_id = ? ORDER BY id DESC LIMIT 1", [
             $kegiatan['nama_kegiatan'],
-            '%' . $kegiatan['nama_kegiatan'] . '%',
             $periode_id
-        ]);
+        ], "si");
     }
     
     if ($edit_data) {
@@ -53,6 +65,7 @@ if ($edit_id > 0) {
         }
     }
 }
+$max_durasi_rundown = max($max_durasi_rundown, (int)($edit_data['durasi_hari'] ?? 1));
 
 // --- POST HANDLER: SIMPAN KE ARSIP ---
 $success_msg = '';
@@ -64,8 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $nama_acara    = $kegiatan['nama_kegiatan'];
         $tahun         = trim($_POST['tahun'] ?? '');
         $tanggal_mulai = trim($_POST['tanggal_mulai'] ?? date('Y-m-d'));
-        $durasi_hari   = (int)($_POST['durasi_hari'] ?? 1);
+        $durasi_hari_raw = filter_var($_POST['durasi_hari'] ?? 1, FILTER_VALIDATE_INT);
+        $durasi_hari   = $durasi_hari_raw !== false ? $durasi_hari_raw : 0;
         $target_edit_id = isset($_POST['edit_id']) ? (int)$_POST['edit_id'] : 0;
+        $tanggal_valid = preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_mulai)
+            && checkdate((int)substr($tanggal_mulai, 5, 2), (int)substr($tanggal_mulai, 8, 2), (int)substr($tanggal_mulai, 0, 4));
 
         $waktu_arr = $_POST['waktu'] ?? [];
         $acara_arr = $_POST['acara'] ?? [];
@@ -80,7 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         // Build rundown JSON
         $rundown_days = [];
-        for ($dayId = 1; $dayId <= $durasi_hari; $dayId++) {
+        $durasi_hari_loop = ($durasi_hari >= 1 && $durasi_hari <= $max_durasi_rundown) ? $durasi_hari : 0;
+        for ($dayId = 1; $dayId <= $durasi_hari_loop; $dayId++) {
             $day_items = [];
             $waktus = $waktu_arr[$dayId] ?? [];
             $acaras = $acara_arr[$dayId] ?? [];
@@ -117,6 +134,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         if (empty($nama_acara)) {
             $error_msg = "Nama acara wajib diisi.";
+        } elseif (!$tanggal_valid) {
+            $error_msg = "Tanggal acara tidak valid.";
+        } elseif ($durasi_hari < 1 || $durasi_hari > $max_durasi_rundown) {
+            $error_msg = "Durasi rundown harus antara 1 dan {$max_durasi_rundown} hari.";
         } elseif (empty($rundown_days)) {
             $error_msg = "Minimal harus ada 1 baris acara untuk disimpan.";
         } else {
@@ -685,13 +706,9 @@ input.barang-qty::-webkit-outer-spin-button {
                 <div class="form-group" style="grid-column: 1 / -1;">
                     <label><i class="far fa-calendar-alt" style="margin-right: 5px;"></i> Hari & Tanggal Acara</label>
                     <div style="display: flex; gap: 15px; align-items: center; background: #080808; padding: 5px 15px; border-radius: 12px; border: 1px solid var(--border-color);">
-                        <input type="date" name="tanggal_mulai" id="tanggal_mulai" required style="flex: 2; border: none; padding: 10px 0; background: transparent; outline: none; box-shadow: none;" onchange="generateDays()" value="<?php echo $edit_data ? htmlspecialchars($edit_data['tanggal_mulai']) : ''; ?>">
+                        <input type="date" name="tanggal_mulai" id="tanggal_mulai" required style="flex: 2; border: none; padding: 10px 0; background: transparent; outline: none; box-shadow: none;" onchange="generateDays()" value="<?php echo htmlspecialchars($rundown_tanggal_mulai); ?>">
                         <span style="color: #888; font-size: 0.9rem;">selama</span>
-                        <select name="durasi_hari" id="durasi_hari" style="flex: 1; border: none; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; outline: none;" onchange="generateDays()">
-                            <?php for ($i = 1; $i <= 7; $i++): ?>
-                                <option value="<?php echo $i; ?>" <?php echo ($edit_data && (int)$edit_data['durasi_hari'] === $i) ? 'selected' : ''; ?>><?php echo $i; ?> Hari</option>
-                            <?php endfor; ?>
-                        </select>
+                        <input type="number" name="durasi_hari" id="durasi_hari" min="1" max="<?php echo $max_durasi_rundown; ?>" required style="flex: 1; min-width: 90px; border: none; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; outline: none;" onchange="generateDays()" oninput="generateDays()" value="<?php echo htmlspecialchars((string)$rundown_durasi_hari); ?>">
                     </div>
                 </div>
             </div>
@@ -748,6 +765,8 @@ if (preg_match('/(\d{1,2})[\.\:](\d{2})/', $w_pelaksanaan, $m)) {
     $def_jam = str_pad($m[1], 2, '0', STR_PAD_LEFT);
     $def_menit = str_pad($m[2], 2, '0', STR_PAD_LEFT);
 }
+$rundown_tanggal_mulai = $edit_data['tanggal_mulai'] ?? $master_tanggal_mulai;
+$rundown_durasi_hari = isset($edit_data['durasi_hari']) ? (int)$edit_data['durasi_hari'] : $master_durasi_hari;
 ?>
 <script>
 const ketList = <?php echo json_encode(array_column($ket_list, 'nama_keterangan')); ?>;
@@ -1414,7 +1433,8 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         const dateInput = document.getElementById('tanggal_mulai');
         if (dateInput && !dateInput.value) {
-            dateInput.value = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         }
         
         const container = document.getElementById('daysContainer');

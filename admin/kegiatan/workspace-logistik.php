@@ -50,11 +50,10 @@ if ($edit_id > 0) {
     }
     // 2. Fallback: Cari lampiran_pinjam berdasarkan nama_acara
     if (!$edit_data) {
-        $edit_data = dbFetchOne("SELECT * FROM lampiran_pinjam WHERE (nama_acara = ? OR nama_acara LIKE ?) AND periode_id = ? ORDER BY id DESC LIMIT 1", [
+        $edit_data = dbFetchOne("SELECT * FROM lampiran_pinjam WHERE nama_acara = ? AND periode_id = ? ORDER BY id DESC LIMIT 1", [
             $kegiatan['nama_kegiatan'],
-            '%' . $kegiatan['nama_kegiatan'] . '%',
             $periode_id
-        ]);
+        ], "si");
     }
     if ($edit_data) {
         $edit_id = (int)$edit_data['id'];

@@ -1038,6 +1038,16 @@ if (!empty($tanggal_kegiatan_val)) {
                         <?php foreach ($all_kegiatan_list as $kg): 
                             $tgl_mulai = $kg['tanggal_mulai'] ?? '';
                             $tgl_selesai = $kg['tanggal_selesai'] ?? '';
+                            $durasi = 1;
+                            if (
+                                preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl_mulai)
+                                && preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl_selesai)
+                                && checkdate((int)substr($tgl_mulai, 5, 2), (int)substr($tgl_mulai, 8, 2), (int)substr($tgl_mulai, 0, 4))
+                                && checkdate((int)substr($tgl_selesai, 5, 2), (int)substr($tgl_selesai, 8, 2), (int)substr($tgl_selesai, 0, 4))
+                                && $tgl_selesai >= $tgl_mulai
+                            ) {
+                                $durasi = (int)(new DateTimeImmutable($tgl_mulai))->diff(new DateTimeImmutable($tgl_selesai))->days + 1;
+                            }
                             
                             $tgl_format = '';
                             if ($tgl_mulai && $tgl_mulai !== '0000-00-00') {
@@ -1050,10 +1060,13 @@ if (!empty($tanggal_kegiatan_val)) {
                         ?>
                             <option value="<?php echo $kg['id']; ?>" 
                                 data-nama="<?php echo htmlspecialchars(trim($kg['nama_kegiatan'])); ?>" 
+                                data-kode="<?php echo htmlspecialchars(strtoupper(trim($kg['kode_kegiatan'] ?? ''))); ?>"
                                 data-tema="<?php echo htmlspecialchars(trim($kg['deskripsi'] ?? '')); ?>" 
                                 data-tgl="<?php echo htmlspecialchars($tgl_format); ?>" 
                                 data-tgl-raw="<?php echo htmlspecialchars($tgl_mulai); ?>"
-                                data-tempat="<?php echo htmlspecialchars(trim($kg['tempat'] ?? '')); ?>"
+                                data-durasi="<?php echo $durasi; ?>"
+                                data-waktu="<?php echo htmlspecialchars(trim($kg['waktu_pelaksanaan'] ?? '')); ?>"
+                                data-tempat="<?php echo htmlspecialchars(trim($kg['tempat_pelaksanaan'] ?? '')); ?>"
                                 data-ketuplat="<?php echo htmlspecialchars(trim($kg['ketua_nama'] ?? '')); ?>"
                                 data-slug="<?php echo htmlspecialchars(trim($kg['slug_surat'] ?? '')); ?>"
                                 data-pelaksana="<?php echo htmlspecialchars(trim($kg['pelaksana'] ?? '')); ?>"
@@ -1635,21 +1648,41 @@ class DrumPicker {
 
 const hours = Array.from({length:24}, (_,i) => String(i).padStart(2,'0'));
 const mins  = Array.from({length:60}, (_,i) => String(i).padStart(2,'0'));
-const existingWaktu = document.getElementById('out-waktu') ? document.getElementById('out-waktu').value || '08.00 s.d Selesai' : '08.00 s.d Selesai';
-const wParts  = existingWaktu.split(' s.d ');
-const startT  = (wParts[0] || '08.00').replace('.', ':').split(':');
-const isSelesai = !wParts[1] || wParts[1] === 'Selesai';
-const endT    = !isSelesai ? wParts[1].replace('.', ':').split(':') : null;
-
-let drumHS, drumMS, drumHE, drumME, _selesaiMode = isSelesai;
+let drumHS, drumMS, drumHE, drumME, _selesaiMode = true;
 
 document.addEventListener('DOMContentLoaded', () => {
-    drumHS = new DrumPicker('drum-h-start', hours, startT[0]||'08', updateWaktu);
-    drumMS = new DrumPicker('drum-m-start', mins,  startT[1]||'00', updateWaktu);
-    drumHE = new DrumPicker('drum-h-end',   hours, endT?endT[0]:'17', updateWaktu);
-    drumME = new DrumPicker('drum-m-end',   mins,  endT?endT[1]:'00', updateWaktu);
-    if (isSelesai) applyToggleSelesai(true);
+    const waktuParts = parseWaktuPelaksanaan(document.getElementById('out-waktu').value);
+    drumHS = new DrumPicker('drum-h-start', hours, waktuParts.start[0], updateWaktu);
+    drumMS = new DrumPicker('drum-m-start', mins, waktuParts.start[1], updateWaktu);
+    drumHE = new DrumPicker('drum-h-end', hours, waktuParts.end[0], updateWaktu);
+    drumME = new DrumPicker('drum-m-end', mins, waktuParts.end[1], updateWaktu);
+    applyToggleSelesai(waktuParts.selesai);
 });
+
+function parseWaktuPelaksanaan(value) {
+    const parts = (value || '').split(' s.d ');
+    const startMatch = (parts[0] || '').match(/(\d{1,2})[\.:](\d{2})/);
+    const endMatch = (parts[1] || '').match(/(\d{1,2})[\.:](\d{2})/);
+    return {
+        start: startMatch ? [startMatch[1].padStart(2, '0'), startMatch[2]] : ['08', '00'],
+        end: endMatch ? [endMatch[1].padStart(2, '0'), endMatch[2]] : ['17', '00'],
+        selesai: !endMatch
+    };
+}
+
+function setWaktuPelaksanaan(value) {
+    const input = document.getElementById('out-waktu');
+    input.value = value || '08.00 s.d Selesai';
+    if (!drumHS || !drumMS || !drumHE || !drumME) return;
+
+    const waktuParts = parseWaktuPelaksanaan(input.value);
+    drumHS.idx = hours.indexOf(waktuParts.start[0]);
+    drumMS.idx = mins.indexOf(waktuParts.start[1]);
+    drumHE.idx = hours.indexOf(waktuParts.end[0]);
+    drumME.idx = mins.indexOf(waktuParts.end[1]);
+    [drumHS, drumMS, drumHE, drumME].forEach(picker => picker._render(false));
+    applyToggleSelesai(waktuParts.selesai);
+}
 
 function updateWaktu() {
     if (!drumHS || !drumMS || !drumHE || !drumME) return;
@@ -1993,6 +2026,8 @@ function syncKegiatanData() {
     const nama = opt.getAttribute('data-nama');
     const tema = opt.getAttribute('data-tema');
     const tglRaw = opt.getAttribute('data-tgl-raw'); // For YYYY-MM-DD input
+    const durasi = parseInt(opt.getAttribute('data-durasi') || '1', 10);
+    const waktu = opt.getAttribute('data-waktu') || '';
     const tempat = opt.getAttribute('data-tempat');
     const ketuplat = opt.getAttribute('data-ketuplat');
     const slug = opt.getAttribute('data-slug');
@@ -2001,13 +2036,27 @@ function syncKegiatanData() {
     
     if (nama) document.getElementById('input_nama_kegiatan').value = nama;
     if (tema) document.querySelector('input[name="tema_kegiatan"]').value = tema;
-    if (tglRaw) {
-        const inputTgl = document.getElementById('tgl-mulai');
-        if (inputTgl) {
-            inputTgl.value = tglRaw;
-            if (typeof formatTanggalRange === 'function') formatTanggalRange();
+    const inputTgl = document.getElementById('tgl-mulai');
+    if (inputTgl) {
+        inputTgl.value = tglRaw;
+        const durasiSelect = document.getElementById('durasi-hari');
+        const customInput = document.getElementById('custom-hari');
+        const labelHari = document.getElementById('label-hari');
+        if (durasiSelect) {
+            if (durasi >= 1 && durasi <= 5) {
+                durasiSelect.value = String(durasi);
+                customInput.style.display = 'none';
+                labelHari.style.display = 'none';
+            } else {
+                durasiSelect.value = 'custom';
+                customInput.value = String(durasi);
+                customInput.style.display = 'inline-block';
+                labelHari.style.display = 'inline';
+            }
         }
+        if (typeof formatTanggalRange === 'function') formatTanggalRange();
     }
+    setWaktuPelaksanaan(waktu);
     if (tempat) document.querySelector('input[name="tempat"]').value = tempat;
     if (ketuplat) document.querySelector('input[name="penanggung_jawab"]').value = ketuplat;
     
@@ -2055,7 +2104,10 @@ function syncKegiatanData() {
     }
     
     // Auto-fill kode/slug (prioritize DB slug from arsip_surat)
-    if (slug) {
+    const kodeMaster = opt.getAttribute('data-kode') || '';
+    if (kodeMaster) {
+        document.getElementById('kode_kegiatan_input').value = kodeMaster;
+    } else if (slug) {
         document.getElementById('kode_kegiatan_input').value = slug;
     } else if (nama) {
         let words = nama.replace(/[^a-zA-Z0-9 ]/g, '').split(' ');
@@ -2092,7 +2144,7 @@ function tarikDataKegiatan() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menarik...';
     btn.disabled = true;
     
-    fetch('<?php echo baseUrl("admin/kegiatan/api-get-kegiatan-data.php"); ?>?nama_acara=' + encodeURIComponent(namaAcara))
+    fetch('<?php echo baseUrl("admin/kegiatan/api-get-kegiatan-data.php"); ?>?kegiatan_id=' + encodeURIComponent(kegiatanId) + '&nama_acara=' + encodeURIComponent(namaAcara))
         .then(res => res.json())
         .then(data => {
             btn.innerHTML = oldHtml;

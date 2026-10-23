@@ -97,7 +97,8 @@ $rundown_internal_list = dbFetchAll("SELECT id, nama_acara, tanggal_mulai, duras
 // Sekaligus ambil data Ketua Pelaksana dan Sekretaris Kementeriannya untuk autofill TTD
 $all_kegiatan_list = dbFetchAll(
     "SELECT 
-        k.id, k.nama_kegiatan, k.status, k.deskripsi, k.tanggal_mulai, k.tanggal_selesai,
+        k.id, k.nama_kegiatan, k.kode_kegiatan, k.status, k.deskripsi,
+        k.tanggal_mulai, k.tanggal_selesai, k.waktu_pelaksanaan, k.tempat_pelaksanaan,
         u_ketua.nama AS ketua_nama,
         u_ketua.file_ttd AS ketua_ttd,
         ak_sek.nama AS sekretaris_nama,
@@ -189,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'tema_kegiatan'           => strip_tags(trim($_POST['tema_kegiatan'] ?? '')),
             'pelaksanaan_hari_tanggal'=> sanitizeText($_POST['pelaksanaan_hari_tanggal'], 100),
             'pelaksanaan_waktu'       => sanitizeText($_POST['pelaksanaan_waktu'], 100),
-            'pelaksanaan_tempat'      => sanitizeText($_POST['pelaksanaan_tempat'], 100),
+            'pelaksanaan_tempat'      => sanitizeText($_POST['pelaksanaan_tempat'], 255),
             'konteks'                 => strip_tags(trim($_POST['konteks'] ?? ''), '<b><strong><i><em><span>'),
             'label_panitia'           => strtoupper(sanitizeText($_POST['label_panitia'] ?? '', 200)),
             'panitia_ketua'           => strtoupper(sanitizeText($_POST['panitia_ketua'], 100)),
@@ -970,6 +971,8 @@ if ($is_edit || $is_clone) {
                         <?php foreach ($all_kegiatan_list as $kg): 
                             $tgl_mulai = $kg['tanggal_mulai'] ?? '';
                             $tgl_selesai = $kg['tanggal_selesai'] ?? '';
+                            $waktu_pelaksanaan = $kg['waktu_pelaksanaan'] ?? '';
+                            $tempat_pelaksanaan = $kg['tempat_pelaksanaan'] ?? '';
                             $durasi = 1;
                             if ($tgl_mulai && $tgl_selesai && $tgl_mulai !== '0000-00-00' && $tgl_selesai !== '0000-00-00') {
                                 try {
@@ -982,8 +985,11 @@ if ($is_edit || $is_clone) {
                             <option value="<?php echo $kg['id']; ?>" 
                                 data-nama="<?php echo htmlspecialchars(strtolower(trim($kg['nama_kegiatan']))); ?>" 
                                 data-nama-asli="<?php echo htmlspecialchars(trim($kg['nama_kegiatan'])); ?>" 
+                                data-kode="<?php echo htmlspecialchars(strtoupper(trim($kg['kode_kegiatan'] ?? ''))); ?>"
                                 data-tema="<?php echo htmlspecialchars(trim($kg['deskripsi'] ?? '')); ?>" 
                                 data-tgl-mulai="<?php echo htmlspecialchars($tgl_mulai); ?>" 
+                                data-waktu="<?php echo htmlspecialchars($waktu_pelaksanaan); ?>"
+                                data-tempat="<?php echo htmlspecialchars($tempat_pelaksanaan); ?>"
                                 data-durasi="<?php echo $durasi; ?>"
                                 data-ketua-nama="<?php echo htmlspecialchars(strtoupper($kg['ketua_nama'] ?? '')); ?>"
                                 data-ketua-ttd="<?php echo htmlspecialchars($kg['ketua_ttd'] ?? ''); ?>"
@@ -1824,6 +1830,7 @@ function filterLampiran(isUserChange = false) {
     const namaKegiatan = selectedOption.getAttribute('data-nama') || '';
     const namaKegiatanAsli = selectedOption.getAttribute('data-nama-asli') || '';
     const temaKegiatan = selectedOption.getAttribute('data-tema') || '';
+    const kodeKegiatan = selectedOption.getAttribute('data-kode') || '';
     
     // Auto-fill form HANYA dijalankan bila:
     // 1. User SECARA EKSPLISIT mengubah dropdown (isUserChange === true), ATAU
@@ -1846,9 +1853,12 @@ function filterLampiran(isUserChange = false) {
             rteTema.innerHTML = temaKegiatan;
             inputTema.value = temaKegiatan;
         }
+        document.getElementById('kode_kegiatan_input').value = kodeKegiatan;
         
         // Auto-fill Waktu & Tempat Pelaksanaan (Hari & Tanggal)
         const tglMulai = selectedOption.getAttribute('data-tgl-mulai') || '';
+        const waktuPelaksanaan = selectedOption.getAttribute('data-waktu') || '';
+        const tempatPelaksanaan = selectedOption.getAttribute('data-tempat') || '';
         const durasi = selectedOption.getAttribute('data-durasi') || '1';
         const inputTglMulai = document.getElementById('tgl-mulai');
         const selectDurasi = document.getElementById('durasi-hari');
@@ -1879,6 +1889,8 @@ function filterLampiran(isUserChange = false) {
             }
             if (typeof formatTanggalRange === 'function') formatTanggalRange();
         }
+        setWaktuPelaksanaan(waktuPelaksanaan);
+        document.getElementById('input_tempat').value = tempatPelaksanaan;
         
         // Auto-fill Panitia (Ketua & Sekretaris Pelaksana)
         const ketuaNama = selectedOption.getAttribute('data-ketua-nama') || '';
@@ -2024,20 +2036,15 @@ class DrumPicker {
 
 const hours = Array.from({length:24}, (_,i) => String(i).padStart(2,'0'));
 const mins  = Array.from({length:60}, (_,i) => String(i).padStart(2,'0'));
-const existingWaktu = document.getElementById('out-waktu').value || '';
-const wParts  = existingWaktu.split(' s.d ');
-const startT  = (wParts[0] || '08.00').replace('.', ':').split(':');
-const isSelesai = !wParts[1] || wParts[1] === 'Selesai';
-const endT    = !isSelesai ? wParts[1].replace('.', ':').split(':') : null;
-
-let drumHS, drumMS, drumHE, drumME, _selesaiMode = isSelesai;
+let drumHS, drumMS, drumHE, drumME, _selesaiMode = true;
 
 document.addEventListener('DOMContentLoaded', () => {
-    drumHS = new DrumPicker('drum-h-start', hours, startT[0]||'08', updateWaktu);
-    drumMS = new DrumPicker('drum-m-start', mins,  startT[1]||'00', updateWaktu);
-    drumHE = new DrumPicker('drum-h-end',   hours, endT?endT[0]:'17', updateWaktu);
-    drumME = new DrumPicker('drum-m-end',   mins,  endT?endT[1]:'00', updateWaktu);
-    if (isSelesai) applyToggleSelesai(true);
+    const waktuParts = parseWaktuPelaksanaan(document.getElementById('out-waktu').value);
+    drumHS = new DrumPicker('drum-h-start', hours, waktuParts.start[0], updateWaktu);
+    drumMS = new DrumPicker('drum-m-start', mins, waktuParts.start[1], updateWaktu);
+    drumHE = new DrumPicker('drum-h-end', hours, waktuParts.end[0], updateWaktu);
+    drumME = new DrumPicker('drum-m-end', mins, waktuParts.end[1], updateWaktu);
+    applyToggleSelesai(waktuParts.selesai);
     
     // Inisialisasi TTD jika sudah ada (Edit Mode)
     ['ketua', 'sekretaris'].forEach(role => {
@@ -2056,6 +2063,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+function parseWaktuPelaksanaan(value) {
+    const parts = (value || '').split(' s.d ');
+    const startMatch = (parts[0] || '').match(/(\d{1,2})[\.:](\d{2})/);
+    const endMatch = (parts[1] || '').match(/(\d{1,2})[\.:](\d{2})/);
+    return {
+        start: startMatch ? [startMatch[1].padStart(2, '0'), startMatch[2]] : ['08', '00'],
+        end: endMatch ? [endMatch[1].padStart(2, '0'), endMatch[2]] : ['17', '00'],
+        selesai: !endMatch
+    };
+}
+
+function setWaktuPelaksanaan(value) {
+    const input = document.getElementById('out-waktu');
+    input.value = value;
+    document.getElementById('preview-waktu').innerText = value;
+    if (!drumHS || !drumMS || !drumHE || !drumME) return;
+
+    const waktuParts = parseWaktuPelaksanaan(value);
+    drumHS.idx = hours.indexOf(waktuParts.start[0]);
+    drumMS.idx = mins.indexOf(waktuParts.start[1]);
+    drumHE.idx = hours.indexOf(waktuParts.end[0]);
+    drumME.idx = mins.indexOf(waktuParts.end[1]);
+    [drumHS, drumMS, drumHE, drumME].forEach(picker => picker._render(false));
+    applyToggleSelesai(waktuParts.selesai);
+}
 
 function updateWaktu() {
     if (!drumHS || !drumMS || !drumHE || !drumME) return;
@@ -2111,8 +2144,9 @@ function formatTanggalRange() {
     const sel = document.getElementById('durasi-hari');
     const custom = document.getElementById('custom-hari');
     
-    if (!mulai) { 
-        document.getElementById('preview-tanggal').innerText = '—belum dipilih—'; 
+    if (!mulai) {
+        document.getElementById('out-tanggal').value = '';
+        document.getElementById('preview-tanggal').innerText = '—belum dipilih—';
         return; 
     }
 
@@ -2308,8 +2342,9 @@ function tarikDataSurat() {
     const oldHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
     btn.disabled = true;
-    
-    fetch('<?php echo baseUrl("admin/kegiatan/api-get-kegiatan-data.php"); ?>?nama_acara=' + encodeURIComponent(namaAcara))
+    const kegiatanId = document.getElementById('kegiatan_id_select')?.value || '0';
+
+    fetch('<?php echo baseUrl("admin/kegiatan/api-get-kegiatan-data.php"); ?>?kegiatan_id=' + encodeURIComponent(kegiatanId) + '&nama_acara=' + encodeURIComponent(namaAcara))
         .then(res => res.json())
         .then(data => {
             btn.innerHTML = oldHtml;
