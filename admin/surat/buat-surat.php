@@ -341,8 +341,15 @@ if ($is_edit || $is_clone) {
         $edit_data['tujuan'] = '';
         $edit_data['sapaan_tujuan'] = '';
     }
-    // Pertahankan kegiatan_id asli surat tersebut. Jika di DB bernilai NULL/0, maka tetap 0 (Tanpa Kegiatan / Surat Umum).
-    $selected_kegiatan_id = !empty($existing['kegiatan_id']) ? (int)$existing['kegiatan_id'] : 0;
+    // HANYA surat yang sedang berstatus 'staging' yang terikat ke kegiatan staging persiapan.
+    // Surat yang terdapat pada Arsip Surat Utama (status_arsip != 'staging' atau 'archived')
+    // TIDAK terikat dengan staging, sehingga pilihan kegiatan harus selalu
+    // '-- Tanpa Kegiatan / Surat Umum (Langsung Masuk Arsip Utama) --' (nilai 0).
+    if (($existing['status_arsip'] ?? '') === 'staging' && !empty($existing['kegiatan_id'])) {
+        $selected_kegiatan_id = (int)$existing['kegiatan_id'];
+    } else {
+        $selected_kegiatan_id = 0;
+    }
 } else {
     $edit_data = $def;
     // Surat Baru: HANYA otomatis mengacu ke kegiatan persiapan jika tombol diklik dari halaman Staging Index (from=staging)
