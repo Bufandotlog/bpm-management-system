@@ -1411,8 +1411,8 @@ document.addEventListener('focusin', function(e) {
             const items = results.querySelectorAll('.tpl-item');
             items.forEach(item => {
                 const val = (item.dataset.val || item.innerText).trim().toLowerCase();
-                const isRecommendation = val.startsWith('yang disampaikan oleh') || val.startsWith('penyampaian materi (');
-                if (isRecommendation && usedValues.has(val)) {
+                const isKeteranganRecommendation = val.startsWith('yang disampaikan oleh');
+                if (!e.target.name.startsWith('acara[') && isKeteranganRecommendation && usedValues.has(val)) {
                     item.style.display = 'none';
                     item.classList.add('filtered-out');
                 } else {
