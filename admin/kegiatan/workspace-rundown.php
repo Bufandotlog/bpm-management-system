@@ -32,7 +32,7 @@ $edit_data = null;
 
 if ($edit_id > 0) {
     $edit_data = dbFetchOne("SELECT * FROM arsip_rundown WHERE id = ? AND periode_id = ?", [$edit_id, $periode_id], "ii");
-} else if ($kegiatan_id > 0) {
+} else if ($kegiatan_id > 0 && !isset($_GET['new'])) {
     // 1. Cek berdasarkan kegiatan_id
     $edit_data = dbFetchOne("SELECT * FROM arsip_rundown WHERE kegiatan_id = ? AND periode_id = ? ORDER BY id DESC LIMIT 1", [$kegiatan_id, $periode_id]);
     
@@ -721,7 +721,7 @@ input.barang-qty::-webkit-outer-spin-button {
         <div class="actions-bar">
             <div style="display: flex; gap: 12px; align-items: center; width: 100%; justify-content: flex-end;">
                 <?php if ($edit_id > 0): ?>
-                    <a href="workspace-rundown.php?kegiatan_id=<?php echo $kegiatan_id; ?>" style="color: #888; text-decoration: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; border: 1px solid var(--border-color); transition: 0.3s;">
+                    <a href="workspace-rundown.php?kegiatan_id=<?php echo $kegiatan_id; ?>&amp;new=1" style="color: #888; text-decoration: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; border: 1px solid var(--border-color); transition: 0.3s;">
                         <i class="fas fa-plus"></i> Buat Baru
                     </a>
                 <?php endif; ?>
