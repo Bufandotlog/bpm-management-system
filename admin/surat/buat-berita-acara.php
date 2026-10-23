@@ -441,14 +441,19 @@ $fallback_presma = $ketua ? ($ketua['nama'] ?? $ketua['nama_lengkap'] ?? '') : '
 $def_presma_name = $pengaturan['ttd_presma_name'] ?? $fallback_presma;
 
 $sekretaris = getSekretarisUmum($periode_id);
-$fallback_sekretaris = '';
-if ($sekretaris) {
-    $fallback_sekretaris = $sekretaris['nama'] ?? '';
-    if (empty($fallback_sekretaris) && !empty($sekretaris['anggota'])) {
-        $fallback_sekretaris = $sekretaris['anggota'][0]['nama'] ?? '';
+$fallback_sekretaris = getNamaSekretarisUmum1($periode_id);
+if (empty($fallback_sekretaris) && $sekretaris) {
+    $raw_s = $sekretaris['nama'] ?? '';
+    if (!empty($raw_s) && !in_array(strtolower(trim($raw_s)), ['sekretaris umum', 'sekretaris bpm', 'sekretaris'], true)) {
+        $fallback_sekretaris = $raw_s;
+    } elseif (!empty($sekretaris['anggota'][0]['nama'])) {
+        $fallback_sekretaris = $sekretaris['anggota'][0]['nama'];
     }
 }
-$def_sekretaris_name = $pengaturan['ttd_sekretaris_name'] ?? $fallback_sekretaris;
+$raw_set_sek = trim($pengaturan['ttd_sekretaris_name'] ?? '');
+$def_sekretaris_name = (!empty($raw_set_sek) && !in_array(strtolower($raw_set_sek), ['sekretaris umum', 'sekretaris bpm', 'sekretaris'], true))
+    ? $raw_set_sek
+    : $fallback_sekretaris;
 $def_warek_name = $pengaturan['ttd_warek_name'] ?? 'II MUHAMAD MISBAH, S.Pd.I., SE., MM.';
 
 // Defaults

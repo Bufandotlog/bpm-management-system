@@ -1617,6 +1617,42 @@ function getSekretarisUmum($periode_id = null) {
     return $data;
 }
 
+/**
+ * Mengambil nama Sekretaris Umum I dari kepengurusan periode tertentu.
+ * Jika terdapat lebih dari satu orang, memprioritaskan yang jabatannya Sekretaris Umum I / Sekum 1,
+ * atau anggota pada urutan pertama.
+ */
+function getNamaSekretarisUmum1($periode_id = null) {
+    $data = getSekretarisUmum($periode_id);
+    if (!$data) return '';
+
+    if (!empty($data['anggota']) && is_array($data['anggota'])) {
+        // Prioritas 1: Anggota dengan jabatan yang mengandung kata "I" atau "1"
+        foreach ($data['anggota'] as $agt) {
+            $jabatan = strtolower(trim($agt['jabatan'] ?? ''));
+            if (preg_match('/(umum\s*(i\b|1\b)|sekum\s*(i\b|1\b)|sekretaris\s*(i\b|1\b)|\b(i|1)\b)/i', $jabatan) || strpos($jabatan, 'sekum1') !== false) {
+                if (!empty($agt['nama']) && !in_array(strtolower(trim($agt['nama'])), ['sekretaris umum', 'sekretaris bpm', 'sekretaris'], true)) {
+                    return $agt['nama'];
+                }
+            }
+        }
+        // Prioritas 2: Anggota urutan pertama (urutan 0) yang valid
+        foreach ($data['anggota'] as $agt) {
+            if (!empty($agt['nama']) && !in_array(strtolower(trim($agt['nama'])), ['sekretaris umum', 'sekretaris bpm', 'sekretaris'], true)) {
+                return $agt['nama'];
+            }
+        }
+    }
+
+    // Fallback: nilai kolom nama di struktur_bph jika bukan string jabatan generik
+    $nama = $data['nama'] ?? '';
+    if (!empty($nama) && !in_array(strtolower(trim($nama)), ['sekretaris umum', 'sekretaris bpm', 'sekretaris'], true)) {
+        return $nama;
+    }
+
+    return '';
+}
+
 function getBendaharaUmum($periode_id = null) {
     if ($periode_id) {
         $data = dbFetchOne("SELECT * FROM struktur_bph WHERE posisi = 'bendahara_umum' AND periode_id = ?", [$periode_id], "i");

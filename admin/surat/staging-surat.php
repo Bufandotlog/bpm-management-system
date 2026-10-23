@@ -573,7 +573,7 @@ $cnt_terkirim = dbFetchOne("SELECT COUNT(*) as total FROM arsip_surat WHERE peri
             <span class="badge-staging" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border-color: rgba(46, 204, 113, 0.3);" title="3. Surat telah dikirim oleh Humas ke tujuan">
                 <i class="fas fa-check-circle"></i> <b><?php echo $cnt_terkirim; ?></b> Terkirim
             </span>
-            <a href="buat-surat.php" class="btn-buat" style="background:#4A90E2; color:white; padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;">
+            <a href="buat-surat.php?from=staging<?php echo $selected_kegiatan_id > 0 ? '&kegiatan_id=' . $selected_kegiatan_id : ''; ?>" class="btn-buat" style="background:#4A90E2; color:white; padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;">
                 <i class="fas fa-plus"></i> Buat Surat Baru
             </a>
         </div>

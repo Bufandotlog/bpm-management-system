@@ -248,6 +248,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action_hapus'])) {
                 dbQuery("DELETE FROM anggota_bph WHERE id=? AND periode_id=?",
                         [$delete_id, $active_periode], "ii");
             }
+
+            // Sinkronisasi Sekretaris Umum I ke struktur_bph dan pengaturan jika posisi adalah sekretaris_umum
+            if ($posisi === 'sekretaris_umum') {
+                $anggota_sekum = dbFetchAll("SELECT user_id, nama, jabatan FROM anggota_bph WHERE bph_id = ? AND periode_id = ? ORDER BY urutan ASC", [$bph_id, $active_periode], "ii");
+                $sekum1_nama = '';
+                $sekum1_uid = null;
+                if (!empty($anggota_sekum)) {
+                    foreach ($anggota_sekum as $as) {
+                        $j = strtolower(trim($as['jabatan'] ?? ''));
+                        if (preg_match('/(umum\s*(i\b|1\b)|sekum\s*(i\b|1\b)|sekretaris\s*(i\b|1\b)|\b(i|1)\b)/i', $j) || strpos($j, 'sekum1') !== false) {
+                            $sekum1_nama = $as['nama'];
+                            $sekum1_uid = $as['user_id'];
+                            break;
+                        }
+                    }
+                    if (empty($sekum1_nama)) {
+                        $sekum1_nama = $anggota_sekum[0]['nama'];
+                        $sekum1_uid = $anggota_sekum[0]['user_id'];
+                    }
+                }
+                if (!empty($sekum1_nama)) {
+                    dbQuery("UPDATE struktur_bph SET user_id = ?, nama = ? WHERE id = ?", [$sekum1_uid, $sekum1_nama, $bph_id], "isi");
+                    
+                    $cur_set_name = dbFetchOne("SELECT nilai FROM pengaturan WHERE kunci = 'ttd_sekretaris_name'");
+                    if (!$cur_set_name || in_array(strtolower(trim($cur_set_name['nilai'] ?? '')), ['', 'sekretaris umum', 'sekretaris bpm', 'sekretaris'], true)) {
+                        dbUpsertPengaturan('ttd_sekretaris_name', $sekum1_nama);
+                    }
+                }
+            }
         }
 
         dbCommit();

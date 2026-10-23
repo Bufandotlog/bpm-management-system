@@ -9,9 +9,11 @@ $error = '';
 $success = '';
 
 // Helper Bulan Romawi
-function getRomawiBulan($bulan) {
-    $romawi = ['1'=>'I', '2'=>'II', '3'=>'III', '4'=>'IV', '5'=>'V', '6'=>'VI', '7'=>'VII', '8'=>'VIII', '9'=>'IX', '10'=>'X', '11'=>'XI', '12'=>'XII'];
-    return $romawi[(int)$bulan] ?? 'I';
+if (!function_exists('getRomawiBulan')) {
+    function getRomawiBulan($bulan) {
+        $romawi = ['1'=>'I', '2'=>'II', '3'=>'III', '4'=>'IV', '5'=>'V', '6'=>'VI', '7'=>'VII', '8'=>'VIII', '9'=>'IX', '10'=>'X', '11'=>'XI', '12'=>'XII'];
+        return $romawi[(int)$bulan] ?? 'I';
+    }
 }
 
 // Mode Edit Setup
@@ -47,15 +49,17 @@ if ($target_id > 0) {
     }
 }
 
-function getLastSequence($jenis, $periode_id) {
-    // Ambil nomor urut TERTINGGI dari Arsip Utama (mengabaikan Staging Index)
-    $last = dbFetchOne(
-        "SELECT MAX(CAST(SUBSTRING_INDEX(nomor_surat, '/', 1) AS UNSIGNED)) AS max_urut 
-         FROM arsip_surat 
-         WHERE periode_id = ? AND jenis_surat = ? AND (status_arsip IS NULL OR status_arsip != 'staging')",
-        [$periode_id, $jenis], "is"
-    );
-    return ($last && $last['max_urut']) ? (int)$last['max_urut'] : 0;
+if (!function_exists('getLastSequence')) {
+    function getLastSequence($jenis, $periode_id) {
+        // Ambil nomor urut TERTINGGI dari Arsip Utama (mengabaikan Staging Index)
+        $last = dbFetchOne(
+            "SELECT MAX(CAST(SUBSTRING_INDEX(nomor_surat, '/', 1) AS UNSIGNED)) AS max_urut 
+             FROM arsip_surat 
+             WHERE periode_id = ? AND jenis_surat = ? AND (status_arsip IS NULL OR status_arsip != 'staging')",
+            [$periode_id, $jenis], "is"
+        );
+        return ($last && $last['max_urut']) ? (int)$last['max_urut'] : 0;
+    }
 }
 
 $count_L = getLastSequence('L', $periode_id);
@@ -108,15 +112,15 @@ $all_kegiatan_list = dbFetchAll(
      ORDER BY k.id DESC",
     [$periode_id], "i"
 );
-$default_kegiatan_id = 0;
+$staging_kegiatan_default = 0;
 foreach ($all_kegiatan_list as $kg) {
     if ($kg['status'] === 'persiapan') {
-        $default_kegiatan_id = (int)$kg['id'];
+        $staging_kegiatan_default = (int)$kg['id'];
         break;
     }
 }
-if ($default_kegiatan_id === 0 && !empty($all_kegiatan_list)) {
-    $default_kegiatan_id = (int)$all_kegiatan_list[0]['id'];
+if ($staging_kegiatan_default === 0 && !empty($all_kegiatan_list)) {
+    $staging_kegiatan_default = (int)$all_kegiatan_list[0]['id'];
 }
 
 // Proses Simpan / Update
@@ -144,32 +148,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tempat_tanggal = sanitizeText($_POST['tempat_tanggal'], 255);
         $tujuan         = strip_tags(trim($_POST['tujuan']));
         
-        function saveSignatureToFile($base64String, $prefix = 'ttd') {
-            if (empty($base64String) || strpos($base64String, 'data:image') === false) return $base64String;
-            $dir = rtrim(UPLOAD_PATH, '/\\') . '/ttd/';
-            if (!is_dir($dir)) mkdir($dir, 0755, true);
-            $data = explode(',', $base64String);
-            if (!isset($data[1])) return '';
-            $imgData = base64_decode($data[1]);
-            $filename = $prefix . '_' . uniqid() . '.png';
-            $destination = $dir . $filename;
-            file_put_contents($destination, $imgData);
-            
-            $relativePath = 'ttd/' . $filename;
-            if (($_ENV['STORAGE_METHOD'] ?? 'local') === 's3') {
-                if (uploadToS3($destination, $relativePath, 'image/png')) {
-                    if (file_exists($destination)) {
-                        @unlink($destination);
+        if (!function_exists('saveSignatureToFile')) {
+            function saveSignatureToFile($base64String, $prefix = 'ttd') {
+                if (empty($base64String) || strpos($base64String, 'data:image') === false) return $base64String;
+                $dir = rtrim(UPLOAD_PATH, '/\\') . '/ttd/';
+                if (!is_dir($dir)) mkdir($dir, 0755, true);
+                $data = explode(',', $base64String);
+                if (!isset($data[1])) return '';
+                $imgData = base64_decode($data[1]);
+                $filename = $prefix . '_' . uniqid() . '.png';
+                $destination = $dir . $filename;
+                file_put_contents($destination, $imgData);
+                
+                $relativePath = 'ttd/' . $filename;
+                if (($_ENV['STORAGE_METHOD'] ?? 'local') === 's3') {
+                    if (uploadToS3($destination, $relativePath, 'image/png')) {
+                        if (file_exists($destination)) {
+                            @unlink($destination);
+                        }
+                        return $relativePath;
+                    } else {
+                        if (file_exists($destination)) {
+                            @unlink($destination);
+                        }
+                        return '';
                     }
-                    return $relativePath;
-                } else {
-                    if (file_exists($destination)) {
-                        @unlink($destination);
-                    }
-                    return '';
                 }
+                return $relativePath;
             }
-            return $relativePath;
         }
 
         $use_ttd_bpm_val = (isset($_POST['use_ttd_bpm']) || isset($_POST['use_ttd_presma'])) ? '1' : '0';
@@ -335,10 +341,19 @@ if ($is_edit || $is_clone) {
         $edit_data['tujuan'] = '';
         $edit_data['sapaan_tujuan'] = '';
     }
-    $selected_kegiatan_id = isset($edit_data['kegiatan_id']) ? (int)$edit_data['kegiatan_id'] : $default_kegiatan_id;
+    // Pertahankan kegiatan_id asli surat tersebut. Jika di DB bernilai NULL/0, maka tetap 0 (Tanpa Kegiatan / Surat Umum).
+    $selected_kegiatan_id = !empty($existing['kegiatan_id']) ? (int)$existing['kegiatan_id'] : 0;
 } else {
     $edit_data = $def;
-    $selected_kegiatan_id = $default_kegiatan_id;
+    // Surat Baru: HANYA otomatis mengacu ke kegiatan persiapan jika tombol diklik dari halaman Staging Index (from=staging)
+    $is_from_staging = (isset($_GET['from']) && $_GET['from'] === 'staging') || (isset($_GET['kegiatan_id']) && (int)$_GET['kegiatan_id'] > 0);
+    if ($is_from_staging) {
+        $req_keg_id = (int)($_GET['kegiatan_id'] ?? 0);
+        $selected_kegiatan_id = ($req_keg_id > 0) ? $req_keg_id : $staging_kegiatan_default;
+    } else {
+        // Pembuatan surat di luar staging (sidebar, arsip umum, dll): DEFAULT 0 (Tanpa Kegiatan / Langsung Masuk Arsip Utama)
+        $selected_kegiatan_id = 0;
+    }
 }
 ?>
 
@@ -940,10 +955,10 @@ if ($is_edit || $is_clone) {
                     <label style="color: #8BB9F0; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
                         <span><i class="fas fa-calendar-alt" style="color: #4A90E2;"></i> Nama Kegiatan / Acara (Alur Staging Surat)</span>
                         <span style="font-size: 0.75rem; text-transform: none; color: #aaa; font-weight: normal;">
-                            <i class="fas fa-info-circle"></i> Otomatis mengacu ke kegiatan status <b>Persiapan</b>
+                            <i class="fas fa-info-circle"></i> Pilih kegiatan persiapan untuk Staging, atau pilih Tanpa Kegiatan untuk Surat Umum
                         </span>
                     </label>
-                    <select name="kegiatan_id" id="kegiatan_id_select" style="border-color: rgba(74, 144, 226, 0.4); background: #0c1017; color: #fff; font-weight: 600;" onchange="filterLampiran()">
+                    <select name="kegiatan_id" id="kegiatan_id_select" style="border-color: rgba(74, 144, 226, 0.4); background: #0c1017; color: #fff; font-weight: 600;" onchange="filterLampiran(true)">
                         <option value="0" data-nama="" data-nama-asli="" data-tema="" <?php echo ((int)$selected_kegiatan_id === 0) ? 'selected' : ''; ?>>-- Tanpa Kegiatan / Surat Umum (Langsung Masuk Arsip Utama) --</option>
                         <?php foreach ($all_kegiatan_list as $kg): 
                             $tgl_mulai = $kg['tanggal_mulai'] ?? '';
@@ -1793,7 +1808,9 @@ function updatePreviewParagraf() {
     document.getElementById('preview-paragraf-text').innerHTML = html;
 }
 
-function filterLampiran() {
+const IS_EDIT_OR_CLONE = <?php echo ($is_edit || $is_clone) ? 'true' : 'false'; ?>;
+
+function filterLampiran(isUserChange = false) {
     const select = document.getElementById('kegiatan_id_select');
     if (!select) return;
     const selectedOption = select.options[select.selectedIndex];
@@ -1801,81 +1818,78 @@ function filterLampiran() {
     const namaKegiatanAsli = selectedOption.getAttribute('data-nama-asli') || '';
     const temaKegiatan = selectedOption.getAttribute('data-tema') || '';
     
-    // Auto-fill Paragraf Pembuka
-    const rteNamaKeg = document.getElementById('rte_nama_keg');
-    const inputNamaKeg = document.getElementById('input_nama_kegiatan');
-    const rteTema = document.getElementById('rte_tema');
-    const inputTema = document.getElementById('input_tema_kegiatan_val');
+    // Auto-fill form HANYA dijalankan bila:
+    // 1. User SECARA EKSPLISIT mengubah dropdown (isUserChange === true), ATAU
+    // 2. Ini pembuatan surat baru (BUKAN edit/clone) dan kegiatan dipilih (> 0)
+    const canAutoFill = isUserChange || (!IS_EDIT_OR_CLONE && select.value !== '0');
     
-    if (rteNamaKeg && inputNamaKeg) {
-        if (namaKegiatanAsli !== '') {
+    if (canAutoFill) {
+        // Auto-fill Paragraf Pembuka
+        const rteNamaKeg = document.getElementById('rte_nama_keg');
+        const inputNamaKeg = document.getElementById('input_nama_kegiatan');
+        const rteTema = document.getElementById('rte_tema');
+        const inputTema = document.getElementById('input_tema_kegiatan_val');
+        
+        if (rteNamaKeg && inputNamaKeg && namaKegiatanAsli !== '') {
             rteNamaKeg.innerHTML = namaKegiatanAsli;
             inputNamaKeg.value = namaKegiatanAsli;
         }
-        // [FIX 2026-09-04] JANGAN clear rte_nama_keg/input_nama_kegiatan saat clone/edit
-        // jika kegiatan_id tidak ada di <select>. Sebelumnya, line 1451-1452 clear hidden
-        // input, menyebabkan preview paragraf tampil [Nama Kegiatan] placeholder
-        // walaupun data nama_kegiatan ada di $edit_data (hidden input value dari PHP).
-        // Cukup preserve nilai existing; user masih bisa edit manual.
-    }
-    
-    if (rteTema && inputTema) {
-        if (temaKegiatan !== '') {
+        
+        if (rteTema && inputTema && temaKegiatan !== '') {
             rteTema.innerHTML = temaKegiatan;
             inputTema.value = temaKegiatan;
         }
-        // Sama seperti di atas: jangan clear. Preserve value existing.
+        
+        // Auto-fill Waktu & Tempat Pelaksanaan (Hari & Tanggal)
+        const tglMulai = selectedOption.getAttribute('data-tgl-mulai') || '';
+        const durasi = selectedOption.getAttribute('data-durasi') || '1';
+        const inputTglMulai = document.getElementById('tgl-mulai');
+        const selectDurasi = document.getElementById('durasi-hari');
+        const inputCustomHari = document.getElementById('custom-hari');
+        const labelHari = document.getElementById('label-hari');
+        
+        if (inputTglMulai && selectDurasi) {
+            if (tglMulai) {
+                inputTglMulai.value = tglMulai;
+                const durasiInt = parseInt(durasi);
+                if (durasiInt >= 1 && durasiInt <= 5) {
+                    selectDurasi.value = durasiInt;
+                    if(inputCustomHari) inputCustomHari.style.display = 'none';
+                    if(labelHari) labelHari.style.display = 'none';
+                } else {
+                    selectDurasi.value = 'custom';
+                    if(inputCustomHari) {
+                        inputCustomHari.style.display = 'block';
+                        inputCustomHari.value = durasiInt;
+                    }
+                    if(labelHari) labelHari.style.display = 'block';
+                }
+            } else {
+                inputTglMulai.value = '';
+                selectDurasi.value = '1';
+                if(inputCustomHari) inputCustomHari.style.display = 'none';
+                if(labelHari) labelHari.style.display = 'none';
+            }
+            if (typeof formatTanggalRange === 'function') formatTanggalRange();
+        }
+        
+        // Auto-fill Panitia (Ketua & Sekretaris Pelaksana)
+        const ketuaNama = selectedOption.getAttribute('data-ketua-nama') || '';
+        const ketuaTtd = selectedOption.getAttribute('data-ketua-ttd') || '';
+        const sekNama = selectedOption.getAttribute('data-sekretaris-nama') || '';
+        const sekTtd = selectedOption.getAttribute('data-sekretaris-ttd') || '';
+        
+        if (typeof selectSavedPanitia === 'function') {
+            if (ketuaNama !== '') {
+                selectSavedPanitia('ketua', { nama: ketuaNama, ttd: ketuaTtd });
+            }
+            if (sekNama !== '') {
+                selectSavedPanitia('sekretaris', { nama: sekNama, ttd: sekTtd });
+            }
+        }
     }
     
     if(typeof updatePreviewParagraf === 'function') updatePreviewParagraf();
-    
-    // Auto-fill Waktu & Tempat Pelaksanaan (Hari & Tanggal)
-    const tglMulai = selectedOption.getAttribute('data-tgl-mulai') || '';
-    const durasi = selectedOption.getAttribute('data-durasi') || '1';
-    const inputTglMulai = document.getElementById('tgl-mulai');
-    const selectDurasi = document.getElementById('durasi-hari');
-    const inputCustomHari = document.getElementById('custom-hari');
-    const labelHari = document.getElementById('label-hari');
-    
-    if (inputTglMulai && selectDurasi) {
-        if (tglMulai) {
-            inputTglMulai.value = tglMulai;
-            const durasiInt = parseInt(durasi);
-            if (durasiInt >= 1 && durasiInt <= 5) {
-                selectDurasi.value = durasiInt;
-                if(inputCustomHari) inputCustomHari.style.display = 'none';
-                if(labelHari) labelHari.style.display = 'none';
-            } else {
-                selectDurasi.value = 'custom';
-                if(inputCustomHari) {
-                    inputCustomHari.style.display = 'block';
-                    inputCustomHari.value = durasiInt;
-                }
-                if(labelHari) labelHari.style.display = 'block';
-            }
-        } else {
-            inputTglMulai.value = '';
-            selectDurasi.value = '1';
-            if(inputCustomHari) inputCustomHari.style.display = 'none';
-            if(labelHari) labelHari.style.display = 'none';
-        }
-        if (typeof formatTanggalRange === 'function') formatTanggalRange();
-    }
-    
-    // Auto-fill Panitia (Ketua & Sekretaris Pelaksana)
-    const ketuaNama = selectedOption.getAttribute('data-ketua-nama') || '';
-    const ketuaTtd = selectedOption.getAttribute('data-ketua-ttd') || '';
-    const sekNama = selectedOption.getAttribute('data-sekretaris-nama') || '';
-    const sekTtd = selectedOption.getAttribute('data-sekretaris-ttd') || '';
-    
-    if (typeof selectSavedPanitia === 'function') {
-        if (ketuaNama !== '') {
-            selectSavedPanitia('ketua', { nama: ketuaNama, ttd: ketuaTtd });
-        }
-        if (sekNama !== '') {
-            selectSavedPanitia('sekretaris', { nama: sekNama, ttd: sekTtd });
-        }
-    }
     
     document.querySelectorAll('.lampiran-item-pinjam').forEach(item => {
         if (namaKegiatan === '') {
@@ -1929,7 +1943,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    filterLampiran();
+    filterLampiran(false);
 });
 
 function execRTE(cmd) {

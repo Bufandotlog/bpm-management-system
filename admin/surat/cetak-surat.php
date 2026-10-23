@@ -126,7 +126,17 @@ $nama_ketua_bem = $nama_ketua_bpm; // alias kompatibilitas
 
 // Sekretaris fallback
 $sekretaris_bpm_data = getSekretarisUmum($periode_id);
-$nama_sekretaris_bpm = $sekretaris_bpm_data['nama'] ?? ($sekretaris_bpm_data['anggota'][0]['nama'] ?? 'Sekretaris BPM');
+$nama_sekretaris_bpm = getNamaSekretarisUmum1($periode_id);
+if (empty($nama_sekretaris_bpm)) {
+    $raw_sek_nama = $sekretaris_bpm_data['nama'] ?? '';
+    if (!empty($raw_sek_nama) && !in_array(strtolower(trim($raw_sek_nama)), ['sekretaris umum', 'sekretaris bpm', 'sekretaris'], true)) {
+        $nama_sekretaris_bpm = $raw_sek_nama;
+    } elseif (!empty($sekretaris_bpm_data['anggota'][0]['nama'])) {
+        $nama_sekretaris_bpm = $sekretaris_bpm_data['anggota'][0]['nama'];
+    } else {
+        $nama_sekretaris_bpm = 'Sekretaris BPM';
+    }
+}
 $nama_sekretaris_bem = $nama_sekretaris_bpm; // alias kompatibilitas
 
 // Ambil Pengaturan Tabel Tanda Tangan Tetap
@@ -752,6 +762,12 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             $use_ttd_bpm_flag = ($konten['use_ttd_bpm'] ?? ($konten['use_ttd_presma'] ?? '1')) === '1';
             $use_cap_bpm_flag = ($konten['use_cap_bpm'] ?? ($konten['use_cap_presma'] ?? '1')) === '1';
 
+            // [BPM RESTRUCTURE] Data TTD Sekretaris Umum BPM (Pejabat Sekretaris Umum I)
+            $raw_sekretaris_pengaturan = trim($pengaturan['ttd_sekretaris_name'] ?? '');
+            $nama_sekretaris_val = (!empty($raw_sekretaris_pengaturan) && !in_array(strtolower($raw_sekretaris_pengaturan), ['sekretaris umum', 'sekretaris bpm', 'sekretaris'], true))
+                ? $raw_sekretaris_pengaturan
+                : $nama_sekretaris_bpm;
+
             if ($format_ttd === '2'):
                 // FORMAT 2: BPM Direct Periode (2 TTD) — Tanpa Panitia, Tanpa Warek
             ?>
@@ -775,7 +791,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($pengaturan['ttd_sekretaris_image']) && ($konten['use_ttd_sekretaris'] ?? '1') === '1'): ?>
                                 <img src="<?php echo uploadUrl($pengaturan['ttd_sekretaris_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_sekretaris_name'] ?? $nama_sekretaris_bpm); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($nama_sekretaris_val); ?></div>
                         </td>
                     </tr>
                 </table>
@@ -804,7 +820,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($pengaturan['ttd_sekretaris_image']) && ($konten['use_ttd_sekretaris'] ?? '1') === '1'): ?>
                                 <img src="<?php echo uploadUrl($pengaturan['ttd_sekretaris_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_sekretaris_name'] ?? $nama_sekretaris_bpm); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($nama_sekretaris_val); ?></div>
                         </td>
                     </tr>
                 </table>
