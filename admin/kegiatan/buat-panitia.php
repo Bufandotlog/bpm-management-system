@@ -17,10 +17,20 @@ $warek_name_row = dbFetchOne("SELECT nilai FROM pengaturan WHERE kunci = 'ttd_wa
 $default_warek = $warek_name_row['nilai'] ?? 'Ii Muhamad Misbah, S.Pd.I., SE., MM.';
 
 // Ambil Ketua & Wakil Ketua BPM (BPH Inti) untuk Steering Committee (SC)
-$presma_row = dbFetchOne("SELECT nama FROM struktur_bph WHERE posisi = 'ketua' AND periode_id = ?", [$periode_id], "i");
-$wapresma_row = dbFetchOne("SELECT nama FROM struktur_bph WHERE posisi = 'wakil_ketua' AND periode_id = ?", [$periode_id], "i");
+$presma_row = dbFetchOne("SELECT id, nama, posisi FROM struktur_bph WHERE posisi = 'ketua' AND periode_id = ?", [$periode_id], "i");
+$wapresma_row = dbFetchOne("SELECT id, nama, posisi FROM struktur_bph WHERE posisi = 'wakil_ketua' AND periode_id = ?", [$periode_id], "i");
 $presma_name = $presma_row['nama'] ?? 'Dede Anggi Muhyidin';
 $wapresma_name = $wapresma_row['nama'] ?? 'Salma Sabila Rahmah';
+$presma_id = (int)($presma_row['id'] ?? 0);
+$wapresma_id = (int)($wapresma_row['id'] ?? 0);
+$sc_members_by_id = [];
+$sc_member_by_position = [];
+foreach ([$presma_row, $wapresma_row] as $sc_member) {
+    if (!empty($sc_member['id'])) {
+        $sc_members_by_id[(int)$sc_member['id']] = $sc_member;
+        $sc_member_by_position[$sc_member['posisi']] = $sc_member;
+    }
+}
 
 // Ambil data anggota BPH & Kementerian untuk dropdown
 $bph_inti_members = dbFetchAll("SELECT nama, jabatan, posisi FROM struktur_bph WHERE periode_id = ? AND posisi IN ('ketua', 'wakil_ketua')", [$periode_id], "i");
@@ -214,6 +224,46 @@ if ($edit_id > 0) {
         }
     }
 }
+$sc_ids_for_form = array_values(array_filter(
+    array_map('intval', $panitia_json['sc_ids'] ?? []),
+    static function ($member_id) use ($sc_members_by_id) {
+        return isset($sc_members_by_id[$member_id]);
+    }
+));
+$sc_roles_for_form = array_values(array_filter(
+    $panitia_json['sc_roles'] ?? [],
+    static function ($role) use ($sc_member_by_position) {
+        return is_string($role) && isset($sc_member_by_position[$role]);
+    }
+));
+if (!$sc_roles_for_form && $sc_ids_for_form) {
+    foreach ($sc_ids_for_form as $member_id) {
+        $sc_roles_for_form[] = $sc_members_by_id[$member_id]['posisi'];
+    }
+}
+$sc_names_for_form = $panitia_json['sc'] ?? [];
+if ($sc_roles_for_form) {
+    $sc_names_for_form = array_map(static function ($role) use ($sc_member_by_position) {
+        return $sc_member_by_position[$role]['nama'];
+    }, $sc_roles_for_form);
+    $sc_ids_for_form = array_map(static function ($role) use ($sc_member_by_position) {
+        return (int)$sc_member_by_position[$role]['id'];
+    }, $sc_roles_for_form);
+} elseif ($sc_ids_for_form) {
+    $sc_names_for_form = array_map(static function ($member_id) use ($sc_members_by_id) {
+        return $sc_members_by_id[$member_id]['nama'];
+    }, $sc_ids_for_form);
+} elseif ($edit_id === 0) {
+    $sc_names_for_form = array_filter([$presma_name, $wapresma_name]);
+    $sc_ids_for_form = array_values(array_filter([$presma_id, $wapresma_id]));
+    $sc_roles_for_form = array_values(array_filter(['ketua', 'wakil_ketua'], static function ($role) use ($sc_member_by_position) {
+        return isset($sc_member_by_position[$role]);
+    }));
+}
+$sc_name_1_for_form = $sc_names_for_form[0] ?? '';
+$sc_name_2_for_form = $sc_names_for_form[1] ?? '';
+$sc_role_1_for_form = $sc_roles_for_form[0] ?? '';
+$sc_role_2_for_form = $sc_roles_for_form[1] ?? '';
 
 // Ambil template Tujuan (Kepada Yth) dari database pengaturan-surat
 $templates_tujuan = dbFetchAll("SELECT * FROM surat_templates WHERE jenis = 'tujuan' AND periode_id = ? ORDER BY label ASC", [$periode_id], "i");
@@ -240,6 +290,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $sc_1 = trim($_POST['sc_1'] ?? '');
         $sc_2 = trim($_POST['sc_2'] ?? '');
+        $submitted_sc_roles = [
+            $_POST['sc_role_1'] ?? '',
+            $_POST['sc_role_2'] ?? ''
+        ];
+        $saved_sc_ids = [];
+        $saved_sc_names = [];
+        $saved_sc_roles = [];
+        foreach ($submitted_sc_roles as $sc_role) {
+            if (is_string($sc_role) && isset($sc_member_by_position[$sc_role])) {
+                $saved_sc_ids[] = (int)$sc_member_by_position[$sc_role]['id'];
+                $saved_sc_names[] = $sc_member_by_position[$sc_role]['nama'];
+                $saved_sc_roles[] = $sc_role;
+            }
+        }
+        if ($saved_sc_roles) {
+            $sc_1 = $saved_sc_names[0] ?? '';
+            $sc_2 = $saved_sc_names[1] ?? '';
+        }
 
         $ketua_pelaksana = trim($_POST['ketua_pelaksana'] ?? '');
 
@@ -281,7 +349,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $panitia_data = [
                 'nama_kegiatan' => $nama_kegiatan,
                 'penanggung_jawab' => $penanggung_jawab,
-                'sc' => array_filter([$sc_1, $sc_2]),
+                'sc' => array_values(array_filter([$sc_1, $sc_2])),
+                'sc_ids' => $saved_sc_ids,
+                'sc_roles' => $saved_sc_roles,
                 'ketua_pelaksana' => $ketua_pelaksana,
                 'sekretaris' => array_filter([$sekretaris_1, $sekretaris_2, $sekretaris_3]),
                 'bendahara' => array_filter([$bendahara_1, $bendahara_2, $bendahara_3]),
@@ -859,8 +929,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <input type="hidden" name="penanggung_jawab" id="penanggung_jawab" value="<?php echo $edit_id > 0 ? htmlspecialchars($panitia_json['penanggung_jawab'] ?? $default_warek) : $default_warek; ?>">
-                    <input type="hidden" name="sc_1" id="sc_1" value="<?php echo $presma_name; ?>">
-                    <input type="hidden" name="sc_2" id="sc_2" value="<?php echo $wapresma_name; ?>">
+                    <input type="hidden" name="sc_1" id="sc_1" value="<?php echo htmlspecialchars($sc_name_1_for_form); ?>">
+                    <input type="hidden" name="sc_2" id="sc_2" value="<?php echo htmlspecialchars($sc_name_2_for_form); ?>">
+                    <input type="hidden" name="sc_role_1" value="<?php echo htmlspecialchars($sc_role_1_for_form); ?>">
+                    <input type="hidden" name="sc_role_2" value="<?php echo htmlspecialchars($sc_role_2_for_form); ?>">
                 </div>
 
                 <!-- CARD 2: PENGURUS INTI PANITIA -->
