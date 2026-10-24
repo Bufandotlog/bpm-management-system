@@ -336,6 +336,29 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
         .ttd-name { font-weight: bold; text-decoration: underline; margin-top: 55px; position: relative; z-index: 1; }
         .ttd-jabatan { font-size: 14px; position: relative; z-index: 1; }
 
+        .page.rundown-page {
+            padding: 20mm;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .rundown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            page-break-inside: auto;
+        }
+        .rundown-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        .rundown-table th,
+        .rundown-table td {
+            border: 1px solid #000;
+            padding: 8px 12px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
         @page {
             size: A4 portrait;
             margin: 0;
@@ -359,12 +382,14 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             .page.surat-page {
                 padding: 0 20mm 15mm !important;
                 width: 210mm !important;
-                min-height: 297mm !important;
             }
             .page.lampiran-page {
                 padding: 10mm 15mm !important;
                 width: 210mm !important;
                 page-break-before: always;
+            }
+            .page.rundown-page {
+                padding: 15mm 20mm !important;
             }
             <?php endif; ?>
             * { 
@@ -922,7 +947,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
         <?php foreach($internal_data as $idx_int => $data_int): 
             $barang_list = json_decode($data_int['barang_json'], true) ?: [];
         ?>
-        <div class="page" style="margin-top: 10mm; page-break-before: always; position:relative; z-index:0;">
+        <div class="page lampiran-page" style="margin-top: 10mm; position:relative; z-index:0;">
             <div style="text-align: left; font-size: 12pt; margin-bottom: 20px; font-style: italic;">Lampiran <?php echo ($idx_int + 1); ?></div>
             
             <div style="text-align: center; margin-bottom: 30px;">
@@ -1076,9 +1101,15 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 $tanggal_utama_r = "$s_d $s_m $s_y";
             }
             
-            $total_days_r = count($rd_json);
-        ?>
-        <div class="page" style="margin-top: 10mm; page-break-before: always; position:relative; z-index:0;">
+            $rd_days = [];
+            foreach ($rd_json as $day_index => $day_data) {
+                if (!empty($day_data['items'])) {
+                    $rd_days[] = ['day_index' => $day_index, 'data' => $day_data];
+                }
+            }
+            $total_days_r = count($rd_days);
+            ?>
+            <div class="page lampiran-page rundown-page" style="margin-top: 10mm; position:relative; z-index:0;">
             <div style="text-align: left; font-size: 12pt; margin-bottom: 20px; font-style: italic;">Lampiran <?php echo ($lampiran_offset + $idx_rd + 1); ?></div>
             
             <div style="text-align: center; margin-bottom: 30px; text-transform: uppercase;">
@@ -1088,11 +1119,14 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 <p style="font-weight: bold; margin-top: 5px; font-size: 12pt;"><?php echo htmlspecialchars($tanggal_utama_r); ?></p>
             </div>
 
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; page-break-inside: auto;">
+            <table class="rundown-table" style="width: 100%; border-collapse: collapse; margin-bottom: 30px; page-break-inside: auto;">
             <?php 
             $day_counter = 1;
-            foreach($rd_json as $dayIdx => $dayData):
-                $day_ts = strtotime($rd_tanggal_mulai . " + $dayIdx days");
+            foreach($rd_days as $rd_day):
+                $dayIdx = $rd_day['day_index'];
+                $dayData = $rd_day['data'];
+                $day_number = (int)($dayData['day_number'] ?? ($dayIdx + 1));
+                $day_ts = strtotime($rd_tanggal_mulai . " + " . ($day_number - 1) . " days");
                 $hari_nama = $hari_id_r[date('l', $day_ts)] ?? date('l', $day_ts);
                 $tgl_d = date('d', $day_ts);
                 $tgl_m = $bulan_id_r[date('F', $day_ts)] ?? date('F', $day_ts);
@@ -1104,9 +1138,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                     $judul_hari = strtoupper($rd_nama) . ' - HARI KE-' . $day_counter;
                 }
                 
-                $items = $dayData['items'] ?? [];
-                // Skip if no items to avoid "nanggung" tables
-                if (empty($items)) continue;
+                $items = $dayData['items'];
             ?>
                 <thead>
                     <?php if ($day_counter > 1): ?>
