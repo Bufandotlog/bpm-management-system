@@ -189,6 +189,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 }
+
+$def_jam = '07';
+$def_menit = '00';
+$w_pelaksanaan = $kegiatan['waktu_pelaksanaan'] ?? '';
+$master_waktu_valid = preg_match('/(\d{1,2})[\.\:](\d{2})/', $w_pelaksanaan, $m) === 1;
+if ($master_waktu_valid) {
+    $def_jam = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+    $def_menit = str_pad($m[2], 2, '0', STR_PAD_LEFT);
+}
+$master_waktu_mulai = [(int)$def_jam, (int)$def_menit];
+$rundown_hari_pertama = [];
+if ($edit_data) {
+    $decoded_rundown = json_decode((string)$edit_data['rundown_json'], true);
+    if (is_array($decoded_rundown) && isset($decoded_rundown[0]) && is_array($decoded_rundown[0])) {
+        $rundown_hari_pertama = $decoded_rundown[0];
+    }
+}
+$rundown_master_waktu_berbeda = $edit_data
+    && $master_waktu_valid
+    && isset($rundown_hari_pertama['waktu_mulai_jam'], $rundown_hari_pertama['waktu_mulai_menit'])
+    && ((int)$rundown_hari_pertama['waktu_mulai_jam'] !== $master_waktu_mulai[0]
+        || (int)$rundown_hari_pertama['waktu_mulai_menit'] !== $master_waktu_mulai[1]);
+$rundown_tanggal_mulai = $edit_data['tanggal_mulai'] ?? $master_tanggal_mulai;
+$rundown_durasi_hari = isset($edit_data['durasi_hari']) ? (int)$edit_data['durasi_hari'] : $master_durasi_hari;
 ?>
 
 <style>
@@ -715,6 +739,13 @@ input.barang-qty::-webkit-outer-spin-button {
             </div>
         </div>
 
+        <?php if ($rundown_master_waktu_berbeda): ?>
+        <div id="master-waktu-rundown-notice" role="status" style="margin: 0 0 20px; padding: 14px 18px; border: 1px solid rgba(241, 196, 15, 0.45); border-radius: 12px; background: rgba(241, 196, 15, 0.08); color: #f4d35e;">
+            <div style="margin-bottom: 10px;"><i class="fas fa-exclamation-triangle"></i> Waktu mulai hari pertama berbeda dari Master Kegiatan (<?php echo htmlspecialchars($def_jam . '.' . $def_menit); ?>). Hari berikutnya tidak akan diubah.</div>
+            <button type="button" class="btn-outline" onclick="syncFirstDayStartTime()">Sinkronkan hari pertama dari Master</button>
+        </div>
+        <?php endif; ?>
+
         <div id="daysContainer">
             <!-- Days will be generated here by JS -->
         </div>
@@ -761,15 +792,6 @@ foreach ($tamu_arr as $t) {
 $acara_recommendations = array_values(array_unique($acara_recommendations));
 $ket_tamu_recommendations = array_values(array_unique($ket_tamu_recommendations));
 
-$def_jam = '07';
-$def_menit = '00';
-$w_pelaksanaan = $kegiatan['waktu_pelaksanaan'] ?? '';
-if (preg_match('/(\d{1,2})[\.\:](\d{2})/', $w_pelaksanaan, $m)) {
-    $def_jam = str_pad($m[1], 2, '0', STR_PAD_LEFT);
-    $def_menit = str_pad($m[2], 2, '0', STR_PAD_LEFT);
-}
-$rundown_tanggal_mulai = $edit_data['tanggal_mulai'] ?? $master_tanggal_mulai;
-$rundown_durasi_hari = isset($edit_data['durasi_hari']) ? (int)$edit_data['durasi_hari'] : $master_durasi_hari;
 ?>
 <script>
 const ketList = <?php echo json_encode(array_column($ket_list, 'nama_keterangan')); ?>;
@@ -781,6 +803,20 @@ const defaultStartHour = '<?php echo $def_jam; ?>';
 const defaultStartMinute = '<?php echo $def_menit; ?>';
 
 let dayCount = 0;
+
+function syncFirstDayStartTime() {
+    const firstDay = document.getElementById('day-1');
+    if (!firstDay) return;
+    const startHour = firstDay.querySelector('.waktu-mulai-jam');
+    const startMinute = firstDay.querySelector('.waktu-mulai-menit');
+    if (!startHour || !startMinute) return;
+
+    startHour.value = defaultStartHour;
+    startMinute.value = defaultStartMinute;
+    recalculateTimes(1);
+    const notice = document.getElementById('master-waktu-rundown-notice');
+    if (notice) notice.style.display = 'none';
+}
 
 function getKetTempatOptions(type) {
     return type === 'ket' ? [...ketTamuRecommendations, ...ketList] : tempatList;

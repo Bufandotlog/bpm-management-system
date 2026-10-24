@@ -2055,7 +2055,9 @@ function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
         }
 
         $pelaksanaan_hari = 'Sesuai Jadwal Kegiatan';
-        $pelaksanaan_waktu = '08.00 s.d Selesai';
+        $pelaksanaan_waktu = !empty($kegiatan['waktu_pelaksanaan'])
+            ? $kegiatan['waktu_pelaksanaan']
+            : '08.00 s.d Selesai';
 
         if (in_array($g_perihal_label, $rapat_perihals) || in_array($g_perihal_surat, $rapat_perihals)) {
             $konteks_narasi = 'untuk menghadiri ' . $g_perihal_surat . ' kegiatan tersebut';
