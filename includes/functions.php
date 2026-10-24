@@ -2032,16 +2032,53 @@ function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
         $date_object = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
         return $date_object ? tanggalIndonesia($date_object->getTimestamp(), true) : '';
     };
-    $tanggal_mulai_master = $format_tanggal_jadwal($kegiatan['tanggal_mulai'] ?? '');
-    $tanggal_selesai_master = $format_tanggal_jadwal($kegiatan['tanggal_selesai'] ?? '');
-    $tanggal_jadwal_kegiatan = $tanggal_mulai_master;
-    if (
-        $tanggal_mulai_master !== ''
-        && $tanggal_selesai_master !== ''
-        && ($kegiatan['tanggal_selesai'] ?? '') >= ($kegiatan['tanggal_mulai'] ?? '')
-    ) {
-        $tanggal_jadwal_kegiatan .= ' - ' . $tanggal_selesai_master;
-    } elseif ($tanggal_jadwal_kegiatan === '' && $rundown) {
+    $format_rentang_tanggal_jadwal = static function ($startDate, $endDate) use ($format_tanggal_jadwal) {
+        $formatted_start = $format_tanggal_jadwal($startDate);
+        if ($formatted_start === '') {
+            return '';
+        }
+        if ($endDate === $startDate) {
+            return $formatted_start;
+        }
+
+        $formatted_end = $format_tanggal_jadwal($endDate);
+        if ($formatted_end === '' || $endDate < $startDate) {
+            return $formatted_start;
+        }
+
+        $start_object = DateTimeImmutable::createFromFormat('!Y-m-d', $startDate);
+        $end_object = DateTimeImmutable::createFromFormat('!Y-m-d', $endDate);
+        if (!$start_object || !$end_object) {
+            return $formatted_start;
+        }
+
+        [$start_weekday, $start_label] = explode(', ', $formatted_start, 2);
+        [$end_weekday, $end_label] = explode(', ', $formatted_end, 2);
+        $start_parts = explode(' ', $start_label);
+        $end_parts = explode(' ', $end_label);
+
+        if ($start_object->format('Y-m') === $end_object->format('Y-m')) {
+            return $start_weekday . '-' . $end_weekday . ', '
+                . $start_object->format('j') . '-' . $end_object->format('j') . ' '
+                . $start_parts[1] . ' ' . $start_object->format('Y');
+        }
+
+        if ($start_object->format('Y') === $end_object->format('Y')) {
+            return $start_weekday . '-' . $end_weekday . ', '
+                . $start_object->format('j') . ' ' . $start_parts[1] . '-'
+                . $end_object->format('j') . ' ' . $end_parts[1] . ' '
+                . $start_object->format('Y');
+        }
+
+        return $start_weekday . '-' . $end_weekday . ', '
+            . $start_object->format('j') . ' ' . $start_parts[1] . ' ' . $start_object->format('Y') . '-'
+            . $end_object->format('j') . ' ' . $end_parts[1] . ' ' . $end_object->format('Y');
+    };
+    $tanggal_jadwal_kegiatan = $format_rentang_tanggal_jadwal(
+        $kegiatan['tanggal_mulai'] ?? '',
+        $kegiatan['tanggal_selesai'] ?? ''
+    );
+    if ($tanggal_jadwal_kegiatan === '' && $rundown) {
         $tanggal_jadwal_kegiatan = $format_tanggal_jadwal($rundown['tanggal_mulai'] ?? '');
     }
 
