@@ -394,6 +394,10 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             .page.rundown-page {
                 padding: 15mm 20mm !important;
             }
+            .rundown-chunk-continuation {
+                page-break-before: always;
+                break-before: page;
+            }
             <?php endif; ?>
             * { 
                 box-shadow: none !important; 
@@ -1141,74 +1145,89 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                     $judul_hari = strtoupper($rd_nama) . ' - HARI KE-' . $day_counter;
                 }
                 
-                $items = $dayData['items'];
+                $numbered_items = [];
+                $current_number = 0;
+                $current_time = '';
+                foreach ($dayData['items'] as $item) {
+                    if (empty($item['is_parallel'])) {
+                        $current_number++;
+                        $current_time = $item['waktu'];
+                    }
+                    $item['display_number'] = $current_number;
+                    $item['display_time'] = $current_time;
+                    $numbered_items[] = $item;
+                }
+                $item_chunks = array_chunk($numbered_items, 8);
             ?>
-                <thead>
-                    <?php if ($day_counter > 1): ?>
-                    <tr>
-                        <td colspan="5" style="border: none; height: 30px;"></td>
-                    </tr>
-                    <?php endif; ?>
-                    <tr>
-                        <th colspan="5" style="background-color: #d9e2f3; font-weight: bold; font-size: 12pt; padding: 10px; border: 1px solid #000; text-align: center; -webkit-print-color-adjust: exact;">
-                            <?php echo htmlspecialchars($judul_hari); ?><br><br>
-                            <?php echo htmlspecialchars("$hari_nama, $tgl_d $tgl_m $tgl_y"); ?>
-                        </th>
-                    </tr>
-                    <tr>
-                        <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 5%; -webkit-print-color-adjust: exact;">NO</th>
-                        <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 15%; -webkit-print-color-adjust: exact;">WAKTU</th>
-                        <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 35%; -webkit-print-color-adjust: exact;">ACARA</th>
-                        <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 30%; -webkit-print-color-adjust: exact;"><?php echo ($dayData['tipe_ket'] ?? 'ket') === 'ket' ? 'KETERANGAN' : 'TEMPAT'; ?></th>
-                        <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 15%; -webkit-print-color-adjust: exact;">PENANGGUNG<br>JAWAB</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $num = 1;
-                    for ($idx = 0; $idx < count($items); $idx++): 
-                        $item = $items[$idx];
-                        $is_par = !empty($item['is_parallel']);
-                        
-                        $rowspan = 1;
-                        if (!$is_par) {
-                            for ($j = $idx + 1; $j < count($items); $j++) {
-                                if (!empty($items[$j]['is_parallel'])) {
-                                    $rowspan++;
-                                } else {
-                                    break;
+            <?php foreach ($item_chunks as $chunk_index => $chunk_items): ?>
+            <div class="<?php echo $chunk_index > 0 ? 'rundown-chunk-continuation' : ''; ?>">
+                <table class="rundown-table" style="width: 100%; border-collapse: collapse; margin-bottom: 30px; page-break-inside: auto;">
+                    <thead>
+                        <?php if ($day_counter > 1 && $chunk_index === 0): ?>
+                        <tr>
+                            <td colspan="5" style="border: none; height: 30px;"></td>
+                        </tr>
+                        <?php endif; ?>
+                        <tr>
+                            <th colspan="5" style="background-color: #d9e2f3; font-weight: bold; font-size: 12pt; padding: 10px; border: 1px solid #000; text-align: center; -webkit-print-color-adjust: exact;">
+                                <?php echo htmlspecialchars($judul_hari); ?><br><br>
+                                <?php echo htmlspecialchars("$hari_nama, $tgl_d $tgl_m $tgl_y"); ?>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 5%; -webkit-print-color-adjust: exact;">NO</th>
+                            <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 15%; -webkit-print-color-adjust: exact;">WAKTU</th>
+                            <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 35%; -webkit-print-color-adjust: exact;">ACARA</th>
+                            <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 30%; -webkit-print-color-adjust: exact;"><?php echo ($dayData['tipe_ket'] ?? 'ket') === 'ket' ? 'KETERANGAN' : 'TEMPAT'; ?></th>
+                            <th style="background-color: #bfbfbf; font-weight: bold; border: 1px solid #000; padding: 8px 12px; text-align: center; width: 15%; -webkit-print-color-adjust: exact;">PENANGGUNG<br>JAWAB</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($chunk_items as $idx => $item):
+                            $is_par = !empty($item['is_parallel']);
+                            $show_schedule_cells = !$is_par || ($idx === 0 && $item['display_number'] > 0);
+                            $rowspan = 1;
+                            if ($show_schedule_cells) {
+                                for ($j = $idx + 1; $j < count($chunk_items); $j++) {
+                                    if (
+                                        !empty($chunk_items[$j]['is_parallel'])
+                                        && $chunk_items[$j]['display_number'] === $item['display_number']
+                                    ) {
+                                        $rowspan++;
+                                    } else {
+                                        break;
+                                    }
                                 }
                             }
-                        }
-                    ?>
-                        <?php 
-                        $is_highlight = false;
-                        $perihal_surat_lower = strtolower($surat['perihal'] ?? '');
-                        $is_pemateri_letter = (strpos($perihal_surat_lower, 'pemateri') !== false || strpos($perihal_surat_lower, 'narasumber') !== false);
-                        
-                        if ($is_pemateri_letter && isset($tujuan_nama_pendek) && !empty($tujuan_nama_pendek)) {
-                            if (stripos($item['keterangan'], $tujuan_nama_pendek) !== false || stripos($item['acara'], $tujuan_nama_pendek) !== false) {
-                                $is_highlight = true;
+                            $is_highlight = false;
+                            $perihal_surat_lower = strtolower($surat['perihal'] ?? '');
+                            $is_pemateri_letter = (strpos($perihal_surat_lower, 'pemateri') !== false || strpos($perihal_surat_lower, 'narasumber') !== false);
+
+                            if ($is_pemateri_letter && isset($tujuan_nama_pendek) && !empty($tujuan_nama_pendek)) {
+                                if (stripos($item['keterangan'], $tujuan_nama_pendek) !== false || stripos($item['acara'], $tujuan_nama_pendek) !== false) {
+                                    $is_highlight = true;
+                                }
                             }
-                        }
-                        $bg_style = $is_highlight ? 'background-color: #d9e2f3; -webkit-print-color-adjust: exact;' : '';
+                            $bg_style = $is_highlight ? 'background-color: #d9e2f3; -webkit-print-color-adjust: exact;' : '';
                         ?>
                         <tr style="page-break-inside: avoid; <?php echo $bg_style; ?>">
-                            <?php if (!$is_par): ?>
-                                <td style="border: 1px solid #000; padding: 8px 12px; text-align: center; vertical-align: middle; <?php echo $bg_style; ?>" <?php echo $rowspan > 1 ? 'rowspan="'.$rowspan.'"' : ''; ?>><?php echo $num++; ?>.</td>
-                                <td style="border: 1px solid #000; padding: 8px 12px; text-align: center; vertical-align: middle; white-space: nowrap; <?php echo $bg_style; ?>" <?php echo $rowspan > 1 ? 'rowspan="'.$rowspan.'"' : ''; ?>><?php echo htmlspecialchars($item['waktu']); ?></td>
+                            <?php if ($show_schedule_cells): ?>
+                                <td style="border: 1px solid #000; padding: 8px 12px; text-align: center; vertical-align: middle; <?php echo $bg_style; ?>" <?php echo $rowspan > 1 ? 'rowspan="'.$rowspan.'"' : ''; ?>><?php echo $item['display_number']; ?>.</td>
+                                <td style="border: 1px solid #000; padding: 8px 12px; text-align: center; vertical-align: middle; white-space: nowrap; <?php echo $bg_style; ?>" <?php echo $rowspan > 1 ? 'rowspan="'.$rowspan.'"' : ''; ?>><?php echo htmlspecialchars($item['display_time']); ?></td>
                             <?php endif; ?>
                             <td style="border: 1px solid #000; padding: 8px 12px; text-align: center; vertical-align: middle; <?php echo $bg_style; ?>"><?php echo nl2br(htmlspecialchars($item['acara'])); ?></td>
                             <td style="border: 1px solid #000; padding: 8px 12px; text-align: center; vertical-align: middle; <?php echo $bg_style; ?>"><?php echo htmlspecialchars($item['keterangan']); ?></td>
                             <td style="border: 1px solid #000; padding: 8px 12px; text-align: center; vertical-align: middle; <?php echo $bg_style; ?>"><?php echo htmlspecialchars($item['pj'] ?? $item['penanggung_jawab'] ?? ''); ?></td>
                         </tr>
-                    <?php endfor; ?>
-                </tbody>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endforeach; ?>
             <?php 
                 $day_counter++;
             endforeach; 
             ?>
-            </table>
             <div style="font-size: 10pt; font-style: italic; margin-top: -15px; margin-bottom: 20px;">*Catatan: Rundown acara dapat berubah sewaktu-waktu menyesuaikan kondisi dan kebutuhan di lapangan.</div>
         </div>
         <?php endforeach; ?>
