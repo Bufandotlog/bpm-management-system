@@ -354,17 +354,17 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 box-shadow: none !important; 
                 outline: none !important;
                 background: white !important; 
-                page-break-after: always; 
             }
             <?php if (!isset($_GET['bulk'])): ?>
             .page.surat-page {
-                padding: 15mm 20mm !important;
+                padding: 0 20mm 15mm !important;
                 width: 210mm !important;
                 min-height: 297mm !important;
             }
             .page.lampiran-page {
                 padding: 10mm 15mm !important;
                 width: 210mm !important;
+                page-break-before: always;
             }
             <?php endif; ?>
             * { 
@@ -387,9 +387,6 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 border-color: #000 !important;
             }
             .pdf-page-canvas { border: none !important; }
-            .page:last-of-type {
-                page-break-after: avoid !important;
-            }
             .no-print { display: none !important; }
         }
     </style>
@@ -426,7 +423,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             $v = file_exists($kop_path) ? filemtime($kop_path) : time();
             $kop_url = uploadUrl('kop_surat.png') . '?v=' . $v;
         ?>
-            <div style="margin: -10mm -15mm -5px -15mm; text-align: center;">
+            <div style="margin: 0 -15mm -5px -15mm; text-align: center;">
                 <img src="<?php echo htmlspecialchars($kop_url); ?>" style="width:100%; height:auto; display:block;" alt="Kop Surat">
             </div>
         <?php else: ?>
@@ -1337,7 +1334,6 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 margin: 0 !important;
                 box-shadow: none !important;
                 border: none !important;
-                page-break-after: always;
             }
             .no-print { display: none !important; }
         }
