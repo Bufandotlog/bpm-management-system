@@ -229,6 +229,7 @@ Sistem telah dioptimalkan secara mendalam untuk alur kerja Event Organizer (Ketu
 3. **Smart Input & Form Autofill**
    * **Smart Recommendation Filter**: Rekomendasi nama pemateri yang sudah dialokasikan ke suatu acara akan otomatis menghilang dari daftar dropdown (mencegah *double booking* jadwal).
    * **Waktu Mulai Otomatis**: Form edit dan pembuatan hari Rundown tidak lagi memaksa admin menginput jam awal 24-jam manual. Nilai ini ditarik secara otomatis di latar belakang berdasarkan `waktu_pelaksanaan` dari Master Kegiatan.
+   * **Sinkronisasi Jadwal**: Jika tanggal atau waktu Master Kegiatan berubah, editor rundown menampilkan aksi sinkronisasi. Setelah rundown disimpan, tanggal surat staging mengikuti tanggal Master atau tanggal sesi rundown untuk surat pemateri/sambutan; surat arsip final tidak diperbarui otomatis.
 
 **Catatan Penting Untuk Developer Selanjutnya (Next Dev Notes):**
 * **Pencocokan Nama Pemateri:** Fitur deteksi otomatis baris pemateri (baik untuk mengubah jam surat maupun memberi *highlight* biru pada PDF) bertumpu pada **nama pendek** pemateri yang diekstrak sebelum tanda koma pertama. (Lihat `syncTamuUndanganLetters()` pada `functions.php`). Jika institusi di kemudian hari memodifikasi form input agar nama asli dan gelar dipisah ke tabel relasional baru, pastikan logika pencocokan *substring* ini diperbarui.
