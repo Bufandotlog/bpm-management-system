@@ -394,7 +394,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             .page.rundown-page {
                 padding: 15mm 20mm !important;
             }
-            .rundown-chunk-continuation {
+            .rundown-page-continuation {
                 page-break-before: always;
                 break-before: page;
             }
@@ -1116,20 +1116,10 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             }
             $total_days_r = count($rd_days);
             ?>
-            <div class="page lampiran-page rundown-page" style="margin-top: 10mm; position:relative; z-index:0;">
-            <div style="text-align: left; font-size: 12pt; margin-bottom: 20px; font-style: italic;">Lampiran <?php echo ($lampiran_offset + $idx_rd + 1); ?></div>
-            
-            <div style="text-align: center; margin-bottom: 30px; text-transform: uppercase;">
-                <h1 style="font-size: 14pt; font-weight: bold; margin: 3px 0;">SUSUNAN ACARA</h1>
-                <h2 style="font-size: 14pt; font-weight: bold; margin: 3px 0;"><?php echo htmlspecialchars($rd_nama); ?></h2>
-                <h3 style="font-size: 14pt; font-weight: bold; margin: 3px 0;">PERIODE <?php echo htmlspecialchars($rd_tahun); ?></h3>
-                <p style="font-weight: bold; margin-top: 5px; font-size: 12pt;"><?php echo htmlspecialchars($tanggal_utama_r); ?></p>
-            </div>
-
-            <table class="rundown-table" style="width: 100%; border-collapse: collapse; margin-bottom: 30px; page-break-inside: auto;">
-            <?php 
+            <?php
+            $first_rundown_page = true;
             $day_counter = 1;
-            foreach($rd_days as $rd_day):
+            foreach($rd_days as $rd_day_index => $rd_day):
                 $dayIdx = $rd_day['day_index'];
                 $dayData = $rd_day['data'];
                 $day_number = (int)($dayData['day_number'] ?? ($dayIdx + 1));
@@ -1160,7 +1150,16 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 $item_chunks = array_chunk($numbered_items, 8);
             ?>
             <?php foreach ($item_chunks as $chunk_index => $chunk_items): ?>
-            <div class="<?php echo $chunk_index > 0 ? 'rundown-chunk-continuation' : ''; ?>">
+            <div class="page lampiran-page rundown-page<?php echo $first_rundown_page ? '' : ' rundown-page-continuation'; ?>" style="margin-top: 10mm; position:relative; z-index:0;">
+                <?php if ($first_rundown_page): ?>
+                <div style="text-align: left; font-size: 12pt; margin-bottom: 20px; font-style: italic;">Lampiran <?php echo ($lampiran_offset + $idx_rd + 1); ?></div>
+                <div style="text-align: center; margin-bottom: 30px; text-transform: uppercase;">
+                    <h1 style="font-size: 14pt; font-weight: bold; margin: 3px 0;">SUSUNAN ACARA</h1>
+                    <h2 style="font-size: 14pt; font-weight: bold; margin: 3px 0;"><?php echo htmlspecialchars($rd_nama); ?></h2>
+                    <h3 style="font-size: 14pt; font-weight: bold; margin: 3px 0;">PERIODE <?php echo htmlspecialchars($rd_tahun); ?></h3>
+                    <p style="font-weight: bold; margin-top: 5px; font-size: 12pt;"><?php echo htmlspecialchars($tanggal_utama_r); ?></p>
+                </div>
+                <?php $first_rundown_page = false; endif; ?>
                 <table class="rundown-table" style="width: 100%; border-collapse: collapse; margin-bottom: 30px; page-break-inside: auto;">
                     <thead>
                         <?php if ($day_counter > 1 && $chunk_index === 0): ?>
@@ -1222,14 +1221,15 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                <?php if ($rd_day_index === count($rd_days) - 1 && $chunk_index === count($item_chunks) - 1): ?>
+                <div style="font-size: 10pt; font-style: italic; margin-top: -15px; margin-bottom: 20px;">*Catatan: Rundown acara dapat berubah sewaktu-waktu menyesuaikan kondisi dan kebutuhan di lapangan.</div>
+                <?php endif; ?>
             </div>
             <?php endforeach; ?>
             <?php 
                 $day_counter++;
             endforeach; 
             ?>
-            <div style="font-size: 10pt; font-style: italic; margin-top: -15px; margin-bottom: 20px;">*Catatan: Rundown acara dapat berubah sewaktu-waktu menyesuaikan kondisi dan kebutuhan di lapangan.</div>
-        </div>
         <?php endforeach; ?>
     <?php endif; ?>
 

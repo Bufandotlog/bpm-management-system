@@ -224,7 +224,7 @@ $download_name = "RUNDOWN - $nama_acara - $tahun";
             .page:last-of-type {
                 page-break-after: avoid !important;
             }
-            .rundown-chunk-continuation {
+            .rundown-page-continuation {
                 page-break-before: always;
                 break-before: page;
             }
@@ -239,16 +239,9 @@ $download_name = "RUNDOWN - $nama_acara - $tahun";
         <a href="cetak-rundown.php" class="btn btn-warning"><i class="fas fa-arrow-left"></i> Kembali</a>
     </div>
 
-    <div class="page">
-        
-        <div class="header-pdf">
-            <h1>SUSUNAN ACARA</h1>
-            <h2><?php echo htmlspecialchars($nama_acara); ?></h2>
-            <h3>PERIODE <?php echo htmlspecialchars($tahun); ?></h3>
-            <p style="font-weight: bold; margin-top: 5px; font-size: 12pt;"><?php echo htmlspecialchars($tanggal_utama); ?></p>
-        </div>
-
-        <?php foreach ($formatted_days as $dayIndex => $dayData):
+        <?php
+        $first_rundown_page = true;
+        foreach ($formatted_days as $dayIndex => $dayData):
             $numbered_items = [];
             $current_number = 0;
             $current_time = '';
@@ -264,7 +257,15 @@ $download_name = "RUNDOWN - $nama_acara - $tahun";
             $item_chunks = array_chunk($numbered_items, 8);
             foreach ($item_chunks as $chunk_index => $chunk_items):
         ?>
-        <div class="<?php echo $chunk_index > 0 ? 'rundown-chunk-continuation' : ''; ?>">
+        <div class="page rundown-page<?php echo $first_rundown_page ? '' : ' rundown-page-continuation'; ?>">
+            <?php if ($first_rundown_page): ?>
+            <div class="header-pdf">
+                <h1>SUSUNAN ACARA</h1>
+                <h2><?php echo htmlspecialchars($nama_acara); ?></h2>
+                <h3>PERIODE <?php echo htmlspecialchars($tahun); ?></h3>
+                <p style="font-weight: bold; margin-top: 5px; font-size: 12pt;"><?php echo htmlspecialchars($tanggal_utama); ?></p>
+            </div>
+            <?php $first_rundown_page = false; endif; ?>
             <table class="table-rundown">
                 <thead>
                     <?php if ($dayIndex > 0 && $chunk_index === 0): ?>
@@ -316,11 +317,11 @@ $download_name = "RUNDOWN - $nama_acara - $tahun";
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php if ($dayIndex === count($formatted_days) - 1 && $chunk_index === count($item_chunks) - 1): ?>
+            <div style="font-size: 10pt; font-style: italic; margin-top: -15px; margin-bottom: 20px;">*Catatan: Rundown acara dapat berubah sewaktu-waktu menyesuaikan kondisi dan kebutuhan di lapangan.</div>
+            <?php endif; ?>
         </div>
         <?php endforeach; endforeach; ?>
-        
-        <div style="font-size: 10pt; font-style: italic; margin-top: -15px; margin-bottom: 20px;">*Catatan: Rundown acara dapat berubah sewaktu-waktu menyesuaikan kondisi dan kebutuhan di lapangan.</div>
-    </div>
 
 </body>
 </html>
