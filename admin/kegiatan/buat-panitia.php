@@ -1511,7 +1511,6 @@ function updateLivePreview() {
     // Kumpulkan penugasan untuk Widget Pool Status
     const assignedMembers = {};
     if (sc1) assignedMembers[sc1] = 'Steering Committee';
-    if (sc2) assignedMembers[sc2] = 'Steering Committee';
     if (ketuaPelaksana) assignedMembers[ketuaPelaksana] = 'Ketua Pelaksana';
     if (sek1) assignedMembers[sek1] = 'Sekretaris 1';
     if (sek2) assignedMembers[sek2] = 'Sekretaris 2';
