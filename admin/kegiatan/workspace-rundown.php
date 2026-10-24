@@ -213,6 +213,16 @@ $rundown_master_waktu_berbeda = $edit_data
         || (int)$rundown_hari_pertama['waktu_mulai_menit'] !== $master_waktu_mulai[1]);
 $rundown_tanggal_mulai = $edit_data['tanggal_mulai'] ?? $master_tanggal_mulai;
 $rundown_durasi_hari = isset($edit_data['durasi_hari']) ? (int)$edit_data['durasi_hari'] : $master_durasi_hari;
+$master_tanggal_mulai_valid = preg_match('/^\d{4}-\d{2}-\d{2}$/', $master_tanggal_mulai)
+    && checkdate((int)substr($master_tanggal_mulai, 5, 2), (int)substr($master_tanggal_mulai, 8, 2), (int)substr($master_tanggal_mulai, 0, 4));
+$master_tanggal_range_valid = $master_tanggal_mulai_valid
+    && preg_match('/^\d{4}-\d{2}-\d{2}$/', $master_tanggal_selesai)
+    && checkdate((int)substr($master_tanggal_selesai, 5, 2), (int)substr($master_tanggal_selesai, 8, 2), (int)substr($master_tanggal_selesai, 0, 4))
+    && $master_tanggal_selesai >= $master_tanggal_mulai;
+$rundown_master_tanggal_berbeda = $edit_data
+    && $master_tanggal_mulai_valid
+    && ($rundown_tanggal_mulai !== $master_tanggal_mulai
+        || ($master_tanggal_range_valid && $rundown_durasi_hari !== $master_durasi_hari));
 ?>
 
 <style>
@@ -832,17 +842,25 @@ input.barang-qty::-webkit-outer-spin-button {
             </div>
         </div>
 
-        <?php if ($rundown_master_waktu_berbeda): ?>
+        <?php if ($rundown_master_waktu_berbeda || $rundown_master_tanggal_berbeda): ?>
         <div class="schedule-sync-card" id="master-waktu-rundown-notice" role="status" aria-live="polite">
             <div class="schedule-sync-copy">
-                <span class="schedule-sync-icon" aria-hidden="true"><i class="fas fa-clock"></i></span>
+                <span class="schedule-sync-icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
                 <div>
-                    <strong id="master-waktu-sync-title">Jadwal Master Kegiatan telah berubah</strong>
-                    <p id="master-waktu-sync-description">Waktu mulai hari pertama di rundown berbeda. Terapkan waktu <?php echo htmlspecialchars($def_jam . '.' . $def_menit); ?> untuk menghitung ulang sesi hari pertama. Hari berikutnya tetap; surat staging yang memakai sesi rundown akan diperbarui setelah rundown disimpan.</p>
+                    <strong id="master-waktu-sync-title">Jadwal Master Kegiatan berbeda</strong>
+                    <p id="master-waktu-sync-description">
+                        <?php if ($rundown_master_tanggal_berbeda): ?>
+                            Tanggal Master <?php echo htmlspecialchars($master_tanggal_mulai); ?><?php echo $master_tanggal_range_valid ? ' sampai ' . htmlspecialchars($master_tanggal_selesai) : ''; ?> tidak sama dengan tanggal rundown.
+                        <?php endif; ?>
+                        <?php if ($rundown_master_waktu_berbeda): ?>
+                            Waktu mulai hari pertama juga berbeda; waktu Master adalah <?php echo htmlspecialchars($def_jam . '.' . $def_menit); ?>.
+                        <?php endif; ?>
+                        Terapkan jadwal Master untuk menyelaraskan tanggal dan durasi<?php echo $rundown_master_waktu_berbeda ? ', serta menghitung ulang sesi hari pertama' : ''; ?>. Susunan acara dan jam hari lainnya tetap; jika durasi Master lebih pendek, sistem akan meminta konfirmasi sebelum menghapus hari tambahan. Surat staging yang mengikuti jadwal akan diperbarui setelah rundown disimpan.
+                    </p>
                 </div>
             </div>
-            <button type="button" class="schedule-sync-button" id="master-waktu-sync-button" onclick="syncFirstDayStartTime()">
-                <i class="fas fa-sync-alt"></i> Terapkan waktu Master
+            <button type="button" class="schedule-sync-button" id="master-waktu-sync-button" onclick="syncMasterSchedule()">
+                <i class="fas fa-sync-alt"></i> Terapkan jadwal Master
             </button>
         </div>
         <?php endif; ?>
@@ -902,28 +920,50 @@ const acaraRecommendations = <?php echo json_encode(array_values($acara_recommen
 const ketTamuRecommendations = <?php echo json_encode(array_values($ket_tamu_recommendations), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
 const defaultStartHour = '<?php echo $def_jam; ?>';
 const defaultStartMinute = '<?php echo $def_menit; ?>';
+const masterStartDate = <?php echo json_encode($master_tanggal_mulai_valid ? $master_tanggal_mulai : ''); ?>;
+const masterDurationDays = <?php echo $master_tanggal_range_valid ? (int)$master_durasi_hari : 'null'; ?>;
+const syncMasterTime = <?php echo $rundown_master_waktu_berbeda ? 'true' : 'false'; ?>;
 
 let dayCount = 0;
 
-function syncFirstDayStartTime() {
-    const firstDay = document.getElementById('day-1');
-    if (!firstDay) return;
-    const startHour = firstDay.querySelector('.waktu-mulai-jam');
-    const startMinute = firstDay.querySelector('.waktu-mulai-menit');
-    if (!startHour || !startMinute) return;
+function syncMasterSchedule() {
+    const durationInput = document.getElementById('durasi_hari');
+    const currentDuration = parseInt(durationInput.value, 10) || 1;
+    const nextDuration = masterDurationDays || currentDuration;
+    if (nextDuration < currentDuration && !confirm(
+        `Durasi Master hanya ${nextDuration} hari. Hari rundown setelah hari ke-${nextDuration} beserta acaranya akan dihapus. Lanjutkan sinkronisasi?`
+    )) {
+        return;
+    }
 
-    startHour.value = defaultStartHour;
-    startMinute.value = defaultStartMinute;
-    recalculateTimes(1);
+    if (masterStartDate) {
+        document.getElementById('tanggal_mulai').value = masterStartDate;
+    }
+    if (masterDurationDays) {
+        durationInput.value = masterDurationDays;
+        generateDays();
+    }
+
+    if (syncMasterTime) {
+        const firstDay = document.getElementById('day-1');
+        const startHour = firstDay && firstDay.querySelector('.waktu-mulai-jam');
+        const startMinute = firstDay && firstDay.querySelector('.waktu-mulai-menit');
+        if (firstDay && startHour && startMinute) {
+            startHour.value = defaultStartHour;
+            startMinute.value = defaultStartMinute;
+            recalculateTimes(1);
+        }
+    }
+
     const notice = document.getElementById('master-waktu-rundown-notice');
     const button = document.getElementById('master-waktu-sync-button');
     const title = document.getElementById('master-waktu-sync-title');
     const description = document.getElementById('master-waktu-sync-description');
     if (notice) notice.classList.add('is-applied');
-    if (title) title.textContent = 'Waktu Master diterapkan ke hari pertama';
-    if (description) description.textContent = 'Sesi hari pertama telah dihitung ulang. Klik “Perbarui Arsip” untuk menyimpan perubahan dan menyinkronkan waktu sesi ke surat staging pemateri atau sambutan.';
+    if (title) title.textContent = 'Jadwal Master diterapkan ke rundown';
+    if (description) description.textContent = 'Tanggal dan durasi rundown telah diselaraskan; waktu sesi hari pertama dihitung ulang jika waktu Master berubah. Klik “Perbarui Arsip” untuk menyimpan dan memperbarui tanggal/waktu surat staging terkait.';
     if (button) {
-        button.innerHTML = '<i class="fas fa-check"></i> Waktu diterapkan';
+        button.innerHTML = '<i class="fas fa-check"></i> Jadwal diterapkan';
         button.disabled = true;
     }
 }
