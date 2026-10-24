@@ -1238,6 +1238,10 @@ if ($is_edit || $is_clone) {
                             </div>
                         </div>
                         <div class="preview-bar" id="preview-waktu"><?php echo htmlspecialchars($edit_data['pelaksanaan_waktu']); ?></div>
+                        <div id="master-waktu-sync-notice" role="status" style="display:none; margin-top:12px; padding:12px 14px; border:1px solid rgba(241,196,15,.45); border-radius:10px; background:rgba(241,196,15,.08); color:#f4d35e;">
+                            <div style="margin-bottom:9px;">Waktu surat berbeda dari waktu Master Kegiatan. Perubahan hanya diterapkan ke formulir dan tersimpan setelah surat disimpan.</div>
+                            <button type="button" class="btn-outline" onclick="syncSuratTimeFromMaster()">Gunakan waktu dari Master Kegiatan</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -1890,6 +1894,7 @@ function filterLampiran(isUserChange = false) {
             if (typeof formatTanggalRange === 'function') formatTanggalRange();
         }
         setWaktuPelaksanaan(waktuPelaksanaan);
+        updateMasterWaktuSyncNotice();
         document.getElementById('input_tempat').value = tempatPelaksanaan;
         
         // Auto-fill Panitia (Ketua & Sekretaris Pelaksana)
@@ -1935,6 +1940,7 @@ function filterLampiran(isUserChange = false) {
             }
         }
     });
+    updateMasterWaktuSyncNotice();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -2075,6 +2081,51 @@ function parseWaktuPelaksanaan(value) {
     };
 }
 
+function normalizedWaktuPelaksanaan(value) {
+    const parts = (value || '').split(' s.d ');
+    const startMatch = (parts[0] || '').match(/(\d{1,2})[\.:](\d{2})/);
+    if (!startMatch) return '';
+    const startHour = Number(startMatch[1]);
+    const startMinute = Number(startMatch[2]);
+    if (startHour > 23 || startMinute > 59) return '';
+
+    const endMatch = (parts[1] || '').match(/(\d{1,2})[\.:](\d{2})/);
+    if (!endMatch) return String(startHour).padStart(2, '0') + ':' + String(startMinute).padStart(2, '0') + '|selesai';
+    const endHour = Number(endMatch[1]);
+    const endMinute = Number(endMatch[2]);
+    if (endHour > 23 || endMinute > 59) return '';
+    return [startHour, startMinute].map(value => String(value).padStart(2, '0')).join(':')
+        + '|' + [endHour, endMinute].map(value => String(value).padStart(2, '0')).join(':');
+}
+
+function updateMasterWaktuSyncNotice() {
+    const notice = document.getElementById('master-waktu-sync-notice');
+    const select = document.getElementById('kegiatan_id_select');
+    if (!notice || !select || select.value === '0') {
+        if (notice) notice.style.display = 'none';
+        return;
+    }
+
+    const option = select.options[select.selectedIndex];
+    const masterWaktu = option ? (option.getAttribute('data-waktu') || '').trim() : '';
+    const currentWaktu = document.getElementById('out-waktu').value;
+    const masterNormalized = normalizedWaktuPelaksanaan(masterWaktu);
+    notice.style.display = masterNormalized
+        && masterNormalized !== normalizedWaktuPelaksanaan(currentWaktu)
+        ? 'block'
+        : 'none';
+}
+
+function syncSuratTimeFromMaster() {
+    const select = document.getElementById('kegiatan_id_select');
+    if (!select || select.value === '0') return;
+    const option = select.options[select.selectedIndex];
+    const masterWaktu = option ? (option.getAttribute('data-waktu') || '').trim() : '';
+    if (!normalizedWaktuPelaksanaan(masterWaktu)) return;
+    setWaktuPelaksanaan(masterWaktu);
+    updateMasterWaktuSyncNotice();
+}
+
 function setWaktuPelaksanaan(value) {
     const input = document.getElementById('out-waktu');
     input.value = value;
@@ -2097,6 +2148,7 @@ function updateWaktu() {
     const result = start + ' s.d ' + end;
     document.getElementById('out-waktu').value   = result;
     document.getElementById('preview-waktu').innerText = result;
+    updateMasterWaktuSyncNotice();
 }
 
 function doToggleSelesai() {
