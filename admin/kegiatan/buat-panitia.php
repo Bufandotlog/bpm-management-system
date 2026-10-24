@@ -16,20 +16,15 @@ $tahun_periode_str = $tahun_mulai . '/' . $tahun_selesai;
 $warek_name_row = dbFetchOne("SELECT nilai FROM pengaturan WHERE kunci = 'ttd_warek_name'");
 $default_warek = $warek_name_row['nilai'] ?? 'Ii Muhamad Misbah, S.Pd.I., SE., MM.';
 
-// Ambil Ketua & Wakil Ketua BPM (BPH Inti) untuk Steering Committee (SC)
+// Steering Committee mengikuti Ketua BPM pada periode aktif.
 $presma_row = dbFetchOne("SELECT id, nama, posisi FROM struktur_bph WHERE posisi = 'ketua' AND periode_id = ?", [$periode_id], "i");
-$wapresma_row = dbFetchOne("SELECT id, nama, posisi FROM struktur_bph WHERE posisi = 'wakil_ketua' AND periode_id = ?", [$periode_id], "i");
-$presma_name = $presma_row['nama'] ?? 'Dede Anggi Muhyidin';
-$wapresma_name = $wapresma_row['nama'] ?? 'Salma Sabila Rahmah';
+$presma_name = $presma_row['nama'] ?? '';
 $presma_id = (int)($presma_row['id'] ?? 0);
-$wapresma_id = (int)($wapresma_row['id'] ?? 0);
 $sc_members_by_id = [];
 $sc_member_by_position = [];
-foreach ([$presma_row, $wapresma_row] as $sc_member) {
-    if (!empty($sc_member['id'])) {
-        $sc_members_by_id[(int)$sc_member['id']] = $sc_member;
-        $sc_member_by_position[$sc_member['posisi']] = $sc_member;
-    }
+if (!empty($presma_row['id'])) {
+    $sc_members_by_id[(int)$presma_row['id']] = $presma_row;
+    $sc_member_by_position['ketua'] = $presma_row;
 }
 
 // Ambil data anggota BPH & Kementerian untuk dropdown
@@ -254,16 +249,12 @@ if ($sc_roles_for_form) {
         return $sc_members_by_id[$member_id]['nama'];
     }, $sc_ids_for_form);
 } elseif ($edit_id === 0) {
-    $sc_names_for_form = array_filter([$presma_name, $wapresma_name]);
-    $sc_ids_for_form = array_values(array_filter([$presma_id, $wapresma_id]));
-    $sc_roles_for_form = array_values(array_filter(['ketua', 'wakil_ketua'], static function ($role) use ($sc_member_by_position) {
-        return isset($sc_member_by_position[$role]);
-    }));
+    $sc_names_for_form = $presma_name !== '' ? [$presma_name] : [];
+    $sc_ids_for_form = $presma_id > 0 ? [$presma_id] : [];
+    $sc_roles_for_form = $presma_id > 0 ? ['ketua'] : [];
 }
 $sc_name_1_for_form = $sc_names_for_form[0] ?? '';
-$sc_name_2_for_form = $sc_names_for_form[1] ?? '';
 $sc_role_1_for_form = $sc_roles_for_form[0] ?? '';
-$sc_role_2_for_form = $sc_roles_for_form[1] ?? '';
 
 // Ambil template Tujuan (Kepada Yth) dari database pengaturan-surat
 $templates_tujuan = dbFetchAll("SELECT * FROM surat_templates WHERE jenis = 'tujuan' AND periode_id = ? ORDER BY label ASC", [$periode_id], "i");
@@ -289,24 +280,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $sc_1 = trim($_POST['sc_1'] ?? '');
-        $sc_2 = trim($_POST['sc_2'] ?? '');
-        $submitted_sc_roles = [
-            $_POST['sc_role_1'] ?? '',
-            $_POST['sc_role_2'] ?? ''
-        ];
+        $submitted_sc_role = $_POST['sc_role_1'] ?? '';
         $saved_sc_ids = [];
         $saved_sc_names = [];
         $saved_sc_roles = [];
-        foreach ($submitted_sc_roles as $sc_role) {
-            if (is_string($sc_role) && isset($sc_member_by_position[$sc_role])) {
-                $saved_sc_ids[] = (int)$sc_member_by_position[$sc_role]['id'];
-                $saved_sc_names[] = $sc_member_by_position[$sc_role]['nama'];
-                $saved_sc_roles[] = $sc_role;
-            }
+        if (is_string($submitted_sc_role) && isset($sc_member_by_position[$submitted_sc_role])) {
+            $saved_sc_ids[] = (int)$sc_member_by_position[$submitted_sc_role]['id'];
+            $saved_sc_names[] = $sc_member_by_position[$submitted_sc_role]['nama'];
+            $saved_sc_roles[] = $submitted_sc_role;
         }
         if ($saved_sc_roles) {
             $sc_1 = $saved_sc_names[0] ?? '';
-            $sc_2 = $saved_sc_names[1] ?? '';
         }
 
         $ketua_pelaksana = trim($_POST['ketua_pelaksana'] ?? '');
@@ -349,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $panitia_data = [
                 'nama_kegiatan' => $nama_kegiatan,
                 'penanggung_jawab' => $penanggung_jawab,
-                'sc' => array_values(array_filter([$sc_1, $sc_2])),
+                'sc' => array_values(array_filter([$sc_1])),
                 'sc_ids' => $saved_sc_ids,
                 'sc_roles' => $saved_sc_roles,
                 'ketua_pelaksana' => $ketua_pelaksana,
@@ -930,9 +914,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <input type="hidden" name="penanggung_jawab" id="penanggung_jawab" value="<?php echo $edit_id > 0 ? htmlspecialchars($panitia_json['penanggung_jawab'] ?? $default_warek) : $default_warek; ?>">
                     <input type="hidden" name="sc_1" id="sc_1" value="<?php echo htmlspecialchars($sc_name_1_for_form); ?>">
-                    <input type="hidden" name="sc_2" id="sc_2" value="<?php echo htmlspecialchars($sc_name_2_for_form); ?>">
                     <input type="hidden" name="sc_role_1" value="<?php echo htmlspecialchars($sc_role_1_for_form); ?>">
-                    <input type="hidden" name="sc_role_2" value="<?php echo htmlspecialchars($sc_role_2_for_form); ?>">
                 </div>
 
                 <!-- CARD 2: PENGURUS INTI PANITIA -->
@@ -1118,8 +1100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <td class="role-title italic-title">Steering Committee (SC)</td>
                                             <td class="names-list">
                                                 <ol id="preview_sc">
-                                                    <li>Dede Anggi Muhyidin</li>
-                                                    <li>Salma Sabila Rahmah</li>
+                                                    <?php if ($sc_name_1_for_form !== ''): ?>
+                                                        <li><?php echo htmlspecialchars($sc_name_1_for_form); ?></li>
+                                                    <?php else: ?>
+                                                        <li>-</li>
+                                                    <?php endif; ?>
                                                 </ol>
                                             </td>
                                         </tr>
@@ -1460,18 +1445,14 @@ function updateLivePreview() {
     
     // 3. Steering Committee
     const sc1 = document.getElementById('sc_1').value;
-    const sc2 = document.getElementById('sc_2').value;
     const scList = [];
     if (sc1) scList.push(sc1);
-    if (sc2) scList.push(sc2);
-    
+
     const previewSc = document.getElementById('preview_sc');
     previewSc.innerHTML = '';
-    scList.forEach(name => {
-        const li = document.createElement('li');
-        li.innerText = name;
-        previewSc.appendChild(li);
-    });
+    const scItem = document.createElement('li');
+    scItem.innerText = scList[0] || '-';
+    previewSc.appendChild(scItem);
     
     // 4. Ketua Pelaksana
     const ketuaPelaksana = document.getElementById('ketua_pelaksana').value;
