@@ -383,6 +383,9 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 padding: 0 20mm 15mm !important;
                 width: 210mm !important;
             }
+            .page.surat-page .ttd-name {
+                margin-top: 15px !important;
+            }
             .page.lampiran-page {
                 padding: 10mm 15mm !important;
                 width: 210mm !important;
