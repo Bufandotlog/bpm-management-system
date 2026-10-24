@@ -460,6 +460,90 @@ $rundown_durasi_hari = isset($edit_data['durasi_hari']) ? (int)$edit_data['duras
     box-shadow: 0 15px 30px rgba(79, 172, 254, 0.4);
 }
 
+.schedule-sync-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 0 0 20px;
+    padding: 18px 20px;
+    border: 1px solid rgba(241, 196, 15, 0.35);
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(241, 196, 15, 0.1), rgba(15, 18, 23, 0.92));
+    color: #e8edf5;
+}
+
+.schedule-sync-copy {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+}
+
+.schedule-sync-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(241, 196, 15, 0.14);
+    color: #f1c40f;
+}
+
+.schedule-sync-copy strong {
+    display: block;
+    margin: 0 0 4px;
+    color: #fff;
+}
+
+.schedule-sync-copy p {
+    margin: 0;
+    color: #aab5c5;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.schedule-sync-button {
+    flex: 0 0 auto;
+    padding: 11px 16px;
+    border: 1px solid rgba(79, 172, 254, 0.45);
+    border-radius: 10px;
+    background: rgba(79, 172, 254, 0.14);
+    color: #8fcaff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.schedule-sync-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(79, 172, 254, 0.8);
+    background: rgba(79, 172, 254, 0.23);
+}
+
+.schedule-sync-button:focus-visible {
+    outline: 2px solid #8fcaff;
+    outline-offset: 3px;
+}
+
+.schedule-sync-card.is-applied {
+    border-color: rgba(46, 204, 113, 0.35);
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(15, 18, 23, 0.92));
+}
+
+.schedule-sync-card.is-applied .schedule-sync-icon {
+    background: rgba(46, 204, 113, 0.14);
+    color: #2ecc71;
+}
+
+.schedule-sync-card.is-applied .schedule-sync-button {
+    border-color: rgba(46, 204, 113, 0.4);
+    background: rgba(46, 204, 113, 0.12);
+    color: #70dfa0;
+    cursor: default;
+}
+
 .btn-remove-day {
     position: absolute;
     top: 25px;
@@ -546,6 +630,15 @@ $rundown_durasi_hari = isset($edit_data['durasi_hari']) ? (int)$edit_data['duras
         justify-content: center;
         padding: 12px;
         font-size: 1rem;
+    }
+
+    .schedule-sync-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .schedule-sync-button {
+        width: 100%;
     }
     
     .btn-remove-day {
@@ -740,9 +833,17 @@ input.barang-qty::-webkit-outer-spin-button {
         </div>
 
         <?php if ($rundown_master_waktu_berbeda): ?>
-        <div id="master-waktu-rundown-notice" role="status" style="margin: 0 0 20px; padding: 14px 18px; border: 1px solid rgba(241, 196, 15, 0.45); border-radius: 12px; background: rgba(241, 196, 15, 0.08); color: #f4d35e;">
-            <div style="margin-bottom: 10px;"><i class="fas fa-exclamation-triangle"></i> Waktu mulai hari pertama berbeda dari Master Kegiatan (<?php echo htmlspecialchars($def_jam . '.' . $def_menit); ?>). Hari berikutnya tidak akan diubah.</div>
-            <button type="button" class="btn-outline" onclick="syncFirstDayStartTime()">Sinkronkan hari pertama dari Master</button>
+        <div class="schedule-sync-card" id="master-waktu-rundown-notice" role="status" aria-live="polite">
+            <div class="schedule-sync-copy">
+                <span class="schedule-sync-icon" aria-hidden="true"><i class="fas fa-clock"></i></span>
+                <div>
+                    <strong id="master-waktu-sync-title">Jadwal Master Kegiatan telah berubah</strong>
+                    <p id="master-waktu-sync-description">Waktu mulai hari pertama di rundown berbeda. Terapkan waktu <?php echo htmlspecialchars($def_jam . '.' . $def_menit); ?> untuk menghitung ulang sesi hari pertama. Hari berikutnya tetap; surat staging yang memakai sesi rundown akan diperbarui setelah rundown disimpan.</p>
+                </div>
+            </div>
+            <button type="button" class="schedule-sync-button" id="master-waktu-sync-button" onclick="syncFirstDayStartTime()">
+                <i class="fas fa-sync-alt"></i> Terapkan waktu Master
+            </button>
         </div>
         <?php endif; ?>
 
@@ -815,7 +916,16 @@ function syncFirstDayStartTime() {
     startMinute.value = defaultStartMinute;
     recalculateTimes(1);
     const notice = document.getElementById('master-waktu-rundown-notice');
-    if (notice) notice.style.display = 'none';
+    const button = document.getElementById('master-waktu-sync-button');
+    const title = document.getElementById('master-waktu-sync-title');
+    const description = document.getElementById('master-waktu-sync-description');
+    if (notice) notice.classList.add('is-applied');
+    if (title) title.textContent = 'Waktu Master diterapkan ke hari pertama';
+    if (description) description.textContent = 'Sesi hari pertama telah dihitung ulang. Klik “Perbarui Arsip” untuk menyimpan perubahan dan menyinkronkan waktu sesi ke surat staging pemateri atau sambutan.';
+    if (button) {
+        button.innerHTML = '<i class="fas fa-check"></i> Waktu diterapkan';
+        button.disabled = true;
+    }
 }
 
 function getKetTempatOptions(type) {
