@@ -1925,7 +1925,10 @@ function debugVar($data, $die = false) {
 }
 function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
     // 1. Ambil data rundown jika ada
-    $rundown = dbFetchOne("SELECT id, rundown_json FROM arsip_rundown WHERE kegiatan_id = ? AND periode_id = ? LIMIT 1", [$kegiatan_id, $periode_id]);
+    $rundown = dbFetchOne(
+        "SELECT id, rundown_json FROM arsip_rundown WHERE kegiatan_id = ? AND periode_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1",
+        [$kegiatan_id, $periode_id]
+    );
 
     $kegiatan = dbFetchOne("SELECT * FROM kegiatan WHERE id = ?", [$kegiatan_id]);
     if (!$kegiatan) return;
@@ -2058,6 +2061,7 @@ function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
         $pelaksanaan_waktu = !empty($kegiatan['waktu_pelaksanaan'])
             ? $kegiatan['waktu_pelaksanaan']
             : '08.00 s.d Selesai';
+        $waktu_sesi_rundown = null;
 
         if (in_array($g_perihal_label, $rapat_perihals) || in_array($g_perihal_surat, $rapat_perihals)) {
             $konteks_narasi = 'untuk menghadiri ' . $g_perihal_surat . ' kegiatan tersebut';
@@ -2094,7 +2098,16 @@ function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
                     if ($found_waktu) break;
                     foreach ($dayData['items'] ?? [] as $item) {
                         if (stripos($item['keterangan'] ?? '', $g_nama_pendek) !== false || stripos($item['acara'] ?? '', $g_nama_pendek) !== false) {
-                            $pelaksanaan_waktu = $item['waktu'];
+                            $waktu_sesi_rundown = preg_replace(
+                                '/\s*[-–]\s*/u',
+                                ' s.d ',
+                                trim((string)($item['waktu'] ?? ''))
+                            );
+                            if ($waktu_sesi_rundown !== '') {
+                                $pelaksanaan_waktu = $waktu_sesi_rundown;
+                            } else {
+                                $waktu_sesi_rundown = null;
+                            }
                             $found_waktu = true;
                             break;
                         }
@@ -2131,6 +2144,9 @@ function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
             if (!empty($old_konten['is_edited'])) {
                 $konten_data = array_merge($konten_data, $old_konten);
                 $konten_data['is_edited'] = 1;
+            }
+            if ($waktu_sesi_rundown !== null) {
+                $konten_data['pelaksanaan_waktu'] = $waktu_sesi_rundown;
             }
 
             if ($old_jenis !== $g_kat || strpos($nomor_surat_cur, "/{$g_kat}/{$kode_kegiatan}/") === false) {
