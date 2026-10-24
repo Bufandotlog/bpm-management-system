@@ -20,7 +20,7 @@ if (!$panitia) {
 
 $data = json_decode($panitia['panitia_json'], true) ?: [];
 $sc_members = dbFetchAll(
-    "SELECT id, nama, posisi FROM struktur_bph WHERE periode_id = ? AND posisi IN ('ketua', 'wakil_ketua')",
+    "SELECT id, nama, posisi FROM struktur_bph WHERE periode_id = ? AND posisi = 'ketua'",
     [$periode_id],
     "i"
 );
@@ -35,13 +35,10 @@ $sync_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'sync_sc') {
     if (!csrfVerify()) {
         $sync_error = 'Token keamanan tidak valid. Muat ulang halaman lalu coba lagi.';
-    } elseif (empty($sc_member_by_position['ketua']) || empty($sc_member_by_position['wakil_ketua'])) {
-        $sync_error = 'Data Ketua atau Wakil Ketua BPH periode aktif belum lengkap.';
+    } elseif (empty($sc_member_by_position['ketua'])) {
+        $sync_error = 'Data Ketua BPH periode aktif belum tersedia.';
     } else {
-        $current_sc = [
-            $sc_member_by_position['ketua'],
-            $sc_member_by_position['wakil_ketua']
-        ];
+        $current_sc = [$sc_member_by_position['ketua']];
         $data['sc'] = array_column($current_sc, 'nama');
         $data['sc_ids'] = array_map('intval', array_column($current_sc, 'id'));
         $data['sc_roles'] = array_column($current_sc, 'posisi');
@@ -76,7 +73,7 @@ if (empty($data['sc_roles'])) {
 $sc_names = array_values(array_filter($sc_names, static function ($name) {
     return trim((string)$name) !== '';
 }));
-$sc_can_sync = !empty($sc_member_by_position['ketua']) && !empty($sc_member_by_position['wakil_ketua']);
+$sc_can_sync = !empty($sc_member_by_position['ketua']);
 
 // Ambil tahun periode
 $periode_data = dbFetchOne("SELECT * FROM periode_kepengurusan WHERE id = ?", [$periode_id], "i");
@@ -222,7 +219,7 @@ $follow_up_seksi_pages = array_chunk(array_slice($valid_seksi_list, 4), 10);
         <button onclick="window.print()" class="btn"><i class="fas fa-print"></i> Cetak Dokumen</button>
         <a href="arsip-panitia.php" class="btn btn-warning"><i class="fas fa-arrow-left"></i> Kembali</a>
         <?php if ($sc_can_sync): ?>
-            <form method="post" onsubmit="return confirm('Perbarui Steering Committee arsip ini sesuai Ketua dan Wakil Ketua BPH saat ini?');">
+            <form method="post" onsubmit="return confirm('Perbarui Steering Committee arsip ini menjadi Ketua BPH periode aktif?');">
                 <?php echo csrfField(); ?>
                 <input type="hidden" name="action" value="sync_sc">
                 <button type="submit" class="btn"><i class="fas fa-sync-alt"></i> Sinkronkan SC</button>
