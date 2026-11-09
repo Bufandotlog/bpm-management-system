@@ -660,6 +660,11 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             // Tentukan "buntut" kalimat (suffix) secara pintar
             if (!empty($konteks_text)) {
                 // Konteks menggantikan kalimat akhiran sepenuhnya
+                $konteks_text = preg_replace(
+                    '/(?:[ \t\r\n]|&nbsp;|&#0*160;)+(?=(?:<\/(?:b|strong|i|em|span)>[ \t\r\n]*)*$)/i',
+                    '',
+                    $konteks_text
+                );
                 $suffix = ' ' . rtrim($konteks_text, " \\") . '.';
             } else {
                 // Suffix otomatis berdasarkan Perihal
