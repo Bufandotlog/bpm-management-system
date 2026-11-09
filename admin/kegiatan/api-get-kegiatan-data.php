@@ -69,8 +69,26 @@ if ($rundown) {
     ];
 }
 
-// Fetch Logistik
-$logistik = dbFetchOne("SELECT * FROM lampiran_pinjam WHERE LOWER(TRIM(nama_acara)) = LOWER(TRIM(?)) AND periode_id = ? ORDER BY id DESC LIMIT 1", [$nama_acara, $periode_id]);
+$matching_activities = $nama_acara !== ''
+    ? dbFetchAll(
+        "SELECT id FROM kegiatan WHERE LOWER(TRIM(nama_kegiatan)) = LOWER(TRIM(?)) AND periode_id = ? LIMIT 2",
+        [$nama_acara, $periode_id],
+        "si"
+    )
+    : [];
+$unique_activity_id = count($matching_activities) === 1 ? (int)$matching_activities[0]['id'] : 0;
+$logistik_activity_id = $kegiatan_id > 0 ? $kegiatan_id : $unique_activity_id;
+
+// Prefer the activity link; only use legacy name matching when unambiguous.
+$logistik = $logistik_activity_id > 0
+    ? dbFetchOne("SELECT * FROM lampiran_pinjam WHERE kegiatan_id = ? AND periode_id = ? ORDER BY id DESC LIMIT 1", [$logistik_activity_id, $periode_id], "ii")
+    : null;
+if (!$logistik && count($matching_activities) <= 1) {
+    $logistik = dbFetchOne(
+        "SELECT * FROM lampiran_pinjam WHERE kegiatan_id IS NULL AND LOWER(TRIM(nama_acara)) = LOWER(TRIM(?)) AND periode_id = ? ORDER BY id DESC LIMIT 1",
+        [$nama_acara, $periode_id]
+    );
+}
 if ($logistik) {
     $barang_json = json_decode($logistik['barang_json'], true);
     $barang_list = [];

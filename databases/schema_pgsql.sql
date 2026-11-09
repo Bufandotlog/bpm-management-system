@@ -368,6 +368,20 @@ CREATE TABLE "kegiatan_panitia" (
   "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+DROP TABLE IF EXISTS "lampiran_pinjam" CASCADE;
+CREATE TABLE "lampiran_pinjam" (
+  "id" SERIAL PRIMARY KEY,
+  "kegiatan_id" INTEGER REFERENCES "kegiatan"("id") ON DELETE SET NULL,
+  "nama_acara" VARCHAR(255) NOT NULL,
+  "tanggal_kegiatan" VARCHAR(100),
+  "tahun" VARCHAR(10),
+  "barang_json" TEXT,
+  "readiness_json" TEXT,
+  "periode_id" INTEGER REFERENCES "periode_kepengurusan"("id") ON DELETE SET NULL,
+  "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX "idx_lampiran_pinjam_kegiatan_periode" ON "lampiran_pinjam" ("kegiatan_id", "periode_id");
+
 -- ----------------------------------------
 -- 17. Views untuk First Normal Form (1NF)
 -- ----------------------------------------
@@ -464,5 +478,4 @@ LATERAL json_to_recordset(NULLIF(r.rundown_json, '')::json) AS jt(
     pj VARCHAR(100),
     keterangan TEXT
 );
-
 

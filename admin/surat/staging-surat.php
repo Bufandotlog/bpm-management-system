@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'commi
 
             if ($count_committed > 0) {
                 resyncStagingNumbers($periode_id);
-                redirect('admin/surat/staging-surat.php?kegiatan_id={$selected_kegiatan_id}', "{$count_committed} surat berhasil di-commit dan resmi dipindahkan ke Arsip Utama!", "success");
+                redirect('admin/surat/staging-surat.php?kegiatan_id=' . $selected_kegiatan_id, "{$count_committed} surat berhasil di-commit dan resmi dipindahkan ke Arsip Utama!", "success");
             } else {
                 $error = "Gagal memproses commit surat.";
             }
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_
                     );
                 }
 
-                redirect('admin/surat/staging-surat.php?kegiatan_id={$selected_kegiatan_id}', "{$count_sent} surat berhasil diverifikasi & dikirim ke Humas untuk disebar!", "success");
+                redirect('admin/surat/staging-surat.php?kegiatan_id=' . $selected_kegiatan_id, "{$count_sent} surat berhasil diverifikasi & dikirim ke Humas untuk disebar!", "success");
             } else {
                 $error = "Gagal memproses pengiriman ke Humas.";
             }
@@ -144,7 +144,7 @@ if (isset($_GET['kirim_humas']) && is_numeric($_GET['kirim_humas'])) {
                 );
             }
 
-            redirect('admin/surat/staging-surat.php?kegiatan_id={$selected_kegiatan_id}', "Surat ({$surat_target['nomor_surat']}) telah diverifikasi & berhasil dikirim ke Humas!", "success");
+            redirect('admin/surat/staging-surat.php?kegiatan_id=' . $selected_kegiatan_id, "Surat ({$surat_target['nomor_surat']}) telah diverifikasi & berhasil dikirim ke Humas!", "success");
         }
     }
 }
@@ -156,7 +156,7 @@ if (isset($_GET['batal_humas']) && is_numeric($_GET['batal_humas'])) {
         $surat_target = dbFetchOne("SELECT nomor_surat FROM arsip_surat WHERE id = ? AND periode_id = ?", [$id_target, $periode_id], "ii");
         if ($surat_target) {
             dbQuery("UPDATE arsip_surat SET status_humas = 'draft' WHERE nomor_surat = ? AND periode_id = ?", [$surat_target['nomor_surat'], $periode_id]);
-            redirect('admin/surat/staging-surat.php?kegiatan_id={$selected_kegiatan_id}', "Status surat dikembalikan ke Draft.", "success");
+            redirect('admin/surat/staging-surat.php?kegiatan_id=' . $selected_kegiatan_id, "Status surat dikembalikan ke Draft.", "success");
         }
     }
 }
@@ -178,7 +178,7 @@ if (isset($_GET['hapus']) && is_numeric($_GET['hapus'])) {
             }
             dbQuery("DELETE FROM arsip_surat WHERE id = ?", [$id_hapus], "i");
             resyncStagingNumbers($periode_id);
-            redirect('admin/surat/staging-surat.php?kegiatan_id={$selected_kegiatan_id}', "Surat di area staging berhasil dihapus.", "success");
+            redirect('admin/surat/staging-surat.php?kegiatan_id=' . $selected_kegiatan_id, "Surat di area staging berhasil dihapus.", "success");
         } else {
             $error = "Surat staging tidak ditemukan.";
         }
