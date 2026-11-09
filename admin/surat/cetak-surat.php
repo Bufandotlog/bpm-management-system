@@ -383,9 +383,6 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                 padding: 0 20mm 15mm !important;
                 width: 210mm !important;
             }
-            .page.surat-page .ttd-name {
-                margin-top: 15px !important;
-            }
             .page.lampiran-page {
                 padding: 10mm 15mm !important;
                 width: 210mm !important;
@@ -663,7 +660,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
             // Tentukan "buntut" kalimat (suffix) secara pintar
             if (!empty($konteks_text)) {
                 // Konteks menggantikan kalimat akhiran sepenuhnya
-                $suffix = ' ' . $konteks_text . '.';
+                $suffix = ' ' . rtrim($konteks_text, " \\") . '.';
             } else {
                 // Suffix otomatis berdasarkan Perihal
                 $perihal_lower = strtolower($surat['perihal']);
@@ -1354,7 +1351,12 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                     body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; color: #000; }
                     table { border-collapse: collapse; }
                     .indent { text-indent: 40px; margin-top: 8px; }
-                    .ttd-table td { width: 50%; vertical-align: top; }
+                    .ttd-area { width: 100%; margin-top: 15px; text-align: center; }
+                    .ttd-area .ttd-title { font-weight: bold; margin-bottom: 5px; }
+                    .ttd-table { width: 100%; margin-bottom: 5px; border-collapse: collapse; border: none !important; }
+                    .ttd-table td { width: 50%; vertical-align: top; padding-bottom: 5px; border: none !important; }
+                    .ttd-name { font-weight: bold; text-decoration: underline; margin-top: 55px; position: relative; z-index: 1; }
+                    .ttd-jabatan { font-size: 14px; position: relative; z-index: 1; }
                     .meta-surat { width: 100%; margin-bottom: 20px; line-height: 1.4; }
                     .meta-surat td { vertical-align: top; }
                     .col-label { width: 70px; }
