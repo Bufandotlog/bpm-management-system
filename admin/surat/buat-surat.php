@@ -993,8 +993,10 @@ if ($is_edit || $is_clone) {
                                 data-durasi="<?php echo $durasi; ?>"
                                 data-ketua-nama="<?php echo htmlspecialchars(strtoupper($kg['ketua_nama'] ?? '')); ?>"
                                 data-ketua-ttd="<?php echo htmlspecialchars($kg['ketua_ttd'] ?? ''); ?>"
+                                data-ketua-ttd-url="<?php echo htmlspecialchars(uploadUrl($kg['ketua_ttd'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
                                 data-sekretaris-nama="<?php echo htmlspecialchars(strtoupper($kg['sekretaris_nama'] ?? '')); ?>"
                                 data-sekretaris-ttd="<?php echo htmlspecialchars($kg['sekretaris_ttd'] ?? ''); ?>"
+                                data-sekretaris-ttd-url="<?php echo htmlspecialchars(uploadUrl($kg['sekretaris_ttd'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
                                 <?php echo ((int)$selected_kegiatan_id === (int)$kg['id']) ? 'selected' : ''; ?>>
                                 [<?php echo strtoupper($kg['status']); ?>] <?php echo htmlspecialchars($kg['nama_kegiatan']); ?>
                             </option>
@@ -1464,7 +1466,7 @@ if ($is_edit || $is_clone) {
                             <input type="text" name="panitia_ketua" class="tpl-search-input" placeholder="Cari atau ketik nama..." value="<?php echo htmlspecialchars($edit_data['panitia_ketua'] ?? ''); ?>" required style="text-transform: uppercase;" autocomplete="off" onfocus="showTplResults('panitia-ketua')" onkeyup="filterTpl('panitia-ketua')" oninput="handleCustomName('ketua', this.value)">
                             <div class="tpl-results" id="results-panitia-ketua">
                                 <?php foreach($panitia_ketua_list as $pk): ?>
-                                <div class="tpl-item" onclick="selectSavedPanitia('ketua', <?php echo htmlspecialchars(json_encode(['nama' => $pk['nama'], 'ttd' => $pk['file_ttd']])); ?>)">
+                                <div class="tpl-item" onclick="selectSavedPanitia('ketua', <?php echo htmlspecialchars(json_encode(['nama' => $pk['nama'], 'ttd' => $pk['file_ttd'], 'ttd_url' => uploadUrl($pk['file_ttd'])]), ENT_QUOTES, 'UTF-8'); ?>)">
                                     <div class="tpl-item-label"><?php echo htmlspecialchars($pk['nama']); ?></div>
                                     <div class="tpl-item-text">Ketua Tersimpan • <?php echo htmlspecialchars($periode_label_picker); ?></div>
                                 </div>
@@ -1497,7 +1499,7 @@ if ($is_edit || $is_clone) {
                             <input type="text" name="panitia_sekretaris" class="tpl-search-input" placeholder="Cari atau ketik nama..." value="<?php echo htmlspecialchars($edit_data['panitia_sekretaris'] ?? ''); ?>" required style="text-transform: uppercase;" autocomplete="off" onfocus="showTplResults('panitia-sekretaris')" onkeyup="filterTpl('panitia-sekretaris')" oninput="handleCustomName('sekretaris', this.value)">
                             <div class="tpl-results" id="results-panitia-sekretaris">
                                 <?php foreach($panitia_sekretaris_list as $ps): ?>
-                                <div class="tpl-item" onclick="selectSavedPanitia('sekretaris', <?php echo htmlspecialchars(json_encode(['nama' => $ps['nama'], 'ttd' => $ps['file_ttd']])); ?>)">
+                                <div class="tpl-item" onclick="selectSavedPanitia('sekretaris', <?php echo htmlspecialchars(json_encode(['nama' => $ps['nama'], 'ttd' => $ps['file_ttd'], 'ttd_url' => uploadUrl($ps['file_ttd'])]), ENT_QUOTES, 'UTF-8'); ?>)">
                                     <div class="tpl-item-label"><?php echo htmlspecialchars($ps['nama']); ?></div>
                                     <div class="tpl-item-text">Sekretaris Tersimpan • <?php echo htmlspecialchars($periode_label_picker); ?></div>
                                 </div>
@@ -1731,17 +1733,15 @@ function selectSavedPanitia(role, data) {
     if (input) input.value = data.nama.toUpperCase();
     
     const modeSel = document.getElementById('ttd_mode_' + role);
-    modeSel.value = 'database';
+    const hasSignature = Boolean(data.ttd && data.ttd_url);
+    modeSel.value = hasSignature ? 'database' : 'none';
     changeTtdMode(role);
     
-    document.getElementById('ttd_' + role + '_val').value = data.ttd;
+    document.getElementById('ttd_' + role + '_val').value = hasSignature ? data.ttd : '';
     const previewWrap = document.getElementById('preview_ttd_' + role);
     const previewImg = document.getElementById('img_preview_' + role);
-    previewWrap.style.display = 'block';
-    
-    // Path untuk TTD tersimpan
-    const uploadBase = '<?php echo uploadUrl(""); ?>';
-    previewImg.src = uploadBase + data.ttd;
+    previewWrap.style.display = hasSignature ? 'block' : 'none';
+    if (hasSignature) previewImg.src = data.ttd_url;
     
     document.getElementById('results-panitia-' + role).style.display = 'none';
     _resetPickerCards();
@@ -1900,15 +1900,17 @@ function filterLampiran(isUserChange = false) {
         // Auto-fill Panitia (Ketua & Sekretaris Pelaksana)
         const ketuaNama = selectedOption.getAttribute('data-ketua-nama') || '';
         const ketuaTtd = selectedOption.getAttribute('data-ketua-ttd') || '';
+        const ketuaTtdUrl = selectedOption.getAttribute('data-ketua-ttd-url') || '';
         const sekNama = selectedOption.getAttribute('data-sekretaris-nama') || '';
         const sekTtd = selectedOption.getAttribute('data-sekretaris-ttd') || '';
+        const sekTtdUrl = selectedOption.getAttribute('data-sekretaris-ttd-url') || '';
         
         if (typeof selectSavedPanitia === 'function') {
             if (ketuaNama !== '') {
-                selectSavedPanitia('ketua', { nama: ketuaNama, ttd: ketuaTtd });
+                selectSavedPanitia('ketua', { nama: ketuaNama, ttd: ketuaTtd, ttd_url: ketuaTtdUrl });
             }
             if (sekNama !== '') {
-                selectSavedPanitia('sekretaris', { nama: sekNama, ttd: sekTtd });
+                selectSavedPanitia('sekretaris', { nama: sekNama, ttd: sekTtd, ttd_url: sekTtdUrl });
             }
         }
     }
@@ -2057,13 +2059,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const val = document.getElementById('ttd_' + role + '_val').value;
         if (val) {
             const previewWrap = document.getElementById('preview_ttd_' + role);
-            const previewImg = document.getElementById('img_preview_' + role);
             previewWrap.style.display = 'block';
             if (val.indexOf('data:image') === -1 && val.indexOf('/') !== -1) {
-                previewImg.src = '<?php echo uploadUrl(""); ?>' + val;
                 document.getElementById('ttd_mode_' + role).value = 'database';
             } else if (val.indexOf('data:image') !== -1) {
-                previewImg.src = val;
                 document.getElementById('ttd_mode_' + role).value = 'draw';
             }
         }
