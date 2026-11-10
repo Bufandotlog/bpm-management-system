@@ -54,7 +54,6 @@ if (strpos($admin_role, 'humas') !== false) {
     if ($cek_humas) $isHumas = true;
 }
 
-$isKetuplat = false;
 if (isset($_SESSION['admin_id'])) {
     $unread_cnt = 0;
 
@@ -66,9 +65,6 @@ if (isset($_SESSION['admin_id'])) {
     ", [getUserPeriode()], "i");
     $pending_dokumentasi_cnt = $pending_dokumentasi['cnt'] ?? 0;
 
-    // Notifikasi Pendaftaran (hanya superadmin)
-    $cek_ketuplat = dbFetchOne("SELECT id FROM kegiatan_panitia WHERE user_id = ? AND event_role = 'ketuplat' LIMIT 1", [$_SESSION['admin_id']], "i");
-    if($cek_ketuplat) $isKetuplat = true;
 }
 
 // ============================================
@@ -117,25 +113,29 @@ $show_bottom_nav = false;
 $bottom_nav_tabs = [];
 $bottom_sheet_items = [];
 
-$is_full_sidebar_role = in_array($admin_role, ['superadmin', 'admin', 'sekretaris']);
+$is_full_sidebar_role = in_array($admin_role, ['superadmin', 'admin']);
 
 if (isset($_SESSION['admin_id']) && !$is_full_sidebar_role && $current_page !== 'login.php') {
-    $active_ws_id = isset($_GET['kegiatan_id']) ? (int)$_GET['kegiatan_id'] : 0;
+    $requested_ws_id = isset($_GET['kegiatan_id']) ? (int)$_GET['kegiatan_id'] : 0;
+    $active_ws_id = 0;
     $primary_event_role = '';
-    
-    if (!empty($my_workspaces)) {
-        if (!$active_ws_id) {
-            $active_ws_id = (int)$my_workspaces[0]['id'];
-            $primary_event_role = $my_workspaces[0]['event_role'];
-        } else {
-            foreach ($my_workspaces as $ws) {
-                if ($ws['id'] == $active_ws_id) {
-                    $primary_event_role = $ws['event_role'];
-                    break;
-                }
-            }
+
+    foreach ($my_workspaces as $ws) {
+        if ($requested_ws_id > 0 && (int)$ws['id'] === $requested_ws_id) {
+            $active_ws_id = (int)$ws['id'];
+            $primary_event_role = $ws['event_role'];
+            break;
         }
     }
+
+    if ($requested_ws_id === 0 && !empty($my_workspaces)) {
+        $active_ws_id = (int)$my_workspaces[0]['id'];
+        $primary_event_role = $my_workspaces[0]['event_role'];
+    }
+
+    $dashboard_url = baseUrl(
+        'admin/core/dashboard.php' . ($active_ws_id > 0 ? '?kegiatan_id=' . $active_ws_id : '')
+    );
 
     // A. Kominfo
     if ($admin_role === 'kominfo') {
@@ -167,7 +167,7 @@ if (isset($_SESSION['admin_id']) && !$is_full_sidebar_role && $current_page !== 
             'url'   => baseUrl('admin/konten/kontak.php'),
             'active'=> ($current_page === 'kontak.php')
         ];
-        
+
         $is_sheet_active = in_array($current_page, ['kepengurusan.php', 'kepengurusan-edit.php', 'kabinet.php', 'visi-misi.php']);
         $bottom_nav_tabs[] = [
             'label'  => 'Konten BPM',
@@ -176,7 +176,7 @@ if (isset($_SESSION['admin_id']) && !$is_full_sidebar_role && $current_page !== 
             'onclick'=> 'toggleMobileBottomSheet()',
             'active' => $is_sheet_active
         ];
-        
+
         $bottom_sheet_items = [
             [
                 'label' => 'Kepengurusan',
@@ -197,9 +197,7 @@ if (isset($_SESSION['admin_id']) && !$is_full_sidebar_role && $current_page !== 
                 'active'=> ($current_page === 'visi-misi.php')
             ]
         ];
-    }
-    // B. Ketuplak
-    elseif ($primary_event_role === 'ketuplat' || $isKetuplat) {
+    } elseif ($admin_role === 'sekretaris') {
         $show_bottom_nav = true;
         $bottom_nav_tabs[] = [
             'label' => 'Dashboard',
@@ -207,63 +205,85 @@ if (isset($_SESSION['admin_id']) && !$is_full_sidebar_role && $current_page !== 
             'url'   => baseUrl('admin/core/dashboard.php'),
             'active'=> ($current_page === 'dashboard.php')
         ];
-        if ($active_ws_id > 0) {
+        $bottom_nav_tabs[] = [
+            'label' => 'Arsip Surat',
+            'icon'  => 'fas fa-folder-open',
+            'url'   => baseUrl('admin/surat/arsip-surat.php'),
+            'active'=> in_array($current_page, ['arsip-surat.php', 'arsip-manual.php'])
+        ];
+        $bottom_nav_tabs[] = [
+            'label' => 'Buat Surat',
+            'icon'  => 'fas fa-file-signature',
+            'url'   => baseUrl('admin/surat/buat-surat.php'),
+            'active'=> in_array($current_page, ['buat-surat.php', 'cetak-surat.php'])
+        ];
+        if ($has_persiapan_kegiatan) {
+            $bottom_nav_tabs[] = [
+                'label' => 'Staging',
+                'icon'  => 'fas fa-layer-group',
+                'url'   => baseUrl('admin/surat/staging-surat.php'),
+                'active'=> ($current_page === 'staging-surat.php')
+            ];
+        }
+    } elseif ($primary_event_role !== '') {
+        $show_bottom_nav = true;
+        $ws_param = '?kegiatan_id=' . $active_ws_id;
+        $bottom_nav_tabs[] = [
+            'label' => 'Dashboard',
+            'icon'  => 'fas fa-tachometer-alt',
+            'url'   => $dashboard_url,
+            'active'=> ($current_page === 'dashboard.php')
+        ];
+
+        if ($primary_event_role === 'ketuplat') {
             $bottom_nav_tabs[] = [
                 'label' => 'Panitia',
                 'icon'  => 'fas fa-users-cog',
-                'url'   => baseUrl('admin/kegiatan/buat-panitia.php?kegiatan_id=' . $active_ws_id),
+                'url'   => baseUrl('admin/kegiatan/buat-panitia.php' . $ws_param),
                 'active'=> ($current_page === 'buat-panitia.php')
             ];
             $bottom_nav_tabs[] = [
                 'label' => 'Undangan',
                 'icon'  => 'fas fa-user-tie',
-                'url'   => baseUrl('admin/kegiatan/tamu-undangan.php?kegiatan_id=' . $active_ws_id),
+                'url'   => baseUrl('admin/kegiatan/tamu-undangan.php' . $ws_param),
                 'active'=> ($current_page === 'tamu-undangan.php')
             ];
+        } elseif ($primary_event_role === 'sekretaris_panitia') {
+            $bottom_nav_tabs[] = [
+                'label' => 'Undangan',
+                'icon'  => 'fas fa-user-tie',
+                'url'   => baseUrl('admin/kegiatan/tamu-undangan.php' . $ws_param),
+                'active'=> ($current_page === 'tamu-undangan.php')
+            ];
+        } elseif ($primary_event_role === 'sie_acara') {
+            $bottom_nav_tabs[] = [
+                'label' => 'Rundown',
+                'icon'  => 'fas fa-calendar-alt',
+                'url'   => baseUrl('admin/kegiatan/workspace-rundown.php' . $ws_param),
+                'active'=> ($current_page === 'workspace-rundown.php')
+            ];
+            $bottom_nav_tabs[] = [
+                'label' => 'Teks MC',
+                'icon'  => 'fas fa-microphone-alt',
+                'url'   => baseUrl('admin/kegiatan/workspace-teks-mc.php' . $ws_param),
+                'active'=> ($current_page === 'workspace-teks-mc.php')
+            ];
+        } elseif ($primary_event_role === 'sie_logistik') {
+            $bottom_nav_tabs[] = [
+                'label' => 'Logistik',
+                'icon'  => 'fas fa-boxes',
+                'url'   => baseUrl('admin/kegiatan/workspace-logistik.php' . $ws_param),
+                'active'=> ($current_page === 'workspace-logistik.php')
+            ];
+        } elseif ($primary_event_role === 'sie_humas') {
+            $bottom_nav_tabs[] = [
+                'label' => 'Distribusi Surat',
+                'icon'  => 'fas fa-paper-plane',
+                'url'   => baseUrl('admin/surat/distribusi-surat.php' . $ws_param),
+                'active'=> ($current_page === 'distribusi-surat.php')
+            ];
         }
-    }
-    // C. Sie Acara
-    elseif ($primary_event_role === 'sie_acara') {
-        $show_bottom_nav = true;
-        $bottom_nav_tabs[] = [
-            'label' => 'Dashboard',
-            'icon'  => 'fas fa-tachometer-alt',
-            'url'   => baseUrl('admin/core/dashboard.php'),
-            'active'=> ($current_page === 'dashboard.php')
-        ];
-        $ws_param = $active_ws_id ? '?kegiatan_id=' . $active_ws_id : '';
-        $bottom_nav_tabs[] = [
-            'label' => 'Rundown',
-            'icon'  => 'fas fa-calendar-alt',
-            'url'   => baseUrl('admin/kegiatan/workspace-rundown.php' . $ws_param),
-            'active'=> ($current_page === 'workspace-rundown.php')
-        ];
-        $bottom_nav_tabs[] = [
-            'label' => 'Teks MC',
-            'icon'  => 'fas fa-microphone-alt',
-            'url'   => baseUrl('admin/kegiatan/workspace-teks-mc.php' . $ws_param),
-            'active'=> ($current_page === 'workspace-teks-mc.php')
-        ];
-    }
-    // D. Sie Logistik
-    elseif ($primary_event_role === 'sie_logistik') {
-        $show_bottom_nav = true;
-        $bottom_nav_tabs[] = [
-            'label' => 'Dashboard',
-            'icon'  => 'fas fa-tachometer-alt',
-            'url'   => baseUrl('admin/core/dashboard.php'),
-            'active'=> ($current_page === 'dashboard.php')
-        ];
-        $ws_param = $active_ws_id ? '?kegiatan_id=' . $active_ws_id : '';
-        $bottom_nav_tabs[] = [
-            'label' => 'Logistik',
-            'icon'  => 'fas fa-boxes',
-            'url'   => baseUrl('admin/kegiatan/workspace-logistik.php' . $ws_param),
-            'active'=> ($current_page === 'workspace-logistik.php')
-        ];
-    }
-    // E. Humas / Sie Humas
-    elseif ($isHumas || $primary_event_role === 'sie_humas') {
+    } elseif ($isHumas) {
         $show_bottom_nav = true;
         $bottom_nav_tabs[] = [
             'label' => 'Dashboard',

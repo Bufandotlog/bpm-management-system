@@ -2,8 +2,17 @@
 // admin/buat-panitia.php
 require_once __DIR__ . '/../core/header.php';
 
-if (!isSekretaris() && !isKetuplat()) {
-    redirect('admin/core/dashboard.php', 'Akses ditolak: Hanya Sekretaris, Admin, atau Ketua Pelaksana yang diizinkan mengelola Susunan Panitia.', 'error');
+$panitia_manager_role = normalizeAppRole($_SESSION['admin_role'] ?? '');
+$is_system_panitia_manager = in_array($panitia_manager_role, ['superadmin', 'admin', 'sekretaris'], true)
+    || !empty($_SESSION['admin_can_access_all']);
+$req_kegiatan_id = isset($_GET['kegiatan_id']) ? (int)$_GET['kegiatan_id'] : 0;
+
+if (!$is_system_panitia_manager && $req_kegiatan_id <= 0) {
+    redirect('admin/core/dashboard.php', 'Akses ditolak: Ketua Pelaksana harus membuka kegiatan yang ditugaskan.', 'error');
+    exit();
+}
+if (!$is_system_panitia_manager) {
+    requireEventAccess($req_kegiatan_id, ['ketuplat']);
 }
 $periode_id = getUserPeriode();
 
@@ -277,6 +286,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($post_kegiatan_id > 0 && $req_kegiatan_id == 0) {
             $req_kegiatan_id = $post_kegiatan_id;
+        }
+        if (!$is_system_panitia_manager) {
+            requireEventAccess($post_kegiatan_id, ['ketuplat']);
         }
 
         $sc_1 = trim($_POST['sc_1'] ?? '');
