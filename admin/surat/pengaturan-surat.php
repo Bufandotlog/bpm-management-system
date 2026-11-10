@@ -120,8 +120,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'tamba
     if (!csrfVerify()) {
         $error = "Token CSRF tidak valid.";
     } else {
-        $nama    = strtoupper(sanitizeText($_POST['nama_panitia'] ?? '', 100));
-        $jabatan = $_POST['jabatan_panitia'] === 'sekretaris' ? 'sekretaris' : 'ketua';
+        $nama_input = sanitizeText($_POST['nama_panitia'] ?? '', 100);
+        $nama    = function_exists('mb_strtoupper') ? mb_strtoupper($nama_input, 'UTF-8') : strtoupper($nama_input);
+        $jabatan_input = $_POST['jabatan_panitia'] ?? 'ketua';
+        $jabatan = in_array($jabatan_input, ['ketua', 'sekretaris'], true) ? $jabatan_input : 'ketua';
         
         if (empty($nama) || empty($_FILES['file_ttd']['name'])) {
             $error = "Nama dan File Tanda Tangan wajib diisi.";
@@ -143,8 +145,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
         $error = "Token CSRF tidak valid.";
     } else {
         $id_update = (int)$_POST['panitia_id'];
-        $nama    = strtoupper(sanitizeText($_POST['nama_panitia'] ?? '', 100));
-        $jabatan = $_POST['jabatan_panitia'] === 'sekretaris' ? 'sekretaris' : 'ketua';
+        $nama_input = sanitizeText($_POST['nama_panitia'] ?? '', 100);
+        $nama    = function_exists('mb_strtoupper') ? mb_strtoupper($nama_input, 'UTF-8') : strtoupper($nama_input);
+        $jabatan_input = $_POST['jabatan_panitia'] ?? 'ketua';
+        $jabatan = in_array($jabatan_input, ['ketua', 'sekretaris'], true) ? $jabatan_input : 'ketua';
         
         if (empty($nama)) {
             $error = "Nama wajib diisi.";
@@ -240,6 +244,61 @@ $edit_panitia_data = null;
 if ($edit_panitia_id > 0) {
     $edit_panitia_data = dbFetchOne("SELECT * FROM panitia_tetap WHERE id = ? AND periode_id = ?", [$edit_panitia_id, $periode_id], "ii");
 }
+
+// Rekomendasi anggota periode aktif yang belum memiliki tanda tangan tersimpan.
+$normalizePanitiaName = static function ($name): string {
+    $name = preg_replace('/\s+/u', ' ', trim((string)$name)) ?? trim((string)$name);
+    return function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
+};
+$signed_panitia_rows = dbFetchAll(
+    "SELECT nama FROM panitia_tetap WHERE periode_id = ? AND file_ttd IS NOT NULL AND TRIM(file_ttd) <> ''",
+    [$periode_id],
+    "i"
+);
+$signed_panitia_names = [];
+foreach ($signed_panitia_rows as $signed_row) {
+    $signed_key = $normalizePanitiaName($signed_row['nama'] ?? '');
+    if ($signed_key !== '') {
+        $signed_panitia_names[$signed_key] = true;
+    }
+}
+
+$anggota_rekomendasi = dbFetchAll(
+    "SELECT ak.nama, ak.jabatan, ak.file_ttd AS anggota_file_ttd, u.file_ttd AS user_file_ttd
+     FROM anggota_kementerian ak
+     LEFT JOIN users u ON u.id = ak.user_id
+     WHERE ak.periode_id = ? AND TRIM(ak.nama) <> ''
+     ORDER BY ak.nama ASC",
+    [$periode_id],
+    "i"
+);
+$rekomendasi_by_name = [];
+foreach ($anggota_rekomendasi as $anggota_row) {
+    $nama_anggota = trim((string)($anggota_row['nama'] ?? ''));
+    $nama_key = $normalizePanitiaName($nama_anggota);
+    if (
+        $nama_key === ''
+        || !empty($anggota_row['anggota_file_ttd'])
+        || !empty($anggota_row['user_file_ttd'])
+        || isset($signed_panitia_names[$nama_key])
+    ) {
+        continue;
+    }
+
+    $jabatan_sumber = (string)($anggota_row['jabatan'] ?? '');
+    $jabatan_rekomendasi = stripos($jabatan_sumber, 'sekretaris') !== false ? 'sekretaris' : 'ketua';
+    if (!isset($rekomendasi_by_name[$nama_key])) {
+        $rekomendasi_by_name[$nama_key] = [
+            'nama' => function_exists('mb_strtoupper') ? mb_strtoupper($nama_anggota, 'UTF-8') : strtoupper($nama_anggota),
+            'jabatan' => $jabatan_rekomendasi,
+        ];
+    } elseif ($jabatan_rekomendasi === 'sekretaris') {
+        $rekomendasi_by_name[$nama_key]['jabatan'] = 'sekretaris';
+    }
+}
+uasort($rekomendasi_by_name, static fn($a, $b) => strcasecmp($a['nama'], $b['nama']));
+$rekomendasi_ketua = array_filter($rekomendasi_by_name, static fn($item) => $item['jabatan'] === 'ketua');
+$rekomendasi_sekretaris = array_filter($rekomendasi_by_name, static fn($item) => $item['jabatan'] === 'sekretaris');
 
 // Ambil semua template
 $templates = dbFetchAll("SELECT * FROM surat_templates WHERE periode_id = ? ORDER BY jenis DESC, label ASC", [$periode_id], "i");
@@ -719,7 +778,32 @@ $def_cap_bpm     = $pengaturan['cap_bpm_image'] ?? ($pengaturan['cap_presma_imag
                 <input type="hidden" name="panitia_id" value="<?php echo $edit_panitia_data['id']; ?>">
             <?php endif; ?>
             <div class="floating-group">
-                <input type="text" id="nama_panitia" name="nama_panitia" class="floating-input" required placeholder=" " value="<?php echo htmlspecialchars($edit_panitia_data['nama'] ?? ''); ?>">
+                <?php if (!$edit_panitia_data): ?>
+                    <select id="rekomendasi_panitia" class="floating-input" onchange="applyPanitiaRecommendation(this)">
+                        <option value="">Pilih rekomendasi anggota (opsional)</option>
+                        <?php if (!empty($rekomendasi_ketua)): ?>
+                            <optgroup label="Rekomendasi Ketua Pelaksana">
+                                <?php foreach ($rekomendasi_ketua as $item): ?>
+                                    <option value="<?php echo htmlspecialchars($item['nama'], ENT_QUOTES, 'UTF-8'); ?>" data-jabatan="ketua"><?php echo htmlspecialchars($item['nama']); ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php endif; ?>
+                        <?php if (!empty($rekomendasi_sekretaris)): ?>
+                            <optgroup label="Rekomendasi Sekretaris Pelaksana">
+                                <?php foreach ($rekomendasi_sekretaris as $item): ?>
+                                    <option value="<?php echo htmlspecialchars($item['nama'], ENT_QUOTES, 'UTF-8'); ?>" data-jabatan="sekretaris"><?php echo htmlspecialchars($item['nama']); ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php endif; ?>
+                    </select>
+                    <label for="rekomendasi_panitia" class="floating-label">Pilih Nama dari Anggota Kementerian</label>
+                    <?php if (empty($rekomendasi_by_name)): ?>
+                        <small style="display:block; margin-top:6px; color:#888;">Tidak ada rekomendasi anggota tanpa tanda tangan tersimpan. Nama tetap dapat diisi manual.</small>
+                    <?php else: ?>
+                        <small style="display:block; margin-top:6px; color:#888;">Jabatan terisi otomatis dari jabatan anggota; selain Sekretaris diarahkan sebagai Ketua Pelaksana.</small>
+                    <?php endif; ?>
+                <?php endif; ?>
+                <input type="text" id="nama_panitia" name="nama_panitia" class="floating-input" required placeholder=" " value="<?php echo htmlspecialchars($edit_panitia_data['nama'] ?? ''); ?>" oninput="this.value = this.value.toLocaleUpperCase('id-ID')" style="text-transform: uppercase;">
                 <label for="nama_panitia" class="floating-label">Nama Lengkap (UPPERCASE)</label>
             </div>
             <div class="floating-group">
@@ -941,6 +1025,14 @@ $def_cap_bpm     = $pengaturan['cap_bpm_image'] ?? ($pengaturan['cap_presma_imag
 </div>
 
 <script>
+function applyPanitiaRecommendation(select) {
+    const option = select.options[select.selectedIndex];
+    if (!option || !option.value) return;
+
+    document.getElementById('nama_panitia').value = option.value.toLocaleUpperCase('id-ID');
+    document.getElementById('jabatan_panitia').value = option.dataset.jabatan === 'sekretaris' ? 'sekretaris' : 'ketua';
+}
+
 // ========== DRAG & DROP DAN PREVIEW GAMBAR ==========
 function setupDragAndDrop(dropZoneId, fileInputId, previewContainerId, previewImgId) {
     const dropZone = document.getElementById(dropZoneId);
