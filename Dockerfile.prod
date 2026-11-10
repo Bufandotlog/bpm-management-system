@@ -88,4 +88,4 @@ EXPOSE 9000
 
 USER www-data
 
-CMD ["php-fpm"]
+CMD ["sh", "-c", "php databases/migrate.php && exec php-fpm"]

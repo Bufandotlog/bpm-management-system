@@ -240,17 +240,37 @@ fi
 info "Build Docker image aplikasi..."
 docker compose build --no-cache app
 
-info "Jalankan semua container..."
-docker compose up -d
+info "Hentikan aplikasi sementara agar aman untuk import database..."
+docker compose stop nginx app
+
+# Start database first so an optional legacy dump is imported before app migrations run.
+info "Jalankan database..."
+docker compose up -d db
 
 # Tunggu database siap
 info "Menunggu database ready..."
-sleep 30
+db_ready=0
+for attempt in $(seq 1 90); do
+    if docker compose exec -T db healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1; then
+        db_ready=1
+        break
+    fi
+    sleep 2
+done
+if [ "$db_ready" -ne 1 ]; then
+    err "Database tidak siap setelah 180 detik."
+fi
 
 # ─────────────────────────────────────────────────────────────
 # LANGKAH 11: Import data dari shared hosting (jika ada)
 # ─────────────────────────────────────────────────────────────
-DUMP_FILE=$(ls "${APP_DIR}/databases/dump_migration_"*.sql.gz 2>/dev/null | head -1)
+DUMP_FILE=""
+for dump_candidate in "${APP_DIR}"/databases/dump_migration_*.sql.gz; do
+    if [ -f "$dump_candidate" ]; then
+        DUMP_FILE="$dump_candidate"
+        break
+    fi
+done
 
 if [ -n "$DUMP_FILE" ]; then
     warn "Ditemukan dump file: $(basename "$DUMP_FILE")"
@@ -264,6 +284,15 @@ if [ -n "$DUMP_FILE" ]; then
         log "Import database berhasil!"
     fi
 fi
+
+# Jalankan aplikasi; entrypoint menjalankan migration sebelum PHP-FPM dimulai.
+info "Jalankan aplikasi dan layanan lainnya..."
+docker compose up -d
+
+# Pastikan schema mengikuti versi aplikasi, termasuk setelah import dump lama.
+info "Memeriksa dan menerapkan migrasi database..."
+docker compose exec -T app php databases/migrate.php
+log "Migrasi database dan pemeriksaan schema berhasil."
 
 # ─────────────────────────────────────────────────────────────
 # LANGKAH 12: Setup Cron untuk Backup Otomatis
