@@ -40,6 +40,18 @@ Pilih salah satu sesuai kebutuhan Anda:
 3. Klik tab **Import** > Pilih file: `databases/schema_mysql.sql` (struktur lengkap: 36 tabel aktif + 3 tabel deprecated + 3 views, tanpa data seed).
 4. Klik **Go** dan tunggu hingga selesai.
 
+Untuk deployment Docker, `databases/schema_mysql.sql` hanya diimpor otomatis ketika volume database pertama kali dibuat. Volume `db_data` yang sudah ada akan dipertahankan saat container dibangun ulang, sehingga file schema init tidak memperbarui database lama. Image aplikasi menjalankan migration bernomor sebelum PHP-FPM menerima request; proses deploy juga menjalankan pemeriksaan ulang setelah import dump. Jangan menghapus volume database untuk menerapkan perubahan schema.
+
+Migration membutuhkan izin DDL pada akun database aplikasi (minimal izin membuat tabel dan mengubah tabel di database aplikasi). Jika migration gagal, container aplikasi tidak akan mulai melayani request dan detail kegagalan tampil pada log container `app`.
+
+Untuk menjalankan atau memeriksa migration secara manual dari direktori deployment:
+
+```bash
+docker compose exec app php databases/migrate.php
+```
+
+Setiap migration memakai versi dan checksum pada tabel `schema_migrations`; migration yang sudah diterapkan tidak dijalankan ulang, dan perubahan pada file migration yang sudah diterapkan akan menyebabkan proses berhenti dengan error.
+
 ### B. Menggunakan PostgreSQL (Lokal/Supabase — sekunder)
 > [!NOTE]
 > `schema_pgsql.sql` tidak sinkron dengan skema MySQL terbaru dan belum diperbarui. Gunakan hanya jika Anda siap menyesuaikannya manual.

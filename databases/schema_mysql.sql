@@ -286,6 +286,7 @@ CREATE TABLE `kontak` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 CREATE TABLE `lampiran_pinjam` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `kegiatan_id` int(11) DEFAULT NULL,
   `nama_acara` varchar(255) NOT NULL,
   `tanggal_kegiatan` varchar(100) DEFAULT NULL,
   `tahun` varchar(10) DEFAULT NULL,
@@ -293,7 +294,8 @@ CREATE TABLE `lampiran_pinjam` (
   `readiness_json` text DEFAULT NULL,
   `periode_id` int(11) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_lampiran_pinjam_kegiatan_periode` (`kegiatan_id`,`periode_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `login_attempts_ip` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
