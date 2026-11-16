@@ -123,6 +123,12 @@ if (isset($BULK_KETUA)) {
 // Di tabel struktur_bph, kolom nama adalah 'nama' (fallback 'nama_lengkap')
 $nama_ketua_bpm = $ketua_bpm['nama'] ?? ($ketua_bpm['nama_lengkap'] ?? 'Bufan Fadhilah');
 $nama_ketua_bem = $nama_ketua_bpm; // alias kompatibilitas
+$uppercaseNamaTtd = static function ($nama): string {
+    $nama = (string)$nama;
+    return function_exists('mb_strtoupper')
+        ? mb_strtoupper($nama, 'UTF-8')
+        : strtoupper($nama);
+};
 
 // Sekretaris fallback
 $sekretaris_bpm_data = getSekretarisUmum($periode_id);
@@ -825,7 +831,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($ttd_bpm_img) && $use_ttd_bpm_flag): ?>
                                 <img src="<?php echo uploadUrl($ttd_bpm_img); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($nama_bpm_val); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($nama_bpm_val)); ?></div>
                         </td>
                         <td style="position:relative; z-index:0;">
                             <?php echo htmlspecialchars($ttd_label_sekretaris); ?><br>
@@ -833,7 +839,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($pengaturan['ttd_sekretaris_image']) && ($konten['use_ttd_sekretaris'] ?? '1') === '1'): ?>
                                 <img src="<?php echo uploadUrl($pengaturan['ttd_sekretaris_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($nama_sekretaris_val); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($nama_sekretaris_val)); ?></div>
                         </td>
                     </tr>
                 </table>
@@ -854,7 +860,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($ttd_bpm_img) && $use_ttd_bpm_flag): ?>
                                 <img src="<?php echo uploadUrl($ttd_bpm_img); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($nama_bpm_val); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($nama_bpm_val)); ?></div>
                         </td>
                         <td style="position:relative; z-index:0;">
                             <?php echo htmlspecialchars($ttd_label_sekretaris); ?><br>
@@ -862,7 +868,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($pengaturan['ttd_sekretaris_image']) && ($konten['use_ttd_sekretaris'] ?? '1') === '1'): ?>
                                 <img src="<?php echo uploadUrl($pengaturan['ttd_sekretaris_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($nama_sekretaris_val); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($nama_sekretaris_val)); ?></div>
                         </td>
                     </tr>
                 </table>
@@ -881,7 +887,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                                 <?php if(!empty($pengaturan['ttd_warek_image']) && ($konten['use_ttd_warek'] ?? '1') === '1'): ?>
                                     <img src="<?php echo uploadUrl($pengaturan['ttd_warek_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none; z-index:-1;">
                                 <?php endif; ?>
-                                <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_warek_name'] ?? 'II MUHAMAD MISBAH, S.Pd.I., SE., MM.'); ?></div>
+                                <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($pengaturan['ttd_warek_name'] ?? 'II MUHAMAD MISBAH, S.Pd.I., SE., MM.')); ?></div>
                             </div>
                         </td>
                     </tr>
@@ -902,14 +908,14 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($konten['panitia_ketua_ttd'])): ?>
                                 <img src="<?php echo renderTTD_inline($konten['panitia_ketua_ttd']); ?>" style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none; z-index:-1;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($konten['panitia_ketua'] ?? ''); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($konten['panitia_ketua'] ?? '')); ?></div>
                         </td>
                         <td style="position:relative; z-index:0;">
                             Sekretaris Pelaksana
                             <?php if(!empty($konten['panitia_sekretaris_ttd'])): ?>
                                 <img src="<?php echo renderTTD_inline($konten['panitia_sekretaris_ttd']); ?>" style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none; z-index:-1;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($konten['panitia_sekretaris'] ?? ''); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($konten['panitia_sekretaris'] ?? '')); ?></div>
                         </td>
                     </tr>
                 </table>
@@ -927,7 +933,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($pengaturan['ttd_warek_image']) && ($konten['use_ttd_warek'] ?? '1') === '1'): ?>
                                 <img src="<?php echo uploadUrl($pengaturan['ttd_warek_image']); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none; z-index:-1;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($pengaturan['ttd_warek_name'] ?? 'II MUHAMAD MISBAH, S.Pd.I., SE., MM.'); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($pengaturan['ttd_warek_name'] ?? 'II MUHAMAD MISBAH, S.Pd.I., SE., MM.')); ?></div>
                         </td>
                         <td style="position:relative; z-index:0;">
                             Ketua BPM<br>
@@ -938,7 +944,7 @@ $download_name = "SURAT $f_perihal $f_kode UNTUK $f_tujuan $f_tahun";
                             <?php if(!empty($ttd_bpm_img) && $use_ttd_bpm_flag): ?>
                                 <img src="<?php echo uploadUrl($ttd_bpm_img); ?>" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); max-height:85px; mix-blend-mode:multiply; pointer-events:none;">
                             <?php endif; ?>
-                            <div class="ttd-name"><?php echo htmlspecialchars($nama_bpm_val); ?></div>
+                            <div class="ttd-name"><?php echo htmlspecialchars($uppercaseNamaTtd($nama_bpm_val)); ?></div>
                         </td>
                     </tr>
                 </table>

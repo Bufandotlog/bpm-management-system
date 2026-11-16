@@ -1935,7 +1935,7 @@ function syncTamuUndanganLetters($kegiatan_id, $periode_id) {
 
     $ketuplat_nama = '';
     $sekretaris_nama = '';
-    $panitia_inti = dbFetchAll("SELECT u.nama, p.event_role FROM kegiatan_panitia p JOIN users u ON p.user_id = u.id WHERE p.kegiatan_id = ? AND p.event_role IN ('ketuplat', 'ketua_pelaksana', 'sekretaris', 'sekretaris_panitia')", [$kegiatan_id]);
+    $panitia_inti = dbFetchAll("SELECT u.nama, p.event_role FROM kegiatan_panitia p JOIN users u ON p.user_id = u.id WHERE p.kegiatan_id = ? AND p.event_role IN ('ketuplat', 'ketua_pelaksana', 'sekretaris', 'sekretaris_panitia') ORDER BY p.id ASC", [$kegiatan_id]);
     foreach ($panitia_inti as $p) {
         if (in_array($p['event_role'], ['sekretaris', 'sekretaris_panitia'])) $sekretaris_nama = $p['nama'];
         else $ketuplat_nama = $p['nama'];
@@ -2428,7 +2428,7 @@ function saveLogistikPeminjamanAndDraftLetter($kegiatan_id, $periode_id, $acara,
             $kp_row = dbFetchOne("SELECT u.nama FROM kegiatan_panitia kp JOIN users u ON kp.user_id = u.id WHERE kp.kegiatan_id = ? AND kp.event_role IN ('ketuplat', 'ketua_pelaksana') LIMIT 1", [$kegiatan_id]);
             $ketuplat_nama = $kp_row ? strtoupper($kp_row['nama']) : '';
 
-            $sek_row = dbFetchOne("SELECT u.nama FROM kegiatan_panitia kp JOIN users u ON kp.user_id = u.id WHERE kp.kegiatan_id = ? AND kp.event_role IN ('sekretaris_panitia', 'sekretaris', 'sekretaris_kegiatan', 'sekretaris_1', 'sekretaris_2') LIMIT 1", [$kegiatan_id]);
+            $sek_row = dbFetchOne("SELECT u.nama FROM kegiatan_panitia kp JOIN users u ON kp.user_id = u.id WHERE kp.kegiatan_id = ? AND kp.event_role IN ('sekretaris_panitia', 'sekretaris', 'sekretaris_kegiatan', 'sekretaris_1', 'sekretaris_2') ORDER BY kp.id DESC LIMIT 1", [$kegiatan_id]);
             $sekretaris_nama = $sek_row ? strtoupper($sek_row['nama']) : '';
 
             // Default Tujuan Sarpras
@@ -2474,6 +2474,13 @@ function saveLogistikPeminjamanAndDraftLetter($kegiatan_id, $periode_id, $acara,
                 foreach (['nama_kegiatan', 'tema', 'tema_kegiatan', 'pelaksanaan_hari_tanggal', 'pelaksanaan_waktu', 'pelaksanaan_tempat'] as $snapshot_key) {
                     if (array_key_exists($snapshot_key, $ex_konten)) {
                         $konten_data[$snapshot_key] = $ex_konten[$snapshot_key];
+                    }
+                }
+                if (!empty($ex_konten['is_edited'])) {
+                    foreach (['panitia_sekretaris', 'panitia_sekretaris_ttd'] as $edited_key) {
+                        if (array_key_exists($edited_key, $ex_konten)) {
+                            $konten_data[$edited_key] = $ex_konten[$edited_key];
+                        }
                     }
                 }
                 $existing_ids = $ex_konten['lampiran_internal_ids'] ?? [];
