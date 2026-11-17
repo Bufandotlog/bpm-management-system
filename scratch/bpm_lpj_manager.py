@@ -438,9 +438,10 @@ def set_document_formatting(doc):
     style.paragraph_format.space_before = Pt(0)
     style.paragraph_format.space_after = Pt(6)
 
-def add_document_footer(doc, triwulan_str):
-    for section in doc.sections:
-        section.different_first_page_header_footer = True
+def add_document_footer(doc, triwulan_str, hide_first_page=True):
+    for section_index, section in enumerate(doc.sections):
+        is_first_page_section = section_index == 0 and hide_first_page
+        section.different_first_page_header_footer = is_first_page_section
         
         # Main footer
         footer = section.footer
@@ -477,13 +478,13 @@ def add_document_footer(doc, triwulan_str):
         run_num._r.append(instrText)
         run_num._r.append(fldChar2)
         
-        # Cover page footer (empty)
-        first_page_footer = section.first_page_footer
-        if not first_page_footer.paragraphs:
-            p_first = first_page_footer.add_paragraph()
-        else:
-            p_first = first_page_footer.paragraphs[0]
-            p_first.text = ""
+        if is_first_page_section:
+            first_page_footer = section.first_page_footer
+            if not first_page_footer.paragraphs:
+                p_first = first_page_footer.add_paragraph()
+            else:
+                p_first = first_page_footer.paragraphs[0]
+                p_first.text = ""
 
 def parse_docx(doc_path):
     if not os.path.exists(doc_path):
@@ -1740,6 +1741,7 @@ def generate_secretariat_lpj(output_path, config_data):
     add_section("D. PENUTUP")
     add_body(config_data.get("penutup", ""))
 
+    add_document_footer(doc, triwulan, hide_first_page=False)
     doc.save(output_path)
     return True
 
