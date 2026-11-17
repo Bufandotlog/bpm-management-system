@@ -340,6 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($lpj_id === 0 || $lpj !== null)) {
 
 <style>
     .secretariat-lpj { max-width:1100px; margin:0 auto 36px; }
+    .secretariat-lpj > .admin-form { width:100%; max-width:none; }
     .secretariat-lpj .page-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:22px; }
     .secretariat-lpj .page-header h1 { margin:0; }
     .secretariat-lpj .page-header .btn-secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 15px; border-radius:8px; text-decoration:none; }
