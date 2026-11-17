@@ -108,23 +108,6 @@ $mergeLetterSnapshots = static function (array ...$snapshots) use ($categories):
 $lettersByType = $lpj && !empty($lpj['surat_arsip'])
     ? $decodeLetterSnapshot($lpj['surat_arsip'])
     : null;
-if ($lettersByType === null && $triwulan === 'MUBESMA') {
-    $quarterRows = dbFetchAll(
-        "SELECT surat_arsip FROM lpj_sekretariat
-         WHERE periode_id = ? AND triwulan IN ('I', 'II') ORDER BY triwulan ASC",
-        [$periode_id],
-        "i"
-    );
-    $quarterSnapshots = [];
-    foreach ($quarterRows as $quarterRow) {
-        if (!empty($quarterRow['surat_arsip'])) {
-            $quarterSnapshots[] = $decodeLetterSnapshot($quarterRow['surat_arsip']);
-        }
-    }
-    $lettersByType = $quarterSnapshots
-        ? $mergeLetterSnapshots(...$quarterSnapshots)
-        : $fetchLatestLetters();
-}
 if ($lettersByType === null) {
     $lettersByType = $fetchLatestLetters();
 }
@@ -239,24 +222,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($lpj_id === 0 || $lpj !== null)) {
 
         $action = (string)($_POST['action'] ?? 'save');
         if ($error === '' && $action === 'sync_archives') {
-            $freshLetters = $triwulan === 'MUBESMA' ? null : $fetchLatestLetters();
-            if ($triwulan === 'MUBESMA') {
-                $quarterRows = dbFetchAll(
-                    "SELECT surat_arsip FROM lpj_sekretariat
-                     WHERE periode_id = ? AND triwulan IN ('I', 'II') ORDER BY triwulan ASC",
-                    [$periode_id],
-                    "i"
-                );
-                $quarterSnapshots = [];
-                foreach ($quarterRows as $quarterRow) {
-                    if (!empty($quarterRow['surat_arsip'])) {
-                        $quarterSnapshots[] = $decodeLetterSnapshot($quarterRow['surat_arsip']);
-                    }
-                }
-                $freshLetters = $quarterSnapshots
-                    ? $mergeLetterSnapshots(...$quarterSnapshots)
-                    : $fetchLatestLetters();
-            }
             $manualLetters = array_fill_keys(array_keys($categories), []);
             foreach ($postedLetters as $type => $rows) {
                 $manualLetters[$type] = array_values(array_filter(
@@ -264,8 +229,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($lpj_id === 0 || $lpj !== null)) {
                     static fn($letter) => (int)$letter['archive_id'] === 0
                 ));
             }
-            $lettersByType = $mergeLetterSnapshots($freshLetters, $manualLetters);
-            $success = 'Arsip surat terbaru disinkronkan. Tinjau perubahan lalu simpan LPJ untuk memperbarui snapshot.';
+            $lettersByType = $mergeLetterSnapshots($fetchLatestLetters(), $manualLetters);
+            $success = $triwulan === 'MUBESMA'
+                ? 'Seluruh arsip surat periode aktif disinkronkan. Tinjau perubahan lalu simpan LPJ untuk memperbarui snapshot.'
+                : 'Arsip surat terbaru disinkronkan. Tinjau perubahan lalu simpan LPJ untuk memperbarui snapshot.';
         } elseif ($error === '') {
             $lettersByType = $postedLetters;
 
@@ -518,7 +485,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($lpj_id === 0 || $lpj !== null)) {
                         <select id="triwulanSelect" onchange="changeSecretariatTriwulan(this.value)">
                             <option value="I" <?php echo $triwulan === 'I' ? 'selected' : ''; ?>>Triwulan I</option>
                             <option value="II" <?php echo $triwulan === 'II' ? 'selected' : ''; ?>>Triwulan II</option>
-                            <option value="MUBESMA" <?php echo $triwulan === 'MUBESMA' ? 'selected' : ''; ?>>MUBESMA (gabungan Triwulan I &amp; II)</option>
+                            <option value="MUBESMA" <?php echo $triwulan === 'MUBESMA' ? 'selected' : ''; ?>>MUBESMA</option>
                         </select>
                     </label>
                 </div>
@@ -559,7 +526,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($lpj_id === 0 || $lpj !== null)) {
                 <button class="lpj-sync-button" type="submit" name="action" value="sync_archives" formnovalidate><i class="fas fa-sync-alt"></i> Sinkronkan Arsip Terbaru</button>
             </div>
             <div class="lpj-panel-content">
-            <p class="archive-intro"><i class="fas fa-info-circle"></i> LPJ tidak berubah saat arsip bertambah. Sinkronisasi mengganti baris dari arsip dengan data terbaru dan mempertahankan baris yang ditambahkan manual. Simpan LPJ untuk menyimpan perubahan.</p>
+            <p class="archive-intro"><i class="fas fa-info-circle"></i> LPJ tidak berubah saat arsip bertambah. Sinkronisasi mengambil seluruh surat langsung dari arsip periode aktif<?php echo $triwulan === 'MUBESMA' ? ' (bukan dari snapshot LPJ Triwulan I/II)' : ''; ?>, mengganti baris arsip dengan data terbaru, dan mempertahankan baris yang ditambahkan manual. Simpan LPJ untuk menyimpan perubahan.</p>
             <?php foreach ($categories as $type => $category): $items = $lettersByType[$type]; ?>
                 <div class="archive-category">
                     <button type="button" aria-expanded="false">

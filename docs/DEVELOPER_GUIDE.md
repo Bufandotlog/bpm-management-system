@@ -70,7 +70,7 @@ graph TD
   1. *Rundown* dari Sie Acara.
   2. *Dokumentasi JSON* dari Kominfo (`arsip_dokumentasi`).
 * **LPJ** menggunakan fitur *Two-Way Sync*. Jika ada perubahan data pada Berita Acara, JSON pada dokumen LPJ akan ter-*update* secara otomatis. Jangan merusak struktur array JSON-nya.
-* **LPJ Sekretariat** disimpan terpisah di tabel `lpj_sekretariat`, satu laporan per periode dan triwulan (`I`, `II`, atau `MUBESMA`). Empat kategori surat (`L`, `D`, `M`, `I`) disimpan sebagai snapshot agar arsip baru tidak mengubah LPJ yang sudah disimpan. Aksi sinkronisasi mengganti baris arsip dengan versi terbaru dan mempertahankan surat manual; MUBESMA menggabungkan snapshot Triwulan I dan II. Konsolidasi memakai snapshot tersimpan, meletakkan Sekretariat lebih dulu, lalu komisi sesuai urutan master.
+* **LPJ Sekretariat** disimpan terpisah di tabel `lpj_sekretariat`, satu laporan per periode dan triwulan (`I`, `II`, atau `MUBESMA`). Empat kategori surat (`L`, `D`, `M`, `I`) disimpan sebagai snapshot agar arsip baru tidak mengubah LPJ yang sudah disimpan. Aksi sinkronisasi mengganti baris arsip dengan data terbaru dari arsip periode aktif dan mempertahankan surat manual. MUBESMA juga mengambil seluruh surat langsung dari arsip, bukan dari snapshot LPJ Triwulan I/II. Konsolidasi memakai snapshot tersimpan, meletakkan Sekretariat lebih dulu, lalu komisi sesuai urutan master.
 
 ### D. Manajemen File / Gambar
 * **File Utama:** `includes/functions.php` -> fungsi `uploadFile()`.
