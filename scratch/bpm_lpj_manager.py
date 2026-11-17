@@ -1,6 +1,7 @@
 import docx
 from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.section import WD_ORIENT, WD_SECTION
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import os
@@ -1583,6 +1584,8 @@ def generate_lpj(output_path, config_data):
 def generate_secretariat_lpj(output_path, config_data):
     doc = docx.Document()
     section = doc.sections[0]
+    section.page_width = Cm(21)
+    section.page_height = Cm(29.7)
     section.top_margin = Cm(3)
     section.bottom_margin = Cm(3)
     section.left_margin = Cm(4)
@@ -1599,7 +1602,7 @@ def generate_secretariat_lpj(output_path, config_data):
     title.paragraph_format.space_after = Pt(4)
     triwulan = str(config_data.get("cover", {}).get("triwulan", "")).upper()
     period_title = "MUBESMA" if triwulan == "MUBESMA" else f"TRIWULAN {triwulan}".strip()
-    title_run = title.add_run(f"LAPORAN PERTANGGUNGJAWABAN {period_title}\nSEKRETARIAT UMUM BPM")
+    title_run = title.add_run(f"LAPORAN PERTANGGUNGJAWABAN {period_title}\nSEKRETARIS UMUM BPM")
     format_run(title_run, size_pt=12, bold=True)
 
     periode = config_data.get("periode", {})
@@ -1627,7 +1630,7 @@ def generate_secretariat_lpj(output_path, config_data):
             paragraph.paragraph_format.first_line_indent = Cm(0.7)
             format_run(paragraph.add_run(line.strip()), size_pt=12)
 
-    add_section("A. KEADAAN OBJEKTIF SEKRETARIAT")
+    add_section("A. KEADAAN OBJEKTIF SEKRETARIS")
     add_body(config_data.get("keadaan_objektif", ""))
 
     add_section("B. SUSUNAN KEANGGOTAAN")
@@ -1649,6 +1652,16 @@ def generate_secretariat_lpj(output_path, config_data):
         ("I", "SURAT MASUK (INTERNAL)", "Tanggal Diterima", "Asal Instansi"),
     ]
     letters = config_data.get("surat", {})
+
+    section = doc.add_section(WD_SECTION.NEW_PAGE)
+    portrait_width, portrait_height = section.page_width, section.page_height
+    section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width, section.page_height = portrait_height, portrait_width
+    section.top_margin = Cm(3)
+    section.bottom_margin = Cm(3)
+    section.left_margin = Cm(4)
+    section.right_margin = Cm(3)
+
     add_section("C. ARSIP SURAT")
     for code, category, date_label, party_label in categories:
         subheading = doc.add_paragraph()
@@ -1659,7 +1672,8 @@ def generate_secretariat_lpj(output_path, config_data):
 
         table = doc.add_table(rows=1, cols=5)
         table.style = "Table Grid"
-        widths = [Cm(0.8), Cm(2.0), Cm(2.8), Cm(3.0), Cm(5.4)]
+        table.autofit = False
+        widths = [Cm(1.0), Cm(2.6), Cm(5.2), Cm(5.3), Cm(8.6)]
         headers = ["No.", date_label, "Nomor Surat", "Perihal", party_label]
         header_row = table.rows[0]
         tr_properties = header_row._tr.get_or_add_trPr()
@@ -1706,6 +1720,18 @@ def generate_secretariat_lpj(output_path, config_data):
                         format_run(run, size_pt=12)
                 if col_index < 2:
                     cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        set_table_widths(table, widths)
+        for column, width in zip(table.columns, widths):
+            column.width = width
+
+    section = doc.add_section(WD_SECTION.NEW_PAGE)
+    landscape_width, landscape_height = section.page_width, section.page_height
+    section.orientation = WD_ORIENT.PORTRAIT
+    section.page_width, section.page_height = landscape_height, landscape_width
+    section.top_margin = Cm(3)
+    section.bottom_margin = Cm(3)
+    section.left_margin = Cm(4)
+    section.right_margin = Cm(3)
 
     add_section("D. PENUTUP")
     add_body(config_data.get("penutup", ""))
