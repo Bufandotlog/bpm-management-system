@@ -70,6 +70,7 @@ graph TD
   1. *Rundown* dari Sie Acara.
   2. *Dokumentasi JSON* dari Kominfo (`arsip_dokumentasi`).
 * **LPJ** menggunakan fitur *Two-Way Sync*. Jika ada perubahan data pada Berita Acara, JSON pada dokumen LPJ akan ter-*update* secara otomatis. Jangan merusak struktur array JSON-nya.
+* **LPJ Sekretariat** disimpan terpisah di tabel `lpj_sekretariat`, satu laporan per periode. Empat kategori arsip surat (`L`, `D`, `M`, `I`) dibaca dari `arsip_surat` berdasarkan periode; jangan menduplikasi surat di tabel LPJ. Generator `generate-secretary` menghasilkan bagian A–D dan tabel arsip surat, tanpa bagian proker.
 
 ### D. Manajemen File / Gambar
 * **File Utama:** `includes/functions.php` -> fungsi `uploadFile()`.

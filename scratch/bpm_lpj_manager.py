@@ -1580,6 +1580,149 @@ def generate_lpj(output_path, config_data):
     doc.save(output_path)
     return True
 
+def generate_secretariat_lpj(output_path, config_data):
+    doc = docx.Document()
+    section = doc.sections[0]
+    section.top_margin = Cm(1.8)
+    section.bottom_margin = Cm(1.8)
+    section.left_margin = Cm(1.6)
+    section.right_margin = Cm(1.6)
+
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.paragraph_format.space_after = Pt(4)
+    title_run = title.add_run("LAPORAN PERTANGGUNGJAWABAN\nSEKRETARIS UMUM BPM")
+    format_run(title_run, size_pt=14, bold=True)
+
+    periode = config_data.get("periode", {})
+    years = f"{periode.get('tahun_mulai', '')}/{periode.get('tahun_selesai', '')}".strip("/")
+    periode_name = periode.get("nama", "")
+    subtitle = doc.add_paragraph()
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    subtitle.paragraph_format.space_after = Pt(14)
+    format_run(subtitle.add_run("BPM INSTBUNAS MAJALENGKA " + (years or periode_name)), size_pt=11, bold=True)
+
+    def add_section(title_text):
+        paragraph = doc.add_paragraph()
+        paragraph.paragraph_format.space_before = Pt(12)
+        paragraph.paragraph_format.space_after = Pt(6)
+        paragraph.paragraph_format.keep_with_next = True
+        format_run(paragraph.add_run(title_text), size_pt=12, bold=True)
+
+    def add_body(text):
+        text = str(text or "").strip()
+        for line in text.splitlines() or [""]:
+            paragraph = doc.add_paragraph()
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            paragraph.paragraph_format.line_spacing = 1.15
+            paragraph.paragraph_format.space_after = Pt(3)
+            paragraph.paragraph_format.first_line_indent = Cm(0.7)
+            format_run(paragraph.add_run(line.strip()), size_pt=11)
+
+    add_section("A. KEADAAN OBJEKTIF KOMISI")
+    add_body(config_data.get("keadaan_objektif", ""))
+
+    add_section("B. SUSUNAN KEANGGOTAAN")
+    membership = config_data.get("keanggotaan", [])
+    if not membership:
+        add_body("Belum ada data keanggotaan.")
+    else:
+        table = doc.add_table(rows=1, cols=3)
+        table.style = "Table Grid"
+        headers = ["No.", "Nama", "Jabatan"]
+        widths = [Cm(1.0), Cm(8.0), Cm(7.5)]
+        for index, text in enumerate(headers):
+            cell = table.rows[0].cells[index]
+            cell.text = text
+            cell.width = widths[index]
+            set_cell_shading(cell, "D9E5F2")
+            set_cell_margins(cell)
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            format_run(cell.paragraphs[0].runs[0], size_pt=10, bold=True)
+        for index, member in enumerate(membership, 1):
+            cells = table.add_row().cells
+            values = [str(index), member.get("nama", ""), member.get("jabatan", "")]
+            for col_index, value in enumerate(values):
+                cells[col_index].text = str(value)
+                cells[col_index].width = widths[col_index]
+                set_cell_margins(cells[col_index])
+                for paragraph in cells[col_index].paragraphs:
+                    paragraph.paragraph_format.space_after = Pt(0)
+                    for run in paragraph.runs:
+                        format_run(run, size_pt=10)
+            cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    categories = [
+        ("L", "SURAT KELUAR (EKSTERNAL)", "Tanggal", "Dituju Kepada"),
+        ("D", "SURAT KELUAR (INTERNAL)", "Tanggal", "Dituju Kepada"),
+        ("M", "SURAT MASUK (EKSTERNAL)", "Tanggal Diterima", "Asal Instansi"),
+        ("I", "SURAT MASUK (INTERNAL)", "Tanggal Diterima", "Asal Instansi"),
+    ]
+    letters = config_data.get("surat", {})
+    add_section("C. ARSIP SURAT")
+    for code, category, date_label, party_label in categories:
+        subheading = doc.add_paragraph()
+        subheading.paragraph_format.space_before = Pt(8)
+        subheading.paragraph_format.space_after = Pt(4)
+        subheading.paragraph_format.keep_with_next = True
+        format_run(subheading.add_run(category), size_pt=11, bold=True)
+
+        table = doc.add_table(rows=1, cols=5)
+        table.style = "Table Grid"
+        widths = [Cm(0.8), Cm(2.4), Cm(4.0), Cm(4.2), Cm(5.1)]
+        headers = ["No.", date_label, "Nomor Surat", "Perihal", party_label]
+        header_row = table.rows[0]
+        tr_properties = header_row._tr.get_or_add_trPr()
+        repeat = OxmlElement("w:tblHeader")
+        repeat.set(qn("w:val"), "true")
+        tr_properties.append(repeat)
+        for index, text in enumerate(headers):
+            cell = header_row.cells[index]
+            cell.text = text
+            cell.width = widths[index]
+            set_cell_shading(cell, "D9E5F2")
+            set_cell_margins(cell, top=80, bottom=80, left=90, right=90)
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            format_run(cell.paragraphs[0].runs[0], size_pt=8, bold=True)
+
+        rows = letters.get(code, [])
+        if not rows:
+            row = table.add_row()
+            row.cells[0].merge(row.cells[4])
+            row.cells[0].text = "Tidak ada surat pada kategori ini."
+            row.cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            set_cell_margins(row.cells[0])
+            format_run(row.cells[0].paragraphs[0].runs[0], size_pt=9)
+        for index, letter in enumerate(rows, 1):
+            row = table.add_row()
+            date_value = letter.get("tanggal_dikirim") or "—"
+            if re.match(r"^\d{4}-\d{2}-\d{2}$", str(date_value)):
+                date_value = f"{date_value[8:10]}/{date_value[5:7]}/{date_value[:4]}"
+            values = [
+                str(index),
+                str(date_value),
+                str(letter.get("nomor_surat") or "—"),
+                str(letter.get("perihal") or "—"),
+                str(letter.get("tujuan") or "—"),
+            ]
+            for col_index, value in enumerate(values):
+                cell = row.cells[col_index]
+                cell.text = value
+                cell.width = widths[col_index]
+                set_cell_margins(cell, top=70, bottom=70, left=80, right=80)
+                for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.space_after = Pt(0)
+                    for run in paragraph.runs:
+                        format_run(run, size_pt=8)
+                if col_index < 2:
+                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    add_section("D. PENUTUP")
+    add_body(config_data.get("penutup", ""))
+
+    doc.save(output_path)
+    return True
+
 def consolidate_lpj(output_path, file_list):
     master_doc = docx.Document()
     set_document_formatting(master_doc)
@@ -2603,6 +2746,7 @@ if __name__ == "__main__":
         print("Usage:")
         print("  python3 scratch/bpm_lpj_manager.py validate <file_path>")
         print("  python3 scratch/bpm_lpj_manager.py generate <output_path> <input_json_path>")
+        print("  python3 scratch/bpm_lpj_manager.py generate-secretary <output_path> <input_json_path>")
         print("  python3 scratch/bpm_lpj_manager.py consolidate <output_path> <file1> <file2> ...")
         print("  python3 scratch/bpm_lpj_manager.py consolidate-data <output_path> <input_json_path>")
         sys.exit(1)
@@ -2648,6 +2792,17 @@ if __name__ == "__main__":
             print(f"LPJ successfully generated at: {out_path}")
         else:
             print("Failed to generate LPJ.")
+
+    elif action == "generate-secretary":
+        out_path = sys.argv[2]
+        json_path = sys.argv[3]
+        with open(json_path, 'r', encoding='utf-8') as input_file:
+            cdata = json.load(input_file)
+        success = generate_secretariat_lpj(out_path, cdata)
+        if success:
+            print(f"Secretariat LPJ successfully generated at: {out_path}")
+        else:
+            print("Failed to generate secretariat LPJ.")
             
     elif action == "consolidate":
         out_path = sys.argv[2]

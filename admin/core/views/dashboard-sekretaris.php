@@ -147,5 +147,5 @@ $surat_monthly = [
     <a href="<?php echo baseUrl('admin/surat/buat-surat.php'); ?>" class="action-card" style="background: rgba(74, 144, 226, 0.1); border-color: rgba(74, 144, 226, 0.3);"><i class="fas fa-file-signature"></i><span>Buat Surat Otomatis</span></a>
     <a href="<?php echo baseUrl('admin/surat/berita-acara.php'); ?>" class="action-card" style="background: rgba(46, 204, 113, 0.1); border-color: rgba(46, 204, 113, 0.3);"><i class="fas fa-file-alt"></i><span>Buat Berita Acara</span></a>
     <a href="<?php echo baseUrl('admin/surat/arsip-surat.php'); ?>" class="action-card" style="background: rgba(103, 58, 183, 0.1); border-color: rgba(103, 58, 183, 0.3);"><i class="fas fa-search"></i><span>Cari Arsip Surat</span></a>
-    <a href="<?php echo baseUrl('admin/lpj/lpj.php'); ?>" class="action-card" style="background: rgba(155, 89, 182, 0.1); border-color: rgba(155, 89, 182, 0.3);"><i class="fas fa-book"></i><span>Dokumen LPJ</span></a>
+    <a href="<?php echo baseUrl('admin/lpj/arsip-lpj-sekretariat.php'); ?>" class="action-card" style="background: rgba(155, 89, 182, 0.1); border-color: rgba(155, 89, 182, 0.3);"><i class="fas fa-book"></i><span>LPJ Sekretariat</span></a>
 </div>
