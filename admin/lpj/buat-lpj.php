@@ -705,7 +705,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if ($kementerian_id <= 0 || empty($triwulan)) {
-            $error = "Kementerian dan Triwulan wajib diisi.";
+            $error = "Komisi dan Triwulan wajib diisi.";
         } else {
             // Check if record exists
             $existing_lpj = dbFetchOne("SELECT id FROM lpj_dokumen WHERE periode_id = ? AND kementerian_id = ? AND triwulan = ?", [$periode_id, $kementerian_id, $triwulan], "iis");
@@ -1766,7 +1766,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
     <div class="step" data-step="2"><span class="step-num">2</span><span class="step-text">. Keanggotaan</span></div>
     <div class="step" data-step="3"><span class="step-num">3</span><span class="step-text">. Proker Terealisasi</span></div>
     <div class="step" data-step="4"><span class="step-num">4</span><span class="step-text">. Proker Belum Terealisasi</span></div>
-    <div class="step step-evaluasi" data-step="5" style="display: <?php echo ($selected_triwulan === 'MUBESMA') ? 'block' : 'none'; ?>;"><span class="step-num">5</span><span class="step-text">. Evaluasi Kinerja Menteri</span></div>
+    <div class="step step-evaluasi" data-step="5" style="display: <?php echo ($selected_triwulan === 'MUBESMA') ? 'block' : 'none'; ?>;"><span class="step-num">5</span><span class="step-text">. Evaluasi Kinerja Komisi</span></div>
 </div>
 
 <form method="POST" enctype="multipart/form-data" id="lpjForm" class="admin-form">
@@ -1780,12 +1780,12 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                 <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                     <div class="floating-group" style="flex: 1; min-width: 280px;">
                         <select name="kementerian_id" id="kementerianSelect" class="floating-input" required <?php echo $edit_data ? 'disabled' : ''; ?> data-has-value="<?php echo !empty($edit_data['kementerian_id']) ? 'true' : 'false'; ?>" onchange="this.setAttribute('data-has-value', this.value !== '' ? 'true' : 'false')">
-                            <option value="" hidden>Kementerian</option>
+                            <option value="" hidden>Komisi</option>
                             <?php foreach ($kementerian_list as $k): ?>
                                 <option value="<?php echo $k['id']; ?>" <?php echo (($edit_data['kementerian_id'] ?? 0) == $k['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($k['nama']); ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <label class="floating-label">Kementerian</label>
+                        <label class="floating-label">Komisi</label>
                         <?php if ($edit_data): ?>
                             <input type="hidden" name="kementerian_id" value="<?php echo $edit_data['kementerian_id']; ?>">
                         <?php endif; ?>
@@ -1807,7 +1807,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                 <div class="floating-group">
                     <textarea name="keadaan_objektif" id="keadaanObjektif" rows="8" class="floating-input" placeholder="Keadaan Objektif / Deskripsi Fungsi" required><?php echo htmlspecialchars($edit_data['keadaan_objektif'] ?? ''); ?></textarea>
                     <label class="floating-label">Keadaan Objektif / Deskripsi Fungsi</label>
-                    <small>Default akan terisi visi & fungsi dari pengaturan kementerian jika Anda memilih kementerian baru.</small>
+                    <small>Default akan terisi visi & fungsi dari pengaturan komisi jika Anda memilih komisi baru.</small>
                 </div>
                 
                 <div class="floating-group" style="margin-top: 15px;">
@@ -1828,18 +1828,18 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                 $keanggotaan_val = json_decode($edit_data['keanggotaan'] ?? '', true) ?: [];
                 ?>
                 <div class="floating-group">
-                    <input type="text" name="anggota_ketua" id="anggotaKetua" class="floating-input field-keanggotaan" value="<?php echo htmlspecialchars($keanggotaan_val['ketua'] ?? ''); ?>" required placeholder="Ketua Menteri / Kepala Menteri">
-                    <label class="floating-label">Ketua Menteri / Kepala Menteri</label>
+                    <input type="text" name="anggota_ketua" id="anggotaKetua" class="floating-input field-keanggotaan" value="<?php echo htmlspecialchars($keanggotaan_val['ketua'] ?? ''); ?>" required placeholder="Ketua Komisi">
+                    <label class="floating-label">Ketua Komisi</label>
                     <div class="autofill-indicator" id="indicator_ketua"></div>
                 </div>
                 <div class="floating-group">
-                    <input type="text" name="anggota_sekretaris" id="anggotaSekretaris" class="floating-input field-keanggotaan" value="<?php echo htmlspecialchars($keanggotaan_val['sekretaris'] ?? ''); ?>" required placeholder="Sekretaris Kementerian">
-                    <label class="floating-label">Sekretaris Kementerian</label>
+                    <input type="text" name="anggota_sekretaris" id="anggotaSekretaris" class="floating-input field-keanggotaan" value="<?php echo htmlspecialchars($keanggotaan_val['sekretaris'] ?? ''); ?>" required placeholder="Sekretaris Komisi">
+                    <label class="floating-label">Sekretaris Komisi</label>
                     <div class="autofill-indicator" id="indicator_sekretaris"></div>
                 </div>
                 <div class="floating-group">
-                    <input type="text" name="anggota_bendahara" id="anggotaBendahara" class="floating-input field-keanggotaan" value="<?php echo htmlspecialchars($keanggotaan_val['bendahara'] ?? ''); ?>" required placeholder="Bendahara Kementerian">
-                    <label class="floating-label">Bendahara Kementerian</label>
+                    <input type="text" name="anggota_bendahara" id="anggotaBendahara" class="floating-input field-keanggotaan" value="<?php echo htmlspecialchars($keanggotaan_val['bendahara'] ?? ''); ?>" required placeholder="Bendahara Komisi">
+                    <label class="floating-label">Bendahara Komisi</label>
                     <div class="autofill-indicator" id="indicator_bendahara"></div>
                 </div>
                 <div class="form-group">
@@ -2301,14 +2301,14 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
     </div>
     
 
-    <!-- STEP 5: EVALUASI KINERJA MENTERI (Only for MUBESMA) -->
+    <!-- STEP 5: EVALUASI KINERJA KOMISI (Only for MUBESMA) -->
     <div class="wizard-panel wizard-panel-evaluasi" data-step="5">
         <div class="card">
             <div class="card-body">
                 <div class="form-group">
-                    <label for="evaluasiKinerjaPribadi" style="font-weight: bold;">Evaluasi Kinerja Menteri</label>
-                    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 10px;">Berikan deskripsi evaluasi kinerja menteri selama periode kepengurusan.</p>
-                    <textarea name="evaluasi_kinerja_pribadi" id="evaluasiKinerjaPribadi" rows="5" class="form-control" placeholder="Tuliskan evaluasi kinerja menteri secara rinci..."><?php echo htmlspecialchars($edit_data['evaluasi_kinerja_pribadi'] ?? ''); ?></textarea>
+                    <label for="evaluasiKinerjaPribadi" style="font-weight: bold;">Evaluasi Kinerja Komisi</label>
+                    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 10px;">Berikan deskripsi evaluasi kinerja komisi selama periode kepengurusan.</p>
+                    <textarea name="evaluasi_kinerja_pribadi" id="evaluasiKinerjaPribadi" rows="5" class="form-control" placeholder="Tuliskan evaluasi kinerja komisi secara rinci..."><?php echo htmlspecialchars($edit_data['evaluasi_kinerja_pribadi'] ?? ''); ?></textarea>
                 </div>
             </div>
         </div>
@@ -4518,7 +4518,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                         alertDiv.className = 'alert alert-info';
                         alertDiv.style.padding = '10px 15px';
                         alertDiv.style.fontSize = '0.85rem';
-                        alertDiv.innerHTML = '<i class="fas fa-info-circle"></i> Data kepengurusan kementerian ini belum tersedia. Silakan isi secara manual atau hubungi BPH BPM.';
+                        alertDiv.innerHTML = '<i class="fas fa-info-circle"></i> Data kepengurusan komisi ini belum tersedia. Silakan isi secara manual atau hubungi BPH BPM.';
                         alertDiv.style.display = 'block';
                     }
                     const container = document.getElementById('anggotaListContainer');
@@ -5092,7 +5092,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
         const kemHidden = document.querySelector('input[name="kementerian_id"][type="hidden"]');
         const kementerianId = (kemSelect && kemSelect.value) || (kemHidden && kemHidden.value);
         if (!kementerianId) {
-            alert("Pilih Kementerian terlebih dahulu pada Langkah 1.");
+            alert("Pilih Komisi terlebih dahulu pada Langkah 1.");
             return;
         }
         
@@ -5121,7 +5121,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                     }
                 });
                 if (data.length === 0) {
-                    sel.innerHTML = '<option value="">-- Tidak ada data Berita Acara untuk kementerian ini --</option>';
+                    sel.innerHTML = '<option value="">-- Tidak ada data Berita Acara untuk komisi ini --</option>';
                 }
             }).catch(err => {
                 console.error(err);

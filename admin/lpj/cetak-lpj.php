@@ -26,6 +26,8 @@ if (!$lpj) {
 }
 
 $k_name = $lpj['nama_kementerian'];
+$k_display_name = preg_replace('/^(?:(?:Kementerian|Menteri|Departemen)\s+)+/i', '', trim($k_name));
+$k_display_name = $k_display_name !== '' ? $k_display_name : 'Komisi';
 $triwulan = strtoupper($lpj['triwulan']);
 $is_mubesma = ($triwulan === 'MUBESMA');
 
@@ -362,7 +364,7 @@ if (!function_exists('cleanPointPrefix')) {
             <div class="cover-page">
                 <div class="cover-title">
                     LAPORAN PERTANGGUNGJAWABAN<br>
-                    MENTERI <?php echo strtoupper($k_name); ?><br>
+                    <?php echo strtoupper($k_display_name); ?><br>
                     BADAN EKSEKUTIF MAHASISWA<br>
                     INSTITUT BUDI UTOMO NASIONAL
                 </div>
@@ -384,14 +386,14 @@ if (!function_exists('cleanPointPrefix')) {
             <?php if (!$is_mubesma): ?>
                 <div style="text-align: center; margin-bottom: 25px;">
                     <h2 style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">LAPORAN PERTANGGUNG JAWABAN TRIWULAN <?php echo htmlspecialchars($triwulan); ?></h2>
-                    <h2 style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">MENTERI <?php echo htmlspecialchars($k_name); ?></h2>
+                    <h2 style="font-size: 12pt; font-weight: bold; text-transform: uppercase;"><?php echo htmlspecialchars($k_display_name); ?></h2>
                     <h2 style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">BPM INSTBUNAS MAJALENGKA <?php echo htmlspecialchars($years_str); ?></h2>
                 </div>
             <?php endif; ?>
 
             <!-- A. / I. PENDAHULUAN / KEADAAN OBJEKTIF -->
             <div class="section-header">
-                <?php echo $is_mubesma ? "I. PENDAHULUAN" : "A. KEADAAN OBJEKTIF MENTERI"; ?>
+                <?php echo $is_mubesma ? "I. PENDAHULUAN" : "A. KEADAAN OBJEKTIF KOMISI"; ?>
             </div>
             <?php 
             $lines = array_filter(array_map('trim', explode("\n", $keadaan_objektif)));
@@ -409,7 +411,7 @@ if (!function_exists('cleanPointPrefix')) {
             </div>
             <table class="borderless-table">
                 <tr>
-                    <td class="col-label">Ketua Menteri</td>
+                    <td class="col-label">Ketua Komisi</td>
                     <td class="col-colon">:</td>
                     <td><?php echo htmlspecialchars($keanggotaan['ketua'] ?? '—'); ?></td>
                 </tr>
@@ -750,8 +752,7 @@ if (!function_exists('cleanPointPrefix')) {
             </div>
         </div>
 
-        <!-- 4. PROGRAM KERJA BELUM TEREALISASI (Mubesma Only) -->
-        <?php if ($is_mubesma): ?>
+        <!-- 5. PROGRAM KERJA BELUM TEREALISASI -->
         <div class="page">
             <div class="section-header">
                 <?php echo $is_mubesma ? "VII. PROGRAM KERJA YANG TIDAK TEREALISASI" : "D. PROGRAM KERJA YANG BELUM TEREALISASI"; ?>
@@ -844,13 +845,12 @@ if (!function_exists('cleanPointPrefix')) {
                 Laporan Pertanggungjawaban <?php echo $is_mubesma ? "Mubesma" : "Triwulan " . htmlspecialchars($triwulan); ?>
             </div>
         </div>
-        <?php endif; ?>
 
-        <!-- 5. EVALUASI KINERJA MENTERI & PENUTUP -->
-        <?php if ($is_mubesma): ?>
+        <!-- 6. EVALUASI KINERJA KOMISI & PENUTUP -->
         <div class="page">
+            <?php if ($is_mubesma): ?>
             <div class="section-header">
-                <?php echo "VIII. EVALUASI KINERJA MENTERI"; ?>
+                <?php echo "VIII. EVALUASI KINERJA KOMISI"; ?>
             </div>
             <?php 
             $eval_pribadi = trim($lpj['evaluasi_kinerja_pribadi'] ?? '');
@@ -862,10 +862,11 @@ if (!function_exists('cleanPointPrefix')) {
             ?>
                 <p class="narrative-p"><?php echo htmlspecialchars($line); ?></p>
             <?php endforeach; ?>
+            <?php endif; ?>
 
             <!-- PENUTUP SECTION -->
             <div class="section-header" style="margin-top: 30px;">
-                <?php echo $is_mubesma ? "IX. PENUTUP" : "D. PENUTUP"; ?>
+                <?php echo $is_mubesma ? "IX. PENUTUP" : "E. PENUTUP"; ?>
             </div>
             <?php 
             $penutup = trim($lpj['penutup'] ?? '');
@@ -881,18 +882,14 @@ if (!function_exists('cleanPointPrefix')) {
             <div style="margin-top: 30px; margin-right: 0.5cm; float: right; text-align: right; width: 6cm;">
                 <?php
                 $ketua_name = $keanggotaan['ketua'] ?? 'Nama Ketua';
-                $k_name = $lpj['kementerian_nama'] ?? 'Kementerian';
+                $k_name = $k_display_name;
                 
                 $months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
                 $now_month = $months[(int)date('n') - 1];
                 $tgl_str = "Majalengka, " . date('d') . " " . $now_month . " " . date('Y');
                 
-                // Clean kementerian name
-                $clean_k_name = preg_replace('/^(Kementerian|Menteri|Departemen)\s+/i', '', $k_name);
-                if (empty($clean_k_name) || strtolower($clean_k_name) === 'kementerian') {
-                    $clean_k_name = 'Luar Kampus'; // Fallback for empty
-                }
-                $org_prefix = 'Menteri';
+                $clean_k_name = preg_replace('/^Komisi\s+/i', '', $k_name);
+                $org_prefix = 'Ketua Komisi';
                 ?>
                 <p style="margin: 0; line-height: 1.15; font-size: 12pt; font-family: 'Times New Roman', serif;"><?php echo $tgl_str; ?></p>
                 <p style="margin: 0; line-height: 1.15; font-size: 12pt; font-family: 'Times New Roman', serif;">Ketua Umum</p>
@@ -903,10 +900,9 @@ if (!function_exists('cleanPointPrefix')) {
             <div style="clear: both;"></div>
 
             <div class="page-footer-label">
-                Laporan Pertanggungjawaban Mubesma
+                Laporan Pertanggungjawaban <?php echo $is_mubesma ? "Mubesma" : "Triwulan " . htmlspecialchars($triwulan); ?>
             </div>
         </div>
-        <?php endif; ?>
 
     </div>
 
