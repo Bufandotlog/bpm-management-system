@@ -2627,6 +2627,10 @@ def append_generated_document(target_doc, source_doc, bookmark_name, bookmark_id
     target_body = target_doc._element.body
     for element in source_elements:
         copied_element = deepcopy(element)
+        for section_properties in copied_element.iter(qn('w:sectPr')):
+            for reference_tag in ('w:headerReference', 'w:footerReference'):
+                for reference in section_properties.findall(qn(reference_tag)):
+                    section_properties.remove(reference)
         for blip in copied_element.iter(qn('a:blip')):
             for relationship_attribute in (qn('r:embed'), qn('r:link')):
                 relationship_id = blip.get(relationship_attribute)
