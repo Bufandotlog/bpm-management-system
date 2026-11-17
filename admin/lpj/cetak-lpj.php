@@ -79,11 +79,54 @@ if (!function_exists('getLpjImageUrl')) {
 
 // Helper to parse points string or array
 if (!function_exists('parsePoints')) {
-    function parsePoints($val) {
+    function recoverTruncatedPointPrefix($text, $depth) {
+        if ($depth > 8) return [];
+
+        $points = [];
+        $length = strlen($text);
+        for ($index = 0; $index < $length; $index++) {
+            if ($text[$index] !== '"') continue;
+
+            $start = $index;
+            $index++;
+            $escaped = false;
+            $closed = false;
+            for (; $index < $length; $index++) {
+                $char = $text[$index];
+                if ($escaped) {
+                    $escaped = false;
+                } elseif ($char === '\\') {
+                    $escaped = true;
+                } elseif ($char === '"') {
+                    $closed = true;
+                    break;
+                }
+            }
+
+            $token = substr($text, $start, $index - $start + ($closed ? 1 : 0));
+            if (!$closed) {
+                preg_match('/\\\\*$/', $token, $trailingSlashes);
+                if (strlen($trailingSlashes[0] ?? '') % 2 === 1) {
+                    $token = substr($token, 0, -1);
+                }
+                $token .= '"';
+            }
+
+            $decoded = json_decode($token, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_string($decoded)) {
+                $points = array_merge($points, parsePoints($decoded, $depth + 1));
+            }
+        }
+
+        return $points;
+    }
+
+    function parsePoints($val, $depth = 0) {
+        if ($depth > 8) return [];
         if (is_array($val)) {
             $points = [];
             foreach ($val as $item) {
-                $points = array_merge($points, parsePoints($item));
+                $points = array_merge($points, parsePoints($item, $depth + 1));
             }
             return $points;
         }
@@ -91,11 +134,15 @@ if (!function_exists('parsePoints')) {
 
         $text = trim((string)$val);
         if ($text === '' || $text === '—' || $text === '-') return [];
-        for ($depth = 0; $depth < 8; $depth++) {
+        for ($decodeDepth = 0; $decodeDepth < 8; $decodeDepth++) {
             if ($text[0] !== '[' && $text[0] !== '"') break;
             $decoded = json_decode($text, true);
-            if (json_last_error() !== JSON_ERROR_NONE) break;
-            if (is_array($decoded)) return parsePoints($decoded);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $recovered = recoverTruncatedPointPrefix($text, $depth);
+                if ($recovered) return $recovered;
+                break;
+            }
+            if (is_array($decoded)) return parsePoints($decoded, $depth + 1);
             if (!is_string($decoded) || $decoded === $text) break;
             $text = trim($decoded);
             if ($text === '') return [];

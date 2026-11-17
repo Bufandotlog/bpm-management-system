@@ -310,6 +310,45 @@ def set_table_indent(table, indent_cm):
             tblPr.remove(existing_ind)
         tblPr.append(tblInd)
 
+def recover_truncated_json_points(text, depth):
+    points = []
+    index = 0
+    while index < len(text):
+        if text[index] != '"':
+            index += 1
+            continue
+
+        start = index
+        index += 1
+        escaped = False
+        closed = False
+        while index < len(text):
+            char = text[index]
+            if escaped:
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == '"':
+                index += 1
+                closed = True
+                break
+            index += 1
+
+        token = text[start:index] if closed else text[start:]
+        if not closed:
+            trailing_slashes = len(token) - len(token.rstrip('\\'))
+            if trailing_slashes % 2:
+                token = token[:-1]
+            token += '"'
+        try:
+            decoded = json.loads(token)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(decoded, str):
+            points.extend(parse_points(decoded, depth + 1))
+
+    return points
+
 def parse_points(val, depth=0):
     if depth > 8:
         return []
@@ -334,6 +373,10 @@ def parse_points(val, depth=0):
             return parse_points(decoded, depth + 1)
         if isinstance(decoded, str) and decoded != val_str:
             return parse_points(decoded, depth + 1)
+        if decoded is None:
+            recovered = recover_truncated_json_points(val_str, depth)
+            if recovered:
+                return recovered
 
     lines = [line.strip() for line in re.split(r'\r\n|\r|\n', val_str) if line.strip()]
     items = []

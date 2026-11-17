@@ -281,11 +281,61 @@ if (isset($_GET['ajax_get_berita_acara_id'])) {
 
 require_once __DIR__ . '/../core/header.php';
 
-function flatten_points_input($value) {
+function recover_truncated_json_points($text, $depth) {
+    if ($depth > 8) {
+        return [];
+    }
+
+    $points = [];
+    $length = strlen($text);
+    for ($index = 0; $index < $length; $index++) {
+        if ($text[$index] !== '"') {
+            continue;
+        }
+
+        $start = $index;
+        $index++;
+        $escaped = false;
+        $closed = false;
+        for (; $index < $length; $index++) {
+            $char = $text[$index];
+            if ($escaped) {
+                $escaped = false;
+            } elseif ($char === '\\') {
+                $escaped = true;
+            } elseif ($char === '"') {
+                $closed = true;
+                break;
+            }
+        }
+
+        $token = substr($text, $start, $index - $start + ($closed ? 1 : 0));
+        if (!$closed) {
+            preg_match('/\\\\*$/', $token, $trailingSlashes);
+            if (strlen($trailingSlashes[0] ?? '') % 2 === 1) {
+                $token = substr($token, 0, -1);
+            }
+            $token .= '"';
+        }
+
+        $decoded = json_decode($token, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_string($decoded)) {
+            $points = array_merge($points, flatten_points_input($decoded, $depth + 1));
+        }
+    }
+
+    return $points;
+}
+
+function flatten_points_input($value, $depth = 0) {
+    if ($depth > 8) {
+        return [];
+    }
+
     if (is_array($value)) {
         $points = [];
         foreach ($value as $item) {
-            $points = array_merge($points, flatten_points_input($item));
+            $points = array_merge($points, flatten_points_input($item, $depth + 1));
         }
         return $points;
     }
@@ -299,7 +349,7 @@ function flatten_points_input($value) {
         return [];
     }
 
-    for ($depth = 0; $depth < 8; $depth++) {
+    for ($decodeDepth = 0; $decodeDepth < 8; $decodeDepth++) {
         if ($text[0] !== '[' && $text[0] !== '"') {
             break;
         }
@@ -308,7 +358,7 @@ function flatten_points_input($value) {
             break;
         }
         if (is_array($decoded)) {
-            return flatten_points_input($decoded);
+            return flatten_points_input($decoded, $depth + 1);
         }
         if (!is_string($decoded) || $decoded === $text) {
             break;
@@ -316,6 +366,12 @@ function flatten_points_input($value) {
         $text = trim($decoded);
         if ($text === '') {
             return [];
+        }
+    }
+    if (($text[0] === '[' || $text[0] === '"') && json_last_error() !== JSON_ERROR_NONE) {
+        $recovered = recover_truncated_json_points($text, $depth);
+        if ($recovered) {
+            return $recovered;
         }
     }
 
@@ -336,7 +392,7 @@ function get_points_array($val) {
 
 function normalize_points_input($val) {
     return array_values(array_map(
-        static fn($point) => sanitizeText($point, 500),
+        static fn($point) => sanitizeText($point, 2000),
         array_filter(flatten_points_input($val), static fn($point) => trim($point) !== '')
     ));
 }
