@@ -20,6 +20,12 @@ if (!$ba) {
 }
 
 $konten = json_decode($ba['konten_json'], true) ?: [];
+$uppercaseNamaTtd = static function ($nama): string {
+    $nama = (string)$nama;
+    return function_exists('mb_strtoupper')
+        ? mb_strtoupper($nama, 'UTF-8')
+        : strtoupper($nama);
+};
 
 // Ambil Pengaturan Tanda Tangan
 $db_pengaturan = dbFetchAll("SELECT kunci, nilai FROM pengaturan");
@@ -473,7 +479,7 @@ function format_paragraphs($text) {
                                         <?php endif; ?>
                                     <?php endif; ?>
                                     
-                                    <div class="sig-name"><?php echo htmlspecialchars($konten['ketua_bpm_nama'] ?: ($pengaturan['ttd_presma_name'] ?? 'Dede Anggi Muhyidin')); ?></div>
+                                    <div class="sig-name"><?php echo htmlspecialchars($uppercaseNamaTtd($konten['ketua_bpm_nama'] ?: ($pengaturan['ttd_presma_name'] ?? 'Dede Anggi Muhyidin'))); ?></div>
                                 </td>
                                 <td>
                                     <div class="sig-title">
@@ -493,7 +499,7 @@ function format_paragraphs($text) {
                                         <?php endif; ?>
                                     <?php endif; ?>
                                     
-                                    <div class="sig-name"><?php echo htmlspecialchars($konten['sekretaris_bpm_nama'] ?: ($pengaturan['ttd_sekretaris_name'] ?? 'Mela Agustin')); ?></div>
+                                    <div class="sig-name"><?php echo htmlspecialchars($uppercaseNamaTtd($konten['sekretaris_bpm_nama'] ?: ($pengaturan['ttd_sekretaris_name'] ?? 'Mela Agustin'))); ?></div>
                                 </td>
                             </tr>
                             <tr>
@@ -520,12 +526,21 @@ function format_paragraphs($text) {
                                         <?php endif; ?>
                                     <?php endif; ?>
                                     
-                                    <div class="sig-name"><?php echo htmlspecialchars($konten['warek_nama'] ?: ($pengaturan['ttd_warek_name'] ?? 'Ir Muhammad Misbah, S.Pd.I., SE., MM.')); ?></div>
+                                    <div class="sig-name"><?php echo htmlspecialchars($uppercaseNamaTtd($konten['warek_nama'] ?: ($pengaturan['ttd_warek_name'] ?? 'Ir Muhammad Misbah, S.Pd.I., SE., MM.'))); ?></div>
                                     <div style="font-size: 14px;">NUPTK. <?php echo htmlspecialchars($konten['warek_nuptk'] ?? '7756762662200002'); ?></div>
                                 </td>
                             </tr>
                         </table>
     </div>
+
+    <?php
+    $tujuan = $konten['tujuan'] ?? [];
+    $manfaat = $konten['manfaat'] ?? [];
+    $pisah_bentuk_kegiatan = (count($tujuan) >= 3 || count($manfaat) >= 3);
+    $dokumentasi = $konten['dokumentasi'] ?? [];
+    $dokumentasi_per_halaman = 6;
+    $dokumentasi_halaman = !empty($dokumentasi) ? array_chunk($dokumentasi, $dokumentasi_per_halaman) : [[]];
+    ?>
 
     <!-- PAGE 2: LAPORAN KEGIATAN -->
     <div class="page">
@@ -533,103 +548,104 @@ function format_paragraphs($text) {
         
         <div class="doc-title" style="text-decoration:none; margin-bottom: 30px;">LAPORAN KEGIATAN <?php echo strtoupper(htmlspecialchars($ba['nama_kegiatan'])); ?></div>
 
-                        <table class="meta-table">
-                            <tr>
-                                <td class="label-col">Nama Kegiatan</td>
-                                <td class="colon-col">:</td>
-                                <td><?php echo htmlspecialchars($ba['nama_kegiatan']); ?></td>
-                            </tr>
-                            <?php if (!empty($konten['program_kerja'])): ?>
-                            <tr>
-                                <td class="label-col">Program Kerja</td>
-                                <td class="colon-col">:</td>
-                                <td><?php echo htmlspecialchars($konten['program_kerja']); ?></td>
-                            </tr>
-                            <?php endif; ?>
-                            <tr>
-                                <td class="label-col">Tema Kegiatan</td>
-                                <td class="colon-col">:</td>
-                                <td>"<?php echo htmlspecialchars($konten['tema_kegiatan'] ?? ''); ?>"</td>
-                            </tr>
-                            <tr>
-                                <td class="label-col">Hari, Tanggal</td>
-                                <td class="colon-col">:</td>
-                                <td><?php echo htmlspecialchars($konten['hari_kegiatan'] ?? ''); ?>, <?php echo htmlspecialchars($ba['tanggal_kegiatan']); ?></td>
-                            </tr>
-                            <tr>
-                                <td class="label-col">Waktu</td>
-                                <td class="colon-col">:</td>
-                                <td><?php echo htmlspecialchars($ba['waktu']); ?></td>
-                            </tr>
-                            <tr>
-                                <td class="label-col">Pelaksana Kegiatan</td>
-                                <td class="colon-col">:</td>
-                                <td><?php echo htmlspecialchars(str_replace('Badan Eksekutif Mahasiswa (BPM)', 'Badan Perwakilan Mahasiswa (BPM)', $konten['pelaksana_kegiatan'] ?? '')); ?></td>
-                            </tr>
-                            <?php if (!empty($konten['penanggung_jawab'])): ?>
-                            <tr>
-                                <td class="label-col">Penanggung Jawab</td>
-                                <td class="colon-col">:</td>
-                                <td><?php echo htmlspecialchars($konten['penanggung_jawab']); ?></td>
-                            </tr>
-                            <?php endif; ?>
-                        </table>
+        <table class="meta-table">
+            <tr>
+                <td class="label-col">Nama Kegiatan</td>
+                <td class="colon-col">:</td>
+                <td><?php echo htmlspecialchars($ba['nama_kegiatan']); ?></td>
+            </tr>
+            <?php if (!empty($konten['program_kerja'])): ?>
+            <tr>
+                <td class="label-col">Program Kerja</td>
+                <td class="colon-col">:</td>
+                <td><?php echo htmlspecialchars($konten['program_kerja']); ?></td>
+            </tr>
+            <?php endif; ?>
+            <tr>
+                <td class="label-col">Tema Kegiatan</td>
+                <td class="colon-col">:</td>
+                <td>"<?php echo htmlspecialchars($konten['tema_kegiatan'] ?? ''); ?>"</td>
+            </tr>
+            <tr>
+                <td class="label-col">Hari, Tanggal</td>
+                <td class="colon-col">:</td>
+                <td><?php echo htmlspecialchars($konten['hari_kegiatan'] ?? ''); ?>, <?php echo htmlspecialchars($ba['tanggal_kegiatan']); ?></td>
+            </tr>
+            <tr>
+                <td class="label-col">Waktu</td>
+                <td class="colon-col">:</td>
+                <td><?php echo htmlspecialchars($ba['waktu']); ?></td>
+            </tr>
+            <tr>
+                <td class="label-col">Pelaksana Kegiatan</td>
+                <td class="colon-col">:</td>
+                <td><?php echo htmlspecialchars(str_replace('Badan Eksekutif Mahasiswa (BPM)', 'Badan Perwakilan Mahasiswa (BPM)', $konten['pelaksana_kegiatan'] ?? '')); ?></td>
+            </tr>
+            <?php if (!empty($konten['penanggung_jawab'])): ?>
+            <tr>
+                <td class="label-col">Penanggung Jawab</td>
+                <td class="colon-col">:</td>
+                <td><?php echo htmlspecialchars($konten['penanggung_jawab']); ?></td>
+            </tr>
+            <?php endif; ?>
+        </table>
 
-                        <!-- A. TUJUAN -->
-                        <div class="section-header">A. Tujuan :</div>
-                        <ol class="section-list">
-                            <?php 
-                            $tujuan = $konten['tujuan'] ?? [];
-                            foreach ($tujuan as $item): 
-                            ?>
-                                <li><?php echo htmlspecialchars($item); ?></li>
-                            <?php endforeach; ?>
-                        </ol>
+        <div class="section-header">A. Tujuan :</div>
+        <ol class="section-list">
+            <?php foreach ($tujuan as $item): ?>
+                <li><?php echo htmlspecialchars($item); ?></li>
+            <?php endforeach; ?>
+        </ol>
 
-                        <!-- B. MANFAAT -->
-                        <div class="section-header">B. Manfaat :</div>
-                        <ol class="section-list">
-                            <?php 
-                            $manfaat = $konten['manfaat'] ?? [];
-                            foreach ($manfaat as $item): 
-                            ?>
-                                <li><?php echo htmlspecialchars($item); ?></li>
-                            <?php endforeach; ?>
-                        </ol>
+        <div class="section-header">B. Manfaat :</div>
+        <ol class="section-list">
+            <?php foreach ($manfaat as $item): ?>
+                <li><?php echo htmlspecialchars($item); ?></li>
+            <?php endforeach; ?>
+        </ol>
 
-                        <!-- C. BENTUK KEGIATAN -->
-                        <div class="section-header">C. Bentuk Kegiatan :</div>
-                        <div class="doc-body" style="text-indent:0;">
-                            <?php echo format_paragraphs($konten['bentuk_kegiatan'] ?? ''); ?>
-                            <p style="text-indent: 0; margin-top:20px;">
-                                Demikian Laporan Kegiatan ini kami buat, semoga dapat dipergunakan sebagaimana mestinya.
-                            </p>
-                        </div>
+        <?php if ($pisah_bentuk_kegiatan): ?>
     </div>
-
-    <!-- PAGE 3: DOKUMENTASI -->
+    <!-- PAGE 3: C. BENTUK KEGIATAN -->
     <div class="page">
         <?php renderKop(); ?>
+        <?php endif; ?>
         
-        <div class="section-header" style="font-size: 18px; margin-bottom: 20px;">D. Dokumentasi :</div>
-
-                        <?php if (!empty($konten['dokumentasi'])): ?>
-                            <div class="doc-grid">
-                                <?php foreach ($konten['dokumentasi'] as $doc): ?>
-                                    <div class="doc-item">
-                                        <div class="doc-photo-wrap">
-                                            <img src="<?php echo uploadUrl($doc['image']); ?>" alt="Foto Kegiatan">
-                                        </div>
-                                        <div class="doc-caption"><?php echo htmlspecialchars($doc['caption']); ?></div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php else: ?>
-                            <p style="font-style: italic; color: #555; text-align: center; margin-top: 30px;">
-                                (tidak ada dokumentasi dalam kegiatan ini)
-                            </p>
-                        <?php endif; ?>
+            <div class="section-header">C. Bentuk Kegiatan :</div>
+            <div class="doc-body" style="text-indent:0;">
+                <?php echo format_paragraphs($konten['bentuk_kegiatan'] ?? ''); ?>
+                <p style="text-indent: 0; margin-top:20px;">
+                    Demikian Laporan Kegiatan ini kami buat, semoga dapat dipergunakan sebagaimana mestinya.
+                </p>
+            </div>
     </div>
+
+    <?php foreach ($dokumentasi_halaman as $idx => $dok_group): ?>
+        <div class="page">
+            <?php renderKop(); ?>
+
+            <div class="section-header" style="font-size: 18px; margin-bottom: 20px;">
+                <?php echo ($idx === 0) ? 'D. Dokumentasi :' : 'D. Dokumentasi (Lanjutan) :'; ?>
+            </div>
+
+            <?php if (!empty($dok_group)): ?>
+                <div class="doc-grid">
+                    <?php foreach ($dok_group as $doc): ?>
+                        <div class="doc-item">
+                            <div class="doc-photo-wrap">
+                                <img src="<?php echo uploadUrl($doc['image']); ?>" alt="Foto Kegiatan">
+                            </div>
+                            <div class="doc-caption"><?php echo htmlspecialchars($doc['caption']); ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p style="font-style: italic; color: #555; text-align: center; margin-top: 30px;">
+                    (tidak ada dokumentasi dalam kegiatan ini)
+                </p>
+            <?php endif; ?>
+        </div>
+    <?php endforeach; ?>
 
     <script>
     function exportWord() {
