@@ -45,14 +45,15 @@ return static function (PDO $pdo): void {
         'uq_lpj_sekretariat_periode_triwulan',
     ]);
     $existingIndexes = $indexes->fetchAll(PDO::FETCH_COLUMN);
-    if (in_array('uq_lpj_sekretariat_periode', $existingIndexes, true)) {
-        $pdo->exec('ALTER TABLE `lpj_sekretariat` DROP INDEX `uq_lpj_sekretariat_periode`');
-    }
+    // Keep an index beginning with periode_id available for the foreign key.
     if (!in_array('uq_lpj_sekretariat_periode_triwulan', $existingIndexes, true)) {
         $pdo->exec(
             'ALTER TABLE `lpj_sekretariat`
              ADD UNIQUE KEY `uq_lpj_sekretariat_periode_triwulan` (`periode_id`, `triwulan`)'
         );
+    }
+    if (in_array('uq_lpj_sekretariat_periode', $existingIndexes, true)) {
+        $pdo->exec('ALTER TABLE `lpj_sekretariat` DROP INDEX `uq_lpj_sekretariat_periode`');
     }
 
     $existingReports = $pdo->query(
