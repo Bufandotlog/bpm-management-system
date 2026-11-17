@@ -37,134 +37,226 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
             array_map('intval', (array)($_POST['selected_lpj'] ?? [])),
             static fn($id) => $id > 0
         )));
-        if (empty($selected_ids)) {
+        $selected_secretariat_ids = array_values(array_unique(array_filter(
+            array_map('intval', (array)($_POST['selected_secretariat_lpj'] ?? [])),
+            static fn($id) => $id > 0
+        )));
+        if (empty($selected_ids) && empty($selected_secretariat_ids)) {
             $error = "Pilih minimal satu LPJ untuk dikonsolidasikan.";
         } else {
-            // Fetch structured LPJ data; do not rebuild reports by parsing their DOCX files.
-            $placeholders = implode(',', array_fill(0, count($selected_ids), '?'));
-            $types = str_repeat('i', count($selected_ids) + 1);
-            $query_params = array_merge([$periode_id], array_map('intval', $selected_ids));
-            
-            $query = "SELECT l.*, k.nama as nama_kementerian, k.tugas, k.fungsi,
-                             p.tahun_mulai, p.tahun_selesai
-                      FROM lpj_dokumen l
-                      JOIN kementerian k ON l.kementerian_id = k.id
-                      JOIN periode_kepengurusan p ON l.periode_id = p.id
-                      WHERE l.periode_id = ? AND l.id IN ($placeholders)
-                        AND l.status = 'submitted'
-                      ORDER BY k.urutan ASC";
-                      
-            $lpjs = dbFetchAll($query, $query_params, $types);
-            if (count($lpjs) !== count($selected_ids)) {
+            $lpjs = [];
+            if ($selected_ids) {
+                $placeholders = implode(',', array_fill(0, count($selected_ids), '?'));
+                $types = str_repeat('i', count($selected_ids) + 1);
+                $query_params = array_merge([$periode_id], $selected_ids);
+                $lpjs = dbFetchAll(
+                    "SELECT l.*, k.nama as nama_kementerian, k.tugas, k.fungsi,
+                            p.tahun_mulai, p.tahun_selesai
+                     FROM lpj_dokumen l
+                     JOIN kementerian k ON l.kementerian_id = k.id
+                     JOIN periode_kepengurusan p ON l.periode_id = p.id
+                     WHERE l.periode_id = ? AND l.id IN ($placeholders)
+                       AND l.status = 'submitted'
+                     ORDER BY k.urutan ASC",
+                    $query_params,
+                    $types
+                );
+            }
+
+            $secretariat_lpjs = [];
+            $secretariat_auto_included = false;
+            if ($selected_secretariat_ids) {
+                $placeholders = implode(',', array_fill(0, count($selected_secretariat_ids), '?'));
+                $types = str_repeat('i', count($selected_secretariat_ids) + 1);
+                $query_params = array_merge([$periode_id], $selected_secretariat_ids);
+                $secretariat_lpjs = dbFetchAll(
+                    "SELECT s.*, p.tahun_mulai, p.tahun_selesai
+                     FROM lpj_sekretariat s
+                     JOIN periode_kepengurusan p ON s.periode_id = p.id
+                     WHERE s.periode_id = ? AND s.id IN ($placeholders)
+                       AND s.status = 'submitted'",
+                    $query_params,
+                    $types
+                );
+            }
+            if ($selected_ids && !$selected_secretariat_ids && $lpjs) {
+                $commissionTriwulan = array_unique(array_map(
+                    static fn($lpj) => strtoupper(trim($lpj['triwulan'])),
+                    $lpjs
+                ));
+                if (count($commissionTriwulan) === 1) {
+                    $secretariat_lpjs = dbFetchAll(
+                        "SELECT s.*, p.tahun_mulai, p.tahun_selesai
+                         FROM lpj_sekretariat s
+                         JOIN periode_kepengurusan p ON s.periode_id = p.id
+                         WHERE s.periode_id = ? AND s.triwulan = ? AND s.status = 'submitted'
+                         ORDER BY s.id ASC",
+                        [$periode_id, reset($commissionTriwulan)],
+                        "is"
+                    );
+                    $secretariat_auto_included = true;
+                }
+            }
+            if (
+                count($lpjs) !== count($selected_ids)
+                || (!$secretariat_auto_included && count($secretariat_lpjs) !== count($selected_secretariat_ids))
+            ) {
                 $error = "Sebagian LPJ tidak ditemukan, belum diserahkan, atau bukan milik periode aktif.";
             } else {
                 $selected_triwulan = array_unique(array_map(
                     static fn($lpj) => strtoupper(trim($lpj['triwulan'])),
-                    $lpjs
+                    array_merge($lpjs, $secretariat_lpjs)
                 ));
                 if (count($selected_triwulan) !== 1) {
                     $error = "Konsolidasi hanya dapat dilakukan untuk LPJ dengan jenis yang sama (Triwulan I, Triwulan II, atau MUBESMA).";
                 } else {
+                    $triwulan = reset($selected_triwulan);
                     $visi_misi_row = dbFetchOne("SELECT visi, misi FROM visi_misi WHERE id = 1");
                     $visi = $visi_misi_row['visi'] ?? '';
                     $misi = !empty($visi_misi_row['misi'])
                         ? (json_decode($visi_misi_row['misi'], true) ?: [])
                         : [];
-                    $periode_text = $lpjs[0]['tahun_mulai'] . '-' . $lpjs[0]['tahun_selesai'];
+                    $periode_source = $lpjs[0] ?? $secretariat_lpjs[0];
+                    $periode_text = $periode_source['tahun_mulai'] . '-' . $periode_source['tahun_selesai'];
                     $configs = [];
-                    foreach ($lpjs as $lpj) {
-                        $decodeJson = static function ($value, $default = []) {
-                            if ($value === null || $value === '') {
-                                return $default;
-                            }
-                            $decoded = json_decode($value, true);
-                            if (json_last_error() !== JSON_ERROR_NONE) {
-                                throw new RuntimeException("Data LPJ tersimpan tidak valid: " . json_last_error_msg());
-                            }
-                            return $decoded === null ? $default : $decoded;
-                        };
+                    foreach ($secretariat_lpjs as $secretariat_lpj) {
+                        $secretariatMembers = json_decode($secretariat_lpj['keanggotaan'] ?? '', true);
+                        $secretariatLetters = json_decode($secretariat_lpj['surat_arsip'] ?? '', true);
+                        if (!is_array($secretariatMembers)) {
+                            $error = 'Data keanggotaan LPJ Sekretariat tidak valid.';
+                            break;
+                        }
+                        if (!is_array($secretariatLetters)) {
+                            $error = 'Snapshot arsip surat LPJ Sekretariat tidak valid.';
+                            break;
+                        }
                         $configs[] = [
+                            'document_type' => 'secretariat',
                             'cover' => [
-                                'triwulan' => strtoupper(trim($lpj['triwulan'])),
-                                'kementerian' => $lpj['nama_kementerian'],
+                                'triwulan' => strtoupper(trim($secretariat_lpj['triwulan'])),
+                                'kementerian' => 'Sekretariat Umum',
                                 'periode' => $periode_text,
                             ],
-                            'keadaan_objektif' => $lpj['keadaan_objektif'] ?? '',
-                            'penutup' => $lpj['penutup'] ?? '',
-                            'keanggotaan' => $decodeJson($lpj['keanggotaan'] ?? ''),
-                            'tugas_pokok' => $decodeJson($lpj['tugas'] ?? ''),
-                            'fungsi' => $decodeJson($lpj['fungsi'] ?? ''),
-                            'visi' => $visi,
-                            'misi' => $misi,
-                            'proker_terlaksana' => $decodeJson($lpj['proker_terlaksana'] ?? ''),
-                            'proker_belum_terlaksana' => $decodeJson($lpj['proker_belum_terlaksana'] ?? ''),
-                            'anggaran' => $decodeJson($lpj['anggaran'] ?? ''),
-                            'dokumentasi' => $decodeJson($lpj['dokumentasi'] ?? ''),
-                            'evaluasi_kinerja_pribadi' => $lpj['evaluasi_kinerja_pribadi'] ?? '',
-                            'evaluasi_anggota_internal' => $decodeJson($lpj['evaluasi_anggota_internal'] ?? ''),
+                            'keadaan_objektif' => $secretariat_lpj['keadaan_objektif'] ?? '',
+                            'keanggotaan' => $secretariatMembers,
+                            'surat' => $secretariatLetters,
+                            'penutup' => $secretariat_lpj['penutup'] ?? '',
                         ];
                     }
+                    try {
+                        foreach ($error === '' ? $lpjs : [] as $lpj) {
+                            $decodeJson = static function ($value, $default = []) {
+                                if ($value === null || $value === '') {
+                                    return $default;
+                                }
+                                $decoded = json_decode($value, true);
+                                if (json_last_error() !== JSON_ERROR_NONE) {
+                                    throw new RuntimeException("Data LPJ tersimpan tidak valid: " . json_last_error_msg());
+                                }
+                                return $decoded === null ? $default : $decoded;
+                            };
+                            $configs[] = [
+                                'cover' => [
+                                    'triwulan' => strtoupper(trim($lpj['triwulan'])),
+                                    'kementerian' => $lpj['nama_kementerian'],
+                                    'periode' => $periode_text,
+                                ],
+                                'keadaan_objektif' => $lpj['keadaan_objektif'] ?? '',
+                                'penutup' => $lpj['penutup'] ?? '',
+                                'keanggotaan' => $decodeJson($lpj['keanggotaan'] ?? ''),
+                                'tugas_pokok' => $decodeJson($lpj['tugas'] ?? ''),
+                                'fungsi' => $decodeJson($lpj['fungsi'] ?? ''),
+                                'visi' => $visi,
+                                'misi' => $misi,
+                                'proker_terlaksana' => $decodeJson($lpj['proker_terlaksana'] ?? ''),
+                                'proker_belum_terlaksana' => $decodeJson($lpj['proker_belum_terlaksana'] ?? ''),
+                                'anggaran' => $decodeJson($lpj['anggaran'] ?? ''),
+                                'dokumentasi' => $decodeJson($lpj['dokumentasi'] ?? ''),
+                                'evaluasi_kinerja_pribadi' => $lpj['evaluasi_kinerja_pribadi'] ?? '',
+                                'evaluasi_anggota_internal' => $decodeJson($lpj['evaluasi_anggota_internal'] ?? ''),
+                            ];
+                        }
+                    } catch (Throwable $exception) {
+                        $error = $exception->getMessage();
+                    }
 
-                    $out_filename = 'MASTER_LPJ_' . preg_replace('/[^A-Z0-9_-]/', '_', reset($selected_triwulan)) . '_' . time() . '.docx';
-                    $out_filepath = UPLOAD_PATH . '/lpj/' . $out_filename;
-                    $lpj_dir = UPLOAD_PATH . '/lpj';
-                    if (!is_dir($lpj_dir) && !mkdir($lpj_dir, 0777, true) && !is_dir($lpj_dir)) {
-                        $error = "Folder penyimpanan LPJ tidak dapat dibuat.";
-                    } else {
-                        $temp_json_path = tempnam(sys_get_temp_dir(), 'lpj_consolidate_');
-                        $s3_temp_files = [];
-                        try {
-                            foreach ($configs as &$config) {
-                                $s3_temp_files = array_merge($s3_temp_files, prefetchS3ImagesForDocx($config));
-                            }
-                            unset($config);
-                            $json = json_encode($configs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                            if ($json === false || file_put_contents($temp_json_path, $json) === false) {
-                                throw new RuntimeException("Data konsolidasi LPJ gagal disiapkan.");
-                            }
+                    if ($error === '') {
+                        $out_filename = 'MASTER_LPJ_' . preg_replace('/[^A-Z0-9_-]/', '_', $triwulan) . '_' . time() . '.docx';
+                        $out_filepath = UPLOAD_PATH . '/lpj/' . $out_filename;
+                        $lpj_dir = UPLOAD_PATH . '/lpj';
+                        if (!is_dir($lpj_dir) && !mkdir($lpj_dir, 0777, true) && !is_dir($lpj_dir)) {
+                            $error = "Folder penyimpanan LPJ tidak dapat dibuat.";
+                        } else {
+                            $temp_json_path = tempnam(sys_get_temp_dir(), 'lpj_consolidate_');
+                            if ($temp_json_path === false) {
+                                $error = "File sementara konsolidasi LPJ tidak dapat dibuat.";
+                            } else {
+                                $s3_temp_files = [];
+                                try {
+                                    foreach ($configs as &$config) {
+                                        $s3_temp_files = array_merge(
+                                            $s3_temp_files,
+                                            prefetchS3ImagesForDocx($config)
+                                        );
+                                    }
+                                    unset($config);
+                                    $json = json_encode(
+                                        $configs,
+                                        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+                                    );
+                                    if ($json === false || file_put_contents($temp_json_path, $json) === false) {
+                                        throw new RuntimeException("Data konsolidasi LPJ gagal disiapkan.");
+                                    }
 
-                            $manager_script = escapeshellarg(__DIR__ . '/../../scratch/bpm_lpj_manager.py');
-                            $command = "python3 {$manager_script} consolidate-data "
-                                . escapeshellarg($out_filepath) . " "
-                                . escapeshellarg($temp_json_path) . " 2>&1";
-                            $output = shell_exec($command);
+                                    $manager_script = escapeshellarg(__DIR__ . '/../../scratch/bpm_lpj_manager.py');
+                                    $command = "python3 {$manager_script} consolidate-data "
+                                        . escapeshellarg($out_filepath) . " "
+                                        . escapeshellarg($temp_json_path) . " 2>&1";
+                                    $output = shell_exec($command);
 
-                            if (!is_file($out_filepath) || filesize($out_filepath) === 0) {
-                                throw new RuntimeException("Generator konsolidasi gagal. " . trim((string)$output));
-                            }
+                                    if (!is_file($out_filepath) || filesize($out_filepath) === 0) {
+                                        throw new RuntimeException(
+                                            "Generator konsolidasi gagal. " . trim((string)$output)
+                                        );
+                                    }
 
-                            if (ob_get_level() > 0) {
-                                ob_clean();
-                            }
-                            header('Content-Description: File Transfer');
-                            header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-                            header('Content-Disposition: attachment; filename="' . $out_filename . '"');
-                            header('Expires: 0');
-                            header('Cache-Control: must-revalidate');
-                            header('Pragma: public');
-                            header('Content-Length: ' . filesize($out_filepath));
-                            readfile($out_filepath);
-                            $consolidation_downloaded = true;
-                        } catch (Throwable $e) {
-                            $error = "Gagal melakukan konsolidasi LPJ: " . $e->getMessage();
-                            error_log("[LPJ Consolidation Error] " . $e->getMessage());
-                            if (is_file($out_filepath)) {
-                                @unlink($out_filepath);
-                            }
-                        } finally {
-                            if (is_file($temp_json_path)) {
-                                @unlink($temp_json_path);
-                            }
-                            foreach (array_unique($s3_temp_files) as $temp_file) {
-                                if (is_dir($temp_file)) {
-                                    foreach (glob(rtrim($temp_file, '/\\') . DIRECTORY_SEPARATOR . '*') ?: [] as $child) {
-                                        if (is_file($child)) {
-                                            @unlink($child);
+                                    if (ob_get_level() > 0) {
+                                        ob_clean();
+                                    }
+                                    header('Content-Description: File Transfer');
+                                    header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                                    header('Content-Disposition: attachment; filename="' . $out_filename . '"');
+                                    header('Expires: 0');
+                                    header('Cache-Control: must-revalidate');
+                                    header('Pragma: public');
+                                    header('Content-Length: ' . filesize($out_filepath));
+                                    readfile($out_filepath);
+                                    $consolidation_downloaded = true;
+                                } catch (Throwable $e) {
+                                    $error = "Gagal melakukan konsolidasi LPJ: " . $e->getMessage();
+                                    error_log("[LPJ Consolidation Error] " . $e->getMessage());
+                                    if (is_file($out_filepath)) {
+                                        @unlink($out_filepath);
+                                    }
+                                } finally {
+                                    if (is_file($temp_json_path)) {
+                                        @unlink($temp_json_path);
+                                    }
+                                    foreach (array_unique($s3_temp_files) as $temp_file) {
+                                        if (is_dir($temp_file)) {
+                                            foreach (
+                                                glob(rtrim($temp_file, '/\\') . DIRECTORY_SEPARATOR . '*') ?: []
+                                                as $child
+                                            ) {
+                                                if (is_file($child)) {
+                                                    @unlink($child);
+                                                }
+                                            }
+                                            @rmdir($temp_file);
+                                        } elseif (is_file($temp_file)) {
+                                            @unlink($temp_file);
                                         }
                                     }
-                                    @rmdir($temp_file);
-                                } elseif (is_file($temp_file)) {
-                                    @unlink($temp_file);
                                 }
                             }
                         }
@@ -216,6 +308,23 @@ $query_lpj = "SELECT l.*, k.nama as nama_kementerian, k.logo as logo_kementerian
 
 $lpj_list = dbFetchAll($query_lpj, $query_params, $query_types);
 
+$secretariat_parts = ["s.periode_id = ?"];
+$secretariat_params = [$periode_id];
+$secretariat_types = "i";
+if ($filter_triwulan !== '') {
+    $secretariat_parts[] = "s.triwulan = ?";
+    $secretariat_params[] = $filter_triwulan;
+    $secretariat_types .= "s";
+}
+$secretariat_list = dbFetchAll(
+    "SELECT s.id, s.triwulan, s.status, s.file_path, s.updated_at
+     FROM lpj_sekretariat s
+     WHERE " . implode(' AND ', $secretariat_parts) . "
+     ORDER BY FIELD(s.triwulan, 'I', 'II', 'MUBESMA'), s.updated_at DESC",
+    $secretariat_params,
+    $secretariat_types
+);
+
 // Kelompokkan triwulan berdasarkan filter atau tampilkan semua default
 $groups_to_display = [];
 if (!empty($filter_triwulan)) {
@@ -224,6 +333,11 @@ if (!empty($filter_triwulan)) {
     $groups_to_display = ['I', 'II', 'MUBESMA'];
     // Tambahkan triwulan lain jika ada di database (agar tidak hilang data)
     foreach ($lpj_list as $lpj) {
+        if (!in_array($lpj['triwulan'], $groups_to_display)) {
+            $groups_to_display[] = $lpj['triwulan'];
+        }
+    }
+    foreach ($secretariat_list as $lpj) {
         if (!in_array($lpj['triwulan'], $groups_to_display)) {
             $groups_to_display[] = $lpj['triwulan'];
         }
@@ -528,6 +642,7 @@ if (!empty($filter_triwulan)) {
     <div style="display: flex; gap: 10px;">
         <button type="submit" form="consolidateForm" class="btn-primary" style="background: #28a745;"><i class="fas fa-compress-arrows-alt"></i> Konsolidasi LPJ Terpilih</button>
         <a href="buat-lpj.php" class="btn-primary"><i class="fas fa-plus"></i> Buat LPJ Baru</a>
+        <a href="buat-lpj-sekretariat.php" class="btn-primary" style="background:#8e44ad;"><i class="fas fa-file-signature"></i> Buat LPJ Sekretariat</a>
     </div>
 </div>
 
@@ -569,10 +684,10 @@ if (!empty($filter_triwulan)) {
     <?php echo csrfField(); ?>
     <input type="hidden" name="action_consolidate" value="1">
     <p style="color: #9aa8ba; font-size: 0.85rem; margin: 0 0 18px;">
-        Pilih LPJ dari satu jenis triwulan yang sama. Isi dan foto laporan dipertahankan; nomor halaman daftar isi diperbarui saat dokumen dibuka di Word.
+        Pilih LPJ dari satu jenis triwulan yang sama. LPJ Sekretariat submitted untuk triwulan pilihan otomatis ikut saat memilih LPJ komisi, selalu di urutan pertama; LPJ Komisi diurutkan sesuai master.
     </p>
 
-    <?php if (empty($lpj_list)): ?>
+    <?php if (empty($lpj_list) && empty($secretariat_list)): ?>
         <div style="text-align: center; padding: 40px; background: #0f1217; border: 1px solid #2a3545; border-radius: 12px; margin-bottom: 30px;">
             <i class="fas fa-file-excel" style="font-size: 3rem; color: #666; margin-bottom: 15px;"></i>
             <p style="color: #888;">Belum ada dokumen LPJ yang sesuai dengan filter.</p>
@@ -582,12 +697,17 @@ if (!empty($filter_triwulan)) {
         <?php 
         // Group the LPJ items
         $grouped_lpj = [];
+        $grouped_secretariat = [];
         foreach ($groups_to_display as $g) {
             $grouped_lpj[$g] = [];
+            $grouped_secretariat[$g] = [];
         }
         foreach ($lpj_list as $lpj) {
             $tw = $lpj['triwulan'];
             $grouped_lpj[$tw][] = $lpj;
+        }
+        foreach ($secretariat_list as $lpj) {
+            $grouped_secretariat[$lpj['triwulan']][] = $lpj;
         }
         
         foreach ($groups_to_display as $group_key):
@@ -610,7 +730,8 @@ if (!empty($filter_triwulan)) {
             }
             
             // Skip empty groups if we have filter active
-            if (empty($group_items) && (!empty($filter_triwulan) || $filter_kementerian > 0)) {
+            $secretariat_items = $grouped_secretariat[$group_key] ?? [];
+            if (empty($group_items) && empty($secretariat_items) && (!empty($filter_triwulan) || $filter_kementerian > 0)) {
                 continue;
             }
         ?>
@@ -619,11 +740,11 @@ if (!empty($filter_triwulan)) {
                     <div class="lpj-group-title">
                         <i class="<?php echo $group_icon; ?>"></i>
                         <h2><?php echo $group_name; ?></h2>
-                        <span class="lpj-group-count"><?php echo count($group_items); ?> Dokumen</span>
+                        <span class="lpj-group-count"><?php echo count($group_items) + count($secretariat_items); ?> Dokumen</span>
                     </div>
                 </div>
                 
-                <?php if (empty($group_items)): ?>
+                <?php if (empty($group_items) && empty($secretariat_items)): ?>
                     <div class="empty-group-placeholder">
                         <i class="far fa-folder-open"></i>
                         <p>Belum ada LPJ kementerian yang dibuat untuk periode ini.</p>
@@ -631,6 +752,45 @@ if (!empty($filter_triwulan)) {
                     </div>
                 <?php else: ?>
                     <div class="lpj-grid">
+                        <?php foreach ($secretariat_items as $secretariat_lpj):
+                            $is_draft = $secretariat_lpj['status'] === 'draft';
+                        ?>
+                            <div class="lpj-card <?php echo $is_draft ? 'lpj-draft' : ''; ?>">
+                                <div class="lpj-card-header">
+                                    <div class="logo-container" style="display:grid;place-items:center;background:rgba(142,68,173,.16);">
+                                        <i class="fas fa-file-signature" style="font-size:1.5rem;color:#c39bd3;"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Sekretariat Umum</h3>
+                                        <span class="status-badge <?php echo $is_draft ? 'status-draft' : 'status-submitted'; ?>">
+                                            <?php echo $is_draft ? 'Draft' : 'Submitted'; ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="lpj-card-body">
+                                    <div class="info-row"><span>Triwulan:</span><span class="info-value"><?php echo htmlspecialchars($group_key); ?></span></div>
+                                    <div class="info-row"><span>Diperbarui:</span><span class="info-value"><?php echo formatTanggal($secretariat_lpj['updated_at'], true); ?></span></div>
+                                </div>
+                                <div class="lpj-card-actions">
+                                    <div class="actions-top">
+                                        <?php if (!$is_draft): ?>
+                                            <label class="lpj-checkbox-label">
+                                                <input type="checkbox" name="selected_secretariat_lpj[]" value="<?php echo (int)$secretariat_lpj['id']; ?>">
+                                                <span>Pilih untuk Konsolidasi</span>
+                                            </label>
+                                        <?php else: ?>
+                                            <span style="font-size:.8rem;color:#ffc107;font-style:italic;"><i class="fas fa-exclamation-triangle"></i> Selesaikan draft untuk konsolidasi</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="actions-buttons">
+                                        <a href="buat-lpj-sekretariat.php?triwulan=<?php echo urlencode($group_key); ?>" class="btn-edit"><i class="fas fa-edit"></i> Edit</a>
+                                        <?php if (!empty($secretariat_lpj['file_path'])): ?>
+                                            <a href="<?php echo htmlspecialchars(uploadUrl($secretariat_lpj['file_path'])); ?>" class="btn-buat" style="background:#4A90E2;" download><i class="fas fa-download"></i> Docx</a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                         <?php foreach ($group_items as $lpj): 
                             $is_draft = $lpj['status'] === 'draft';
                             $logo = $lpj['logo_kementerian'] ? uploadUrl($lpj['logo_kementerian']) : BASE_URL . 'assets/images/default-logo.png';

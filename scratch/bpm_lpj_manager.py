@@ -1591,7 +1591,9 @@ def generate_secretariat_lpj(output_path, config_data):
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.paragraph_format.space_after = Pt(4)
-    title_run = title.add_run("LAPORAN PERTANGGUNGJAWABAN\nSEKRETARIS UMUM BPM")
+    triwulan = str(config_data.get("cover", {}).get("triwulan", "")).upper()
+    period_title = "MUBESMA" if triwulan == "MUBESMA" else f"TRIWULAN {triwulan}".strip()
+    title_run = title.add_run(f"LAPORAN PERTANGGUNGJAWABAN {period_title}\nSEKRETARIAT UMUM BPM")
     format_run(title_run, size_pt=14, bold=True)
 
     periode = config_data.get("periode", {})
@@ -2590,9 +2592,10 @@ def calculate_budget_summary(config_data):
     saldo = saldo_values[-1] if saldo_values else debet - kredit
     return {"debet": debet, "kredit": kredit, "saldo": saldo}
 
-def add_consolidated_budget_summary(doc, configs, triwulan):
+def add_consolidated_budget_summary(doc, configs, triwulan, report_count=None):
     is_mubesma = triwulan == "MUBESMA"
-    chapter = int_to_roman(len(configs) + 1) if is_mubesma else chr(65 + len(configs))
+    chapter_index = (report_count if report_count is not None else len(configs)) + 1
+    chapter = int_to_roman(chapter_index) if is_mubesma else chr(64 + chapter_index)
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.paragraph_format.space_before = Pt(12)
@@ -2673,7 +2676,11 @@ def consolidate_lpj_data(output_path, configs):
                         image["file_path"] = resolved_path
 
             source_path = os.path.join(temp_dir, f"BPM_LPJ_{index}.docx")
-            if not generate_lpj(source_path, config):
+            if config.get("document_type") == "secretariat":
+                generated = generate_secretariat_lpj(source_path, config)
+            else:
+                generated = generate_lpj(source_path, config)
+            if not generated:
                 raise RuntimeError(f"Gagal membuat dokumen LPJ {config['cover'].get('kementerian', '')}.")
             source_paths.append(source_path)
 
@@ -2692,7 +2699,11 @@ def consolidate_lpj_data(output_path, configs):
         format_run(toc_title.add_run("DAFTAR ISI"), size_pt=14, bold=True)
 
         for index, config in enumerate(configs, 1):
-            name = format_kementerian_title(config.get("cover", {}).get("kementerian", ""))
+            name = (
+                "SEKRETARIAT UMUM"
+                if config.get("document_type") == "secretariat"
+                else format_kementerian_title(config.get("cover", {}).get("kementerian", ""))
+            )
             paragraph = master_doc.add_paragraph()
             paragraph.paragraph_format.line_spacing = 1.5
             paragraph.paragraph_format.tab_stops.add_tab_stop(
@@ -2726,7 +2737,11 @@ def consolidate_lpj_data(output_path, configs):
         master_doc.add_page_break()
         summary_title = master_doc.add_paragraph()
         add_bookmark(summary_title, "lpj_budget_summary", len(configs) + 1)
-        add_consolidated_budget_summary(master_doc, configs, triwulan)
+        budget_configs = [
+            config for config in configs
+            if config.get("document_type") != "secretariat"
+        ]
+        add_consolidated_budget_summary(master_doc, budget_configs, triwulan, len(configs))
         add_document_footer(master_doc, triwulan)
         update_fields = master_doc.settings.element.find(qn('w:updateFields'))
         if update_fields is None:
