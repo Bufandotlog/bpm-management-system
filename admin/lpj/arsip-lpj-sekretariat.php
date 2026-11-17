@@ -1,5 +1,5 @@
 <?php
-$page_css = 'arsip-surat';
+$page_css = 'lpj-sekretariat-arsip';
 require_once __DIR__ . '/../core/header.php';
 requireSekretaris();
 
@@ -31,44 +31,111 @@ $items = dbFetchAll(
     [$periode_id],
     "i"
 );
+$statusCounts = ['submitted' => 0, 'draft' => 0];
+foreach ($items as $item) {
+    $status = strtolower((string)($item['status'] ?? ''));
+    if (isset($statusCounts[$status])) {
+        $statusCounts[$status]++;
+    }
+}
 ?>
-<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-    <h1><i class="fas fa-archive"></i> Arsip LPJ Sekretariat</h1>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <?php foreach (['I' => 'Triwulan I', 'II' => 'Triwulan II', 'MUBESMA' => 'MUBESMA'] as $type => $label): ?>
-            <a class="btn-primary" href="buat-lpj-sekretariat.php?triwulan=<?php echo urlencode($type); ?>"><i class="fas fa-plus"></i> <?php echo htmlspecialchars($label); ?></a>
-        <?php endforeach; ?>
-    </div>
-</div>
-<?php if ($error): ?><div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
-<?php if ($success): ?><div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
-<div style="overflow-x:auto;">
-<table class="admin-table responsive-card-table">
-    <thead><tr><th>No.</th><th>Jenis LPJ</th><th>Triwulan</th><th>Status</th><th>Terakhir diperbarui</th><th>Aksi</th></tr></thead>
-    <tbody>
-    <?php if (!$items): ?>
-        <tr><td colspan="6" style="text-align:center;padding:30px;">Belum ada LPJ Sekretariat untuk periode ini.</td></tr>
-    <?php else: foreach ($items as $index => $item): ?>
-        <tr>
-            <td><?php echo $index + 1; ?></td>
-            <td>LPJ Sekretaris Umum</td>
-            <td><?php echo htmlspecialchars($item['triwulan']); ?></td>
-            <td><?php echo htmlspecialchars(ucfirst($item['status'])); ?></td>
-            <td><?php echo htmlspecialchars($item['updated_at'] ?? '—'); ?></td>
-            <td style="display:flex;gap:8px;flex-wrap:wrap;">
-                <a class="btn-edit" href="buat-lpj-sekretariat.php?triwulan=<?php echo urlencode($item['triwulan']); ?>">Edit</a>
-                <?php if (!empty($item['file_path'])): ?>
-                    <a class="btn-buat" href="<?php echo htmlspecialchars(uploadUrl($item['file_path'])); ?>" download>Unduh DOCX</a>
-                <?php endif; ?>
-                <form method="POST" onsubmit="return confirm('Hapus LPJ Sekretariat ini?')">
-                    <?php echo csrfField(); ?>
-                    <input type="hidden" name="delete_id" value="<?php echo (int)$item['id']; ?>">
-                    <button class="btn-delete" type="submit">Hapus</button>
-                </form>
-            </td>
-        </tr>
-    <?php endforeach; endif; ?>
-    </tbody>
-</table>
+<div class="secretariat-archive">
+    <header class="secretariat-archive-header">
+        <div class="secretariat-archive-heading">
+            <span class="secretariat-archive-eyebrow"><i class="fas fa-folder-open"></i> Dokumen periode aktif</span>
+            <h1>Arsip LPJ Sekretariat</h1>
+            <p>Kelola, perbarui, dan unduh laporan pertanggungjawaban sekretariat.</p>
+        </div>
+        <div class="secretariat-archive-create" aria-label="Buat LPJ baru">
+            <?php foreach (['I' => 'Triwulan I', 'II' => 'Triwulan II', 'MUBESMA' => 'MUBESMA'] as $type => $label): ?>
+                <a href="buat-lpj-sekretariat.php?triwulan=<?php echo urlencode($type); ?>">
+                    <i class="fas fa-plus" aria-hidden="true"></i><span><?php echo htmlspecialchars($label); ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </header>
+    <?php if ($error): ?><div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+    <?php if ($success): ?><div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
+
+    <section class="secretariat-archive-summary" aria-label="Ringkasan arsip">
+        <div class="archive-summary-card">
+            <span class="archive-summary-icon"><i class="fas fa-file-alt" aria-hidden="true"></i></span>
+            <span class="archive-summary-label">Total LPJ</span>
+            <strong><?php echo count($items); ?></strong>
+        </div>
+        <div class="archive-summary-card">
+            <span class="archive-summary-icon is-submitted"><i class="fas fa-check" aria-hidden="true"></i></span>
+            <span class="archive-summary-label">Diserahkan</span>
+            <strong><?php echo $statusCounts['submitted']; ?></strong>
+        </div>
+        <div class="archive-summary-card">
+            <span class="archive-summary-icon is-draft"><i class="fas fa-pen" aria-hidden="true"></i></span>
+            <span class="archive-summary-label">Draft</span>
+            <strong><?php echo $statusCounts['draft']; ?></strong>
+        </div>
+    </section>
+
+    <section class="secretariat-archive-list" aria-labelledby="archive-list-title">
+        <div class="archive-list-heading">
+            <div>
+                <h2 id="archive-list-title">Daftar laporan</h2>
+                <p><?php echo count($items); ?> dokumen pada periode aktif</p>
+            </div>
+        </div>
+        <?php if (!$items): ?>
+            <div class="archive-empty-state">
+                <span><i class="far fa-folder-open" aria-hidden="true"></i></span>
+                <h3>Belum ada LPJ Sekretariat</h3>
+                <p>Buat laporan Triwulan I, Triwulan II, atau MUBESMA untuk memulai pengarsipan.</p>
+            </div>
+        <?php else: ?>
+            <div class="archive-table-wrap">
+                <table class="admin-table responsive-card-table secretariat-archive-table">
+                    <thead>
+                        <tr><th>No.</th><th>Jenis LPJ</th><th>Triwulan</th><th>Status</th><th>Terakhir diperbarui</th><th>Aksi</th></tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($items as $index => $item):
+                        $status = strtolower((string)($item['status'] ?? ''));
+                        $statusClass = $status === 'submitted' ? 'is-submitted' : ($status === 'draft' ? 'is-draft' : 'is-other');
+                        $statusLabel = $status !== '' ? ucfirst($status) : 'Tidak diketahui';
+                        $updatedAt = (string)($item['updated_at'] ?? '');
+                        $updatedTimestamp = $updatedAt !== '' ? strtotime($updatedAt) : false;
+                        $updatedLabel = $updatedTimestamp !== false
+                            ? date('d M Y, H:i', $updatedTimestamp)
+                            : ($updatedAt !== '' ? $updatedAt : '—');
+                    ?>
+                        <tr>
+                            <td data-label="No."><span class="archive-row-number"><?php echo $index + 1; ?></span></td>
+                            <td data-label="Jenis LPJ"><span class="archive-report-name"><i class="fas fa-file-word" aria-hidden="true"></i>LPJ Sekretariat</span></td>
+                            <td data-label="Triwulan"><span class="archive-quarter"><?php echo htmlspecialchars((string)$item['triwulan']); ?></span></td>
+                            <td data-label="Status"><span class="archive-status <?php echo $statusClass; ?>"><?php echo htmlspecialchars($statusLabel); ?></span></td>
+                            <td data-label="Terakhir diperbarui"><span class="archive-updated"><?php echo htmlspecialchars($updatedLabel); ?></span></td>
+                            <td data-label="Aksi" class="archive-actions-cell">
+                                <div class="archive-actions">
+                                    <a class="archive-action archive-action-edit" href="buat-lpj-sekretariat.php?triwulan=<?php echo urlencode((string)$item['triwulan']); ?>">
+                                        <i class="fas fa-pen" aria-hidden="true"></i><span>Edit</span>
+                                    </a>
+                                    <?php if (!empty($item['file_path'])): ?>
+                                        <a class="archive-action archive-action-download" href="<?php echo htmlspecialchars(uploadUrl($item['file_path'])); ?>" download>
+                                            <i class="fas fa-download" aria-hidden="true"></i><span>Unduh DOCX</span>
+                                        </a>
+                                    <?php endif; ?>
+                                    <form method="POST" onsubmit="return confirm('Hapus LPJ Sekretariat ini?')">
+                                        <?php echo csrfField(); ?>
+                                        <input type="hidden" name="delete_id" value="<?php echo (int)$item['id']; ?>">
+                                        <button class="archive-action archive-action-delete" type="submit">
+                                            <i class="fas fa-trash-alt" aria-hidden="true"></i><span>Hapus</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </section>
 </div>
 <?php require_once __DIR__ . '/../core/footer.php'; ?>

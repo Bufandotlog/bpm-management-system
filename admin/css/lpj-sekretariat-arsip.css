@@ -1,0 +1,397 @@
+.secretariat-archive {
+    --archive-accent: #77aef5;
+    --archive-border: rgba(148, 163, 184, 0.16);
+    --archive-panel: #111820;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding-bottom: 32px;
+}
+
+.secretariat-archive-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 28px;
+    margin-bottom: 26px;
+    padding: 28px;
+    border: 1px solid var(--archive-border);
+    border-radius: 18px;
+    background:
+        radial-gradient(ellipse at 92% 10%, rgba(74, 144, 226, 0.18), transparent 42%),
+        linear-gradient(135deg, #151d27, #10151c 72%);
+}
+
+.secretariat-archive-heading { min-width: 0; }
+.secretariat-archive-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: var(--archive-accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.secretariat-archive-heading h1 {
+    margin: 0;
+    color: #f4f7fb;
+    font-size: clamp(1.55rem, 3vw, 2.15rem);
+    line-height: 1.2;
+}
+.secretariat-archive-heading p {
+    max-width: 620px;
+    margin-top: 9px;
+    color: #9aa8b8;
+    font-size: 0.92rem;
+}
+
+.secretariat-archive-create {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 9px;
+}
+.secretariat-archive-create a {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 14px;
+    border: 1px solid rgba(119, 174, 245, 0.34);
+    border-radius: 9px;
+    background: rgba(74, 144, 226, 0.12);
+    color: #d7e8ff;
+    font-size: 0.82rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.secretariat-archive-create a:hover {
+    transform: translateY(-1px);
+    border-color: var(--archive-accent);
+    background: rgba(74, 144, 226, 0.22);
+}
+.secretariat-archive-create a:first-child {
+    border-color: #4a90e2;
+    background: #3478c8;
+    color: #fff;
+}
+.secretariat-archive-create a:first-child:hover { background: #4289dc; }
+
+.secretariat-archive .alert { margin-bottom: 18px; }
+.secretariat-archive-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+.archive-summary-card {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 13px;
+    padding: 17px 19px;
+    border: 1px solid var(--archive-border);
+    border-radius: 13px;
+    background: var(--archive-panel);
+}
+.archive-summary-icon {
+    display: grid;
+    grid-row: 1 / 3;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid rgba(119, 174, 245, 0.22);
+    border-radius: 11px;
+    background: rgba(74, 144, 226, 0.12);
+    color: var(--archive-accent);
+}
+.archive-summary-icon.is-submitted {
+    border-color: rgba(52, 211, 153, 0.2);
+    background: rgba(16, 185, 129, 0.1);
+    color: #52d6a5;
+}
+.archive-summary-icon.is-draft {
+    border-color: rgba(251, 191, 36, 0.2);
+    background: rgba(245, 158, 11, 0.1);
+    color: #f5c451;
+}
+.archive-summary-label { color: #91a0b1; font-size: 0.78rem; }
+.archive-summary-card strong { color: #f4f7fb; font-size: 1.35rem; line-height: 1.15; }
+
+.secretariat-archive-list {
+    overflow: hidden;
+    border: 1px solid var(--archive-border);
+    border-radius: 15px;
+    background: #10161e;
+}
+.archive-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 77px;
+    padding: 17px 22px;
+    border-bottom: 1px solid var(--archive-border);
+}
+.archive-list-heading h2 { color: #eef3f8; font-size: 1.04rem; }
+.archive-list-heading p { margin-top: 3px; color: #8492a2; font-size: 0.78rem; }
+
+.archive-table-wrap { overflow-x: auto; }
+.secretariat-archive-table {
+    width: 100%;
+    min-width: 780px;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.secretariat-archive-table thead th {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--archive-border);
+    background: rgba(255, 255, 255, 0.025);
+    color: #8492a2;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.secretariat-archive-table tbody tr { background: transparent; transition: background 0.16s ease; }
+.secretariat-archive-table tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
+.secretariat-archive-table tbody td {
+    padding: 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    color: #d5dde7;
+    font-size: 0.86rem;
+    vertical-align: middle;
+}
+.secretariat-archive-table tbody tr:last-child td { border-bottom: 0; }
+.secretariat-archive-table th:first-child,
+.secretariat-archive-table td:first-child { width: 68px; padding-left: 22px; }
+.secretariat-archive-table th:last-child { width: 300px; }
+.archive-row-number { color: #8998a9; font-variant-numeric: tabular-nums; }
+.archive-report-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #e8eef6;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.archive-report-name i { color: #80b5f6; }
+.archive-quarter {
+    display: inline-flex;
+    min-width: 82px;
+    justify-content: center;
+    padding: 5px 10px;
+    border: 1px solid rgba(148, 163, 184, 0.17);
+    border-radius: 7px;
+    background: rgba(148, 163, 184, 0.07);
+    color: #d5deea;
+    font-size: 0.77rem;
+    font-weight: 650;
+}
+.archive-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.archive-status::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+}
+.archive-status.is-submitted {
+    border-color: rgba(52, 211, 153, 0.2);
+    background: rgba(16, 185, 129, 0.1);
+    color: #52d6a5;
+}
+.archive-status.is-draft {
+    border-color: rgba(251, 191, 36, 0.2);
+    background: rgba(245, 158, 11, 0.1);
+    color: #f5c451;
+}
+.archive-status.is-other {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: rgba(148, 163, 184, 0.08);
+    color: #b6c1ce;
+}
+.archive-updated { color: #aab6c4; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.archive-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+.archive-actions form { display: inline-flex; margin: 0; }
+.archive-action {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: #d6e0eb;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+.archive-action-edit {
+    border-color: rgba(119, 174, 245, 0.2);
+    background: rgba(74, 144, 226, 0.1);
+    color: #a9d0ff;
+}
+.archive-action-edit:hover { background: rgba(74, 144, 226, 0.2); }
+.archive-action-download {
+    border-color: rgba(52, 211, 153, 0.2);
+    background: rgba(16, 185, 129, 0.09);
+    color: #74dfb7;
+}
+.archive-action-download:hover { background: rgba(16, 185, 129, 0.18); }
+.archive-action-delete {
+    border-color: rgba(248, 113, 113, 0.2);
+    background: rgba(239, 68, 68, 0.08);
+    color: #f39797;
+}
+.archive-action-delete:hover { background: rgba(239, 68, 68, 0.18); }
+
+.archive-empty-state {
+    display: flex;
+    min-height: 260px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+}
+.archive-empty-state > span {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    margin-bottom: 15px;
+    place-items: center;
+    border: 1px solid rgba(119, 174, 245, 0.2);
+    border-radius: 16px;
+    background: rgba(74, 144, 226, 0.1);
+    color: #80b5f6;
+    font-size: 1.35rem;
+}
+.archive-empty-state h3 { color: #e5ecf4; font-size: 1rem; }
+.archive-empty-state p { max-width: 420px; margin-top: 7px; color: #8e9cac; font-size: 0.84rem; }
+
+@media (max-width: 900px) {
+    .secretariat-archive-header { align-items: flex-start; flex-direction: column; gap: 20px; }
+    .secretariat-archive-create { justify-content: flex-start; }
+}
+
+@media (max-width: 768px) {
+    .secretariat-archive { padding-bottom: 20px; }
+    .secretariat-archive-header { margin-bottom: 16px; padding: 21px 18px; border-radius: 14px; }
+    .secretariat-archive-heading h1 { font-size: 1.55rem; }
+    .secretariat-archive-heading p { font-size: 0.84rem; }
+    .secretariat-archive-create { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .secretariat-archive-create a { min-width: 0; padding: 0 9px; font-size: 0.76rem; }
+    .secretariat-archive-create a:last-child { grid-column: 1 / -1; }
+    .secretariat-archive-summary { gap: 8px; margin-bottom: 16px; }
+    .archive-summary-card { grid-template-columns: 32px 1fr; column-gap: 8px; padding: 12px 10px; border-radius: 10px; }
+    .archive-summary-icon { width: 32px; height: 32px; border-radius: 9px; font-size: 0.78rem; }
+    .archive-summary-label { font-size: 0.67rem; }
+    .archive-summary-card strong { font-size: 1.12rem; }
+    .secretariat-archive-list { border-radius: 12px; }
+    .archive-list-heading { min-height: 66px; padding: 14px 16px; }
+    .archive-list-heading h2 { font-size: 0.98rem; }
+    .archive-table-wrap { overflow: visible; padding: 12px; }
+    .secretariat-archive-table { min-width: 0 !important; table-layout: fixed !important; }
+    .secretariat-archive-table thead { display: none; }
+    .secretariat-archive-table tbody,
+    .secretariat-archive-table tbody tr,
+    .secretariat-archive-table tbody td { display: block; width: 100%; }
+    .secretariat-archive-table tbody tr {
+        margin: 0 0 12px;
+        padding: 6px 0;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 11px;
+        background: #151d27;
+        box-shadow: none;
+    }
+    .secretariat-archive-table tbody tr:last-child { margin-bottom: 0; }
+    .secretariat-archive-table tbody td {
+        display: flex;
+        min-height: 39px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 12px;
+        border: 0 !important;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.09) !important;
+        text-align: right;
+    }
+    .secretariat-archive-table tbody td::before {
+        flex: 0 0 118px;
+        color: #8fa0b2;
+        content: attr(data-label);
+        font-size: 0.68rem;
+        font-weight: 650;
+        text-align: left;
+        text-transform: uppercase;
+    }
+    .secretariat-archive-table tbody td:first-child { width: 100%; padding-left: 12px; }
+    .secretariat-archive-table tbody td:last-child { border-bottom: 0 !important; }
+    .secretariat-archive-table tbody td > span {
+        max-width: calc(100% - 128px);
+        margin: 0;
+        text-align: right;
+    }
+    .archive-report-name { white-space: normal; }
+    .archive-actions-cell {
+        display: block !important;
+        padding: 9px 12px 12px !important;
+        text-align: left !important;
+    }
+    .archive-actions-cell::before { display: block; margin-bottom: 8px; }
+    .secretariat-archive-table .archive-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        flex: none;
+    }
+    .secretariat-archive-table .archive-actions > a,
+    .secretariat-archive-table .archive-actions > form,
+    .secretariat-archive-table .archive-actions > form > button {
+        width: 100%;
+        min-width: 0;
+    }
+    .secretariat-archive-table .archive-actions form { display: flex; }
+    .archive-action { min-height: 38px; padding: 0 8px; font-size: 0.73rem; }
+}
+
+@media (max-width: 380px) {
+    .secretariat-archive-summary { grid-template-columns: 1fr; }
+    .archive-summary-card { grid-template-columns: 38px 1fr auto; }
+    .archive-summary-icon { grid-row: 1; width: 34px; height: 34px; }
+    .archive-summary-label { grid-column: 2; grid-row: 1; }
+    .archive-summary-card strong { grid-column: 3; grid-row: 1; }
+    .secretariat-archive-table tbody td::before { flex-basis: 100px; }
+    .secretariat-archive-table tbody td > span { max-width: calc(100% - 110px); }
+}

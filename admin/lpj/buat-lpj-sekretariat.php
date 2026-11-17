@@ -18,6 +18,15 @@ $sanitizeLpjText = static function (string $value, int $maxLength): string {
     $value = preg_replace('/[^\S\n]+/u', ' ', $value) ?? $value;
     return mb_substr(trim($value), 0, $maxLength);
 };
+$defaultKeadaanObjektif = <<<'TEXT'
+Dalam menjalankan fungsi kesekretariatan, BPM telah melakukan pengembangan sistem administrasi berbasis digital melalui Sistem Manajemen Administrasi BPM. Sejak periode kepengurusan 2026/2027, pelaksanaan administrasi kesekretariatan mulai beralih dari mekanisme konvensional menuju sistem semiotomatis dan otomatis berbasis web. Pengembangan tersebut merupakan upaya untuk menciptakan tata kelola administrasi organisasi yang lebih terstruktur, terintegrasi, efektif, dan berkelanjutan.
+
+Pada periode kepengurusan berjalan, sistem web telah mengalami pengembangan lebih lanjut, khususnya dalam integrasi alur pengelolaan data administrasi. Informasi persuratan, berita acara, hingga penyusunan Laporan Pertanggungjawaban (LPJ) diarahkan untuk dikelola melalui satu sistem yang saling terhubung. Dengan demikian, data administrasi yang dihasilkan dari setiap proses kelembagaan dapat menjadi sumber informasi yang mendukung proses penyusunan dokumen lainnya, sehingga mengurangi pengulangan penginputan data dan meminimalkan ketidaksesuaian informasi antardokumen.
+
+Dalam aspek persuratan, sistem telah menyediakan mekanisme pengisian formulir digital, pengelolaan arsip surat, penyimpanan data administrasi, pencetakan dokumen, serta penyusunan redaksi informasi yang dapat digunakan untuk penyampaian melalui WhatsApp. Sistem juga mendukung pengelolaan tanda tangan digital dan lampiran dokumen dalam proses penerbitan surat. Pengelolaan data dilakukan melalui basis data terstruktur yang dikombinasikan dengan penyimpanan data fleksibel, sehingga memungkinkan penyesuaian kebutuhan administrasi tanpa harus mengubah keseluruhan struktur penyimpanan.
+
+Pengembangan sistem tersebut menjadi langkah strategis dalam membangun tata kelola kesekretariatan yang tidak hanya berorientasi pada pemenuhan kebutuhan administrasi jangka pendek, tetapi juga pada keberlanjutan arsip dan informasi kelembagaan. Meskipun demikian, keberadaan sistem tetap memerlukan pemeliharaan, evaluasi, pengawasan terhadap kelengkapan data, serta pengembangan berkelanjutan agar pemanfaatannya dapat berjalan secara optimal dan dapat diteruskan oleh kepengurusan berikutnya.
+TEXT;
 $lpj = $lpj_id > 0
     ? dbFetchOne("SELECT * FROM lpj_sekretariat WHERE id = ? AND periode_id = ?", [$lpj_id, $periode_id], "ii")
     : dbFetchOne(
@@ -29,7 +38,9 @@ if ($lpj && $lpj_id === 0) {
     $lpj_id = (int)$lpj['id'];
 }
 $triwulan = strtoupper((string)($lpj['triwulan'] ?? $requestedTriwulan));
-$formKeadaanObjektif = $lpj['keadaan_objektif'] ?? '';
+$formKeadaanObjektif = trim((string)($lpj['keadaan_objektif'] ?? '')) !== ''
+    ? $lpj['keadaan_objektif']
+    : $defaultKeadaanObjektif;
 $formPenutup = $lpj['penutup'] ?? '';
 
 if ($lpj_id > 0 && !$lpj) {
@@ -492,6 +503,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($lpj_id === 0 || $lpj !== null)) {
                 </div>
                 <div class="lpj-field">
                     <label for="keadaan_objektif"><span class="field-kicker">A.</span> Keadaan Objektif Sekretariat</label>
+                    <p class="field-hint">Template awal sebagai acuan. Sesuaikan seluruh isinya dengan kondisi faktual periode kepengurusan yang dilaporkan.</p>
                     <textarea id="keadaan_objektif" name="keadaan_objektif" rows="7" maxlength="10000" placeholder="Jelaskan kondisi, peran, dan pelaksanaan fungsi sekretariat selama periode kepengurusan..."><?php echo htmlspecialchars($formKeadaanObjektif); ?></textarea>
                     <small class="field-hint">Uraikan keadaan sekretariat sebagai dasar pertanggungjawaban pada laporan.</small>
                 </div>

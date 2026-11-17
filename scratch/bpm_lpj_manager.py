@@ -1583,10 +1583,16 @@ def generate_lpj(output_path, config_data):
 def generate_secretariat_lpj(output_path, config_data):
     doc = docx.Document()
     section = doc.sections[0]
-    section.top_margin = Cm(1.8)
-    section.bottom_margin = Cm(1.8)
-    section.left_margin = Cm(1.6)
-    section.right_margin = Cm(1.6)
+    section.top_margin = Cm(3)
+    section.bottom_margin = Cm(3)
+    section.left_margin = Cm(4)
+    section.right_margin = Cm(3)
+
+    normal_style = doc.styles["Normal"]
+    normal_style.font.name = "Times New Roman"
+    normal_style.font.size = Pt(12)
+    normal_style.paragraph_format.line_spacing = 1.5
+    normal_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -1594,7 +1600,7 @@ def generate_secretariat_lpj(output_path, config_data):
     triwulan = str(config_data.get("cover", {}).get("triwulan", "")).upper()
     period_title = "MUBESMA" if triwulan == "MUBESMA" else f"TRIWULAN {triwulan}".strip()
     title_run = title.add_run(f"LAPORAN PERTANGGUNGJAWABAN {period_title}\nSEKRETARIAT UMUM BPM")
-    format_run(title_run, size_pt=14, bold=True)
+    format_run(title_run, size_pt=12, bold=True)
 
     periode = config_data.get("periode", {})
     years = f"{periode.get('tahun_mulai', '')}/{periode.get('tahun_selesai', '')}".strip("/")
@@ -1602,7 +1608,7 @@ def generate_secretariat_lpj(output_path, config_data):
     subtitle = doc.add_paragraph()
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
     subtitle.paragraph_format.space_after = Pt(14)
-    format_run(subtitle.add_run("BPM INSTBUNAS MAJALENGKA " + (years or periode_name)), size_pt=11, bold=True)
+    format_run(subtitle.add_run("BPM INSTBUNAS MAJALENGKA " + (years or periode_name)), size_pt=12, bold=True)
 
     def add_section(title_text):
         paragraph = doc.add_paragraph()
@@ -1616,12 +1622,12 @@ def generate_secretariat_lpj(output_path, config_data):
         for line in text.splitlines() or [""]:
             paragraph = doc.add_paragraph()
             paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            paragraph.paragraph_format.line_spacing = 1.15
-            paragraph.paragraph_format.space_after = Pt(3)
+            paragraph.paragraph_format.line_spacing = 1.5
+            paragraph.paragraph_format.space_after = Pt(6)
             paragraph.paragraph_format.first_line_indent = Cm(0.7)
-            format_run(paragraph.add_run(line.strip()), size_pt=11)
+            format_run(paragraph.add_run(line.strip()), size_pt=12)
 
-    add_section("A. KEADAAN OBJEKTIF KOMISI")
+    add_section("A. KEADAAN OBJEKTIF SEKRETARIAT")
     add_body(config_data.get("keadaan_objektif", ""))
 
     add_section("B. SUSUNAN KEANGGOTAAN")
@@ -1629,30 +1635,12 @@ def generate_secretariat_lpj(output_path, config_data):
     if not membership:
         add_body("Belum ada data keanggotaan.")
     else:
-        table = doc.add_table(rows=1, cols=3)
-        table.style = "Table Grid"
-        headers = ["No.", "Nama", "Jabatan"]
-        widths = [Cm(1.0), Cm(8.0), Cm(7.5)]
-        for index, text in enumerate(headers):
-            cell = table.rows[0].cells[index]
-            cell.text = text
-            cell.width = widths[index]
-            set_cell_shading(cell, "D9E5F2")
-            set_cell_margins(cell)
-            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-            format_run(cell.paragraphs[0].runs[0], size_pt=10, bold=True)
-        for index, member in enumerate(membership, 1):
-            cells = table.add_row().cells
-            values = [str(index), member.get("nama", ""), member.get("jabatan", "")]
-            for col_index, value in enumerate(values):
-                cells[col_index].text = str(value)
-                cells[col_index].width = widths[col_index]
-                set_cell_margins(cells[col_index])
-                for paragraph in cells[col_index].paragraphs:
-                    paragraph.paragraph_format.space_after = Pt(0)
-                    for run in paragraph.runs:
-                        format_run(run, size_pt=10)
-            cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        membership_fields = [
+            (str(member.get("jabatan", "")).strip() or "Anggota", str(member.get("nama", "")).strip())
+            for member in membership
+        ]
+        table = doc.add_table(rows=len(membership_fields), cols=3)
+        render_table_rows(table, membership_fields, bold_label=False)
 
     categories = [
         ("L", "SURAT KELUAR (EKSTERNAL)", "Tanggal", "Dituju Kepada"),
@@ -1667,11 +1655,11 @@ def generate_secretariat_lpj(output_path, config_data):
         subheading.paragraph_format.space_before = Pt(8)
         subheading.paragraph_format.space_after = Pt(4)
         subheading.paragraph_format.keep_with_next = True
-        format_run(subheading.add_run(category), size_pt=11, bold=True)
+        format_run(subheading.add_run(category), size_pt=12, bold=True)
 
         table = doc.add_table(rows=1, cols=5)
         table.style = "Table Grid"
-        widths = [Cm(0.8), Cm(2.4), Cm(4.0), Cm(4.2), Cm(5.1)]
+        widths = [Cm(0.8), Cm(2.0), Cm(2.8), Cm(3.0), Cm(5.4)]
         headers = ["No.", date_label, "Nomor Surat", "Perihal", party_label]
         header_row = table.rows[0]
         tr_properties = header_row._tr.get_or_add_trPr()
@@ -1685,7 +1673,7 @@ def generate_secretariat_lpj(output_path, config_data):
             set_cell_shading(cell, "D9E5F2")
             set_cell_margins(cell, top=80, bottom=80, left=90, right=90)
             cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-            format_run(cell.paragraphs[0].runs[0], size_pt=8, bold=True)
+            format_run(cell.paragraphs[0].runs[0], size_pt=12, bold=True)
 
         rows = letters.get(code, [])
         if not rows:
@@ -1694,7 +1682,7 @@ def generate_secretariat_lpj(output_path, config_data):
             row.cells[0].text = "Tidak ada surat pada kategori ini."
             row.cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             set_cell_margins(row.cells[0])
-            format_run(row.cells[0].paragraphs[0].runs[0], size_pt=9)
+            format_run(row.cells[0].paragraphs[0].runs[0], size_pt=12)
         for index, letter in enumerate(rows, 1):
             row = table.add_row()
             date_value = letter.get("tanggal_dikirim") or "—"
@@ -1715,7 +1703,7 @@ def generate_secretariat_lpj(output_path, config_data):
                 for paragraph in cell.paragraphs:
                     paragraph.paragraph_format.space_after = Pt(0)
                     for run in paragraph.runs:
-                        format_run(run, size_pt=8)
+                        format_run(run, size_pt=12)
                 if col_index < 2:
                     cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
