@@ -9,6 +9,10 @@ import re
 import json
 import zipfile
 import tempfile
+import shutil
+from copy import deepcopy
+from io import BytesIO
+from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
 
 def clean_currency(val):
     if val is None:
@@ -102,12 +106,19 @@ def resolve_photo_path(photo_path):
         return _download_to_temp(photo_path)
     if os.path.exists(photo_path) and os.path.isfile(photo_path):
         return photo_path
-    uploads_pos = photo_path.find('uploads/')
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    normalized_path = photo_path.replace('\\', '/').lstrip('/')
+    uploads_pos = normalized_path.find('uploads/')
     if uploads_pos != -1:
-        rel_path = photo_path[uploads_pos:]
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        local_path = os.path.join(project_root, rel_path)
-        if os.path.exists(local_path) and os.path.isfile(local_path):
+        rel_path = normalized_path[uploads_pos:]
+        local_candidates = [
+            os.path.join(project_root, rel_path),
+            os.path.join(project_root, rel_path[len('uploads/'):])
+        ]
+    else:
+        local_candidates = [os.path.join(project_root, 'uploads', normalized_path)]
+    for local_path in local_candidates:
+        if os.path.isfile(local_path):
             return local_path
     # Fallback: try S3 public URL if configured
     s3_public_url = os.environ.get("S3_PUBLIC_URL", "")
@@ -2322,12 +2333,271 @@ def consolidate_lpj(output_path, file_list):
     master_doc.save(output_path)
     return True
 
+def add_consolidated_cover(doc, triwulan, periode):
+    p_title = doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_title.paragraph_format.line_spacing = 1.15
+    p_title.paragraph_format.space_before = Pt(72)
+    p_title.paragraph_format.space_after = Pt(18)
+
+    if triwulan == "MUBESMA":
+        title = "LAPORAN PERTANGGUNGJAWABAN MUBESMA"
+    else:
+        title = f"LAPORAN PERTANGGUNGJAWABAN TRIWULAN {triwulan}"
+    format_run(p_title.add_run(f"{title}\n"), size_pt=14, bold=True)
+    format_run(p_title.add_run("BADAN PERWAKILAN MAHASISWA\n"), size_pt=14, bold=True)
+    format_run(p_title.add_run(f"INSTBUNAS MAJALENGKA\nPERIODE {extract_periode_years(periode)}"), size_pt=14, bold=True)
+
+    logo_path = get_bpm_logo_path()
+    if not logo_path:
+        raise FileNotFoundError("Logo BPM tidak ditemukan pada assets/images/favicon.")
+    p_logo = doc.add_paragraph()
+    p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_logo.paragraph_format.space_before = Pt(48)
+    p_logo.paragraph_format.space_after = Pt(48)
+    p_logo.add_run().add_picture(logo_path, width=Cm(6.5))
+    doc.add_page_break()
+
+def add_toc_page_reference(paragraph, bookmark_name):
+    run = paragraph.add_run()
+    begin = OxmlElement('w:fldChar')
+    begin.set(qn('w:fldCharType'), 'begin')
+    run._r.append(begin)
+
+    run = paragraph.add_run()
+    instruction = OxmlElement('w:instrText')
+    instruction.set(qn('xml:space'), 'preserve')
+    instruction.text = f" PAGEREF {bookmark_name} \\h "
+    run._r.append(instruction)
+
+    run = paragraph.add_run()
+    separate = OxmlElement('w:fldChar')
+    separate.set(qn('w:fldCharType'), 'separate')
+    run._r.append(separate)
+    format_run(run, size_pt=12)
+    run.add_text("1")
+
+    run = paragraph.add_run()
+    end = OxmlElement('w:fldChar')
+    end.set(qn('w:fldCharType'), 'end')
+    run._r.append(end)
+
+def add_bookmark(paragraph, name, bookmark_id):
+    start = OxmlElement('w:bookmarkStart')
+    start.set(qn('w:id'), str(bookmark_id))
+    start.set(qn('w:name'), name)
+    end = OxmlElement('w:bookmarkEnd')
+    end.set(qn('w:id'), str(bookmark_id))
+
+    insert_at = 1 if paragraph._p.pPr is not None else 0
+    paragraph._p.insert(insert_at, start)
+    paragraph._p.append(end)
+
+def append_generated_document(target_doc, source_doc, bookmark_name, bookmark_id):
+    body = source_doc._element.body
+    source_elements = [child for child in body if child.tag != qn('w:sectPr')]
+    first_paragraph = next(
+        (element for element in source_elements if element.tag == qn('w:p')),
+        None
+    )
+    if first_paragraph is None:
+        raise ValueError("Dokumen LPJ hasil generate tidak memiliki paragraf isi.")
+    add_bookmark(
+        docx.text.paragraph.Paragraph(first_paragraph, source_doc),
+        bookmark_name,
+        bookmark_id
+    )
+
+    relationship_map = {}
+    target_body = target_doc._element.body
+    for element in source_elements:
+        copied_element = deepcopy(element)
+        for blip in copied_element.iter(qn('a:blip')):
+            for relationship_attribute in (qn('r:embed'), qn('r:link')):
+                relationship_id = blip.get(relationship_attribute)
+                if not relationship_id:
+                    continue
+                if relationship_id not in relationship_map:
+                    image_part = source_doc.part.related_parts[relationship_id]
+                    target_relationship_id, _ = target_doc.part.get_or_add_image(
+                        BytesIO(image_part.blob)
+                    )
+                    relationship_map[relationship_id] = target_relationship_id
+                blip.set(relationship_attribute, relationship_map[relationship_id])
+        target_body.insert(len(target_body) - 1, copied_element)
+
+def calculate_budget_summary(config_data):
+    transactions = config_data.get("anggaran", [])
+    if not isinstance(transactions, list):
+        transactions = []
+    debet = sum(clean_currency(row.get("debet", 0)) for row in transactions if isinstance(row, dict))
+    kredit = sum(clean_currency(row.get("kredit", 0)) for row in transactions if isinstance(row, dict))
+    saldo_values = [
+        clean_currency(row.get("saldo", 0))
+        for row in transactions
+        if isinstance(row, dict) and row.get("saldo") not in (None, "")
+    ]
+    saldo = saldo_values[-1] if saldo_values else debet - kredit
+    return {"debet": debet, "kredit": kredit, "saldo": saldo}
+
+def add_consolidated_budget_summary(doc, configs, triwulan):
+    is_mubesma = triwulan == "MUBESMA"
+    chapter = int_to_roman(len(configs) + 1) if is_mubesma else chr(65 + len(configs))
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.paragraph_format.space_before = Pt(12)
+    title.paragraph_format.space_after = Pt(12)
+    title.paragraph_format.keep_with_next = True
+    format_run(title.add_run(f"{chapter}. RINGKASAN ANGGARAN TERPADU BPM INSTBUNAS"), size_pt=12, bold=True)
+
+    table = doc.add_table(rows=1, cols=4)
+    table.style = 'Table Grid'
+    headers = ["Komisi", "Total Debet", "Total Kredit", "Saldo"]
+    for index, header in enumerate(headers):
+        cell = table.rows[0].cells[index]
+        cell.text = header
+        set_cell_shading(cell, "D3D3D3")
+        set_cell_margins(cell, top=100, bottom=100, left=120, right=120)
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        format_run(cell.paragraphs[0].runs[0], size_pt=12, bold=True)
+
+    totals = {"debet": 0, "kredit": 0, "saldo": 0}
+    for config in configs:
+        summary = calculate_budget_summary(config)
+        totals["debet"] += summary["debet"]
+        totals["kredit"] += summary["kredit"]
+        totals["saldo"] += summary["saldo"]
+        row = table.add_row().cells
+        row[0].text = format_kementerian_title(config["cover"].get("kementerian", ""))
+        row[1].text = format_currency(summary["debet"])
+        row[2].text = format_currency(summary["kredit"])
+        row[3].text = format_currency(summary["saldo"])
+        for index, cell in enumerate(row):
+            set_cell_margins(cell, top=80, bottom=80, left=100, right=100)
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT if index else WD_ALIGN_PARAGRAPH.LEFT
+
+    total_row = table.add_row().cells
+    total_row[0].text = "GRAND TOTAL"
+    total_row[1].text = format_currency(totals["debet"])
+    total_row[2].text = format_currency(totals["kredit"])
+    total_row[3].text = format_currency(totals["saldo"])
+    for index, cell in enumerate(total_row):
+        set_cell_shading(cell, "EAEAEA")
+        set_cell_margins(cell, top=100, bottom=100, left=100, right=100)
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT if index else WD_ALIGN_PARAGRAPH.LEFT
+        for run in cell.paragraphs[0].runs:
+            format_run(run, size_pt=12, bold=True)
+
+def consolidate_lpj_data(output_path, configs):
+    if not isinstance(configs, list) or not configs:
+        raise ValueError("Tidak ada data LPJ yang dapat dikonsolidasikan.")
+
+    triwulan_values = {
+        str(config.get("cover", {}).get("triwulan", "")).strip().upper()
+        for config in configs
+    }
+    if len(triwulan_values) != 1 or not next(iter(triwulan_values)):
+        raise ValueError("Semua LPJ terpilih harus memiliki jenis triwulan yang sama.")
+    triwulan = next(iter(triwulan_values))
+
+    temp_dir = tempfile.mkdtemp(prefix="lpj_consolidate_")
+    downloaded_images = set()
+    try:
+        source_paths = []
+        for index, config in enumerate(configs, 1):
+            for proker in config.get("proker_terlaksana", []):
+                if not isinstance(proker, dict):
+                    continue
+                for image_group in ("dokumentasi", "nota_belanja"):
+                    for image in proker.get(image_group, []) or []:
+                        if not isinstance(image, dict) or not image.get("file_path"):
+                            continue
+                        original_path = image["file_path"]
+                        resolved_path = resolve_photo_path(original_path)
+                        if not resolved_path:
+                            raise FileNotFoundError(
+                                f"Foto LPJ {config['cover'].get('kementerian', '')} tidak dapat dibaca: {original_path}"
+                            )
+                        if original_path.startswith(("http://", "https://")):
+                            downloaded_images.add(resolved_path)
+                        image["file_path"] = resolved_path
+
+            source_path = os.path.join(temp_dir, f"BPM_LPJ_{index}.docx")
+            if not generate_lpj(source_path, config):
+                raise RuntimeError(f"Gagal membuat dokumen LPJ {config['cover'].get('kementerian', '')}.")
+            source_paths.append(source_path)
+
+        master_doc = docx.Document()
+        set_document_formatting(master_doc)
+        first_config = configs[0]
+        add_consolidated_cover(
+            master_doc,
+            triwulan,
+            first_config.get("cover", {}).get("periode", "")
+        )
+
+        toc_title = master_doc.add_paragraph()
+        toc_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        toc_title.paragraph_format.space_after = Pt(18)
+        format_run(toc_title.add_run("DAFTAR ISI"), size_pt=14, bold=True)
+
+        for index, config in enumerate(configs, 1):
+            name = format_kementerian_title(config.get("cover", {}).get("kementerian", ""))
+            paragraph = master_doc.add_paragraph()
+            paragraph.paragraph_format.line_spacing = 1.5
+            paragraph.paragraph_format.tab_stops.add_tab_stop(
+                Cm(13.5),
+                WD_TAB_ALIGNMENT.RIGHT,
+                WD_TAB_LEADER.DOTS
+            )
+            run = paragraph.add_run(f"LAPORAN PERTANGGUNGJAWABAN {name}\t")
+            format_run(run, size_pt=12)
+            add_toc_page_reference(paragraph, f"lpj_{index}")
+
+        summary_chapter = int_to_roman(len(configs) + 1) if triwulan == "MUBESMA" else chr(65 + len(configs))
+        paragraph = master_doc.add_paragraph()
+        paragraph.paragraph_format.line_spacing = 1.5
+        paragraph.paragraph_format.tab_stops.add_tab_stop(
+            Cm(13.5),
+            WD_TAB_ALIGNMENT.RIGHT,
+            WD_TAB_LEADER.DOTS
+        )
+        run = paragraph.add_run(f"{summary_chapter}. RINGKASAN ANGGARAN TERPADU BPM\t")
+        format_run(run, size_pt=12)
+        add_toc_page_reference(paragraph, "lpj_budget_summary")
+        master_doc.add_page_break()
+
+        for index, source_path in enumerate(source_paths, 1):
+            if index > 1:
+                master_doc.add_page_break()
+            source_doc = docx.Document(source_path)
+            append_generated_document(master_doc, source_doc, f"lpj_{index}", index)
+
+        master_doc.add_page_break()
+        summary_title = master_doc.add_paragraph()
+        add_bookmark(summary_title, "lpj_budget_summary", len(configs) + 1)
+        add_consolidated_budget_summary(master_doc, configs, triwulan)
+        add_document_footer(master_doc, triwulan)
+        update_fields = master_doc.settings.element.find(qn('w:updateFields'))
+        if update_fields is None:
+            update_fields = OxmlElement('w:updateFields')
+            master_doc.settings.element.append(update_fields)
+        update_fields.set(qn('w:val'), 'true')
+        master_doc.save(output_path)
+        return True
+    finally:
+        for image_path in downloaded_images:
+            if os.path.isfile(image_path):
+                os.remove(image_path)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage:")
         print("  python3 scratch/bpm_lpj_manager.py validate <file_path>")
         print("  python3 scratch/bpm_lpj_manager.py generate <output_path> <input_json_path>")
         print("  python3 scratch/bpm_lpj_manager.py consolidate <output_path> <file1> <file2> ...")
+        print("  python3 scratch/bpm_lpj_manager.py consolidate-data <output_path> <input_json_path>")
         sys.exit(1)
         
     action = sys.argv[1].lower()
@@ -2376,6 +2646,16 @@ if __name__ == "__main__":
         out_path = sys.argv[2]
         files = sys.argv[3:]
         success = consolidate_lpj(out_path, files)
+        if success:
+            print(f"Consolidated LPJ successfully created at: {out_path}")
+        else:
+            print("Failed to consolidate LPJ files.")
+    elif action == "consolidate-data":
+        out_path = sys.argv[2]
+        json_path = sys.argv[3]
+        with open(json_path, 'r', encoding='utf-8') as input_file:
+            configs = json.load(input_file)
+        success = consolidate_lpj_data(out_path, configs)
         if success:
             print(f"Consolidated LPJ successfully created at: {out_path}")
         else:
