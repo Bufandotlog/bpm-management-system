@@ -281,72 +281,64 @@ if (isset($_GET['ajax_get_berita_acara_id'])) {
 
 require_once __DIR__ . '/../core/header.php';
 
-function get_points_array($val) {
-    if (empty($val)) {
+function flatten_points_input($value) {
+    if (is_array($value)) {
+        $points = [];
+        foreach ($value as $item) {
+            $points = array_merge($points, flatten_points_input($item));
+        }
+        return $points;
+    }
+
+    if (!is_scalar($value)) {
         return [];
     }
-    if (is_string($val) && strpos($val, '[') === 0) {
-        $decoded = json_decode($val, true);
+
+    $text = trim((string)$value);
+    if ($text === '') {
+        return [];
+    }
+
+    for ($depth = 0; $depth < 8; $depth++) {
+        if ($text[0] !== '[' && $text[0] !== '"') {
+            break;
+        }
+        $decoded = json_decode($text, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            break;
+        }
         if (is_array($decoded)) {
-            return $decoded;
+            return flatten_points_input($decoded);
+        }
+        if (!is_string($decoded) || $decoded === $text) {
+            break;
+        }
+        $text = trim($decoded);
+        if ($text === '') {
+            return [];
         }
     }
-    if (is_array($val)) {
-        return $val;
+
+    if (strpos($text, "\n") !== false || strpos($text, "\r") !== false) {
+        $points = [];
+        foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
+            $points = array_merge($points, flatten_points_input($line));
+        }
+        return $points;
     }
-    $str_val = trim((string)$val);
-    if ($str_val === '') {
-        return [];
-    }
-    if (strpos($str_val, "\n") !== false) {
-        return array_filter(array_map('trim', explode("\n", $str_val)));
-    }
-    return [$str_val];
+
+    return [$text];
+}
+
+function get_points_array($val) {
+    return flatten_points_input($val);
 }
 
 function normalize_points_input($val) {
-    if (empty($val)) {
-        return [];
-    }
-    if (is_string($val) && strpos($val, '[') === 0) {
-        $decoded = json_decode($val, true);
-        if (is_array($decoded)) {
-            $cleaned = [];
-            foreach ($decoded as $item) {
-                $item_str = trim((string)$item);
-                if ($item_str !== '') {
-                    $cleaned[] = sanitizeText($item_str, 500);
-                }
-            }
-            return $cleaned;
-        }
-    }
-    if (is_array($val)) {
-        $cleaned = [];
-        foreach ($val as $item) {
-            $item_str = trim((string)$item);
-            if ($item_str !== '') {
-                $cleaned[] = sanitizeText($item_str, 500);
-            }
-        }
-        return $cleaned;
-    }
-    $str_val = trim((string)$val);
-    if ($str_val === '') {
-        return [];
-    }
-    if (strpos($str_val, "\n") !== false) {
-        $lines = explode("\n", $str_val);
-        $cleaned = [];
-        foreach ($lines as $line) {
-            $line_str = trim($line);
-            if ($line_str !== '') {
-                $cleaned[] = sanitizeText($line_str, 500);
-            }
-        }
-        return $cleaned;
-    }
-    return [sanitizeText($str_val, 500)];
+    return array_values(array_map(
+        static fn($point) => sanitizeText($point, 500),
+        array_filter(flatten_points_input($val), static fn($point) => trim($point) !== '')
+    ));
 }
 
 $periode_id = getUserPeriode();
@@ -661,11 +653,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Tempat Kegiatan' => sanitizeText($pbt_tempats[$i] ?? ''),
                     'Sifat' => sanitizeText($pbt_sifats[$i] ?? ''),
                     'Tema Kegiatan' => sanitizeText($pbt_temas[$i] ?? ''),
-                    'Tujuan Kegiatan' => sanitizeText($pbt_tujuans[$i] ?? ''),
+                    'Tujuan Kegiatan' => normalize_points_input($pbt_tujuans[$i] ?? ''),
                     'Tanggal Kegiatan' => sanitizeText($pbt_tanggals[$i] ?? ''),
                     'Penanggung Jawab' => sanitizeText($pbt_pjs[$i] ?? ''),
-                    'Peserta Kegiatan' => sanitizeText($pbt_pesertas[$i] ?? ''),
-                    'Hambatan & Kendala' => sanitizeText($pbt_dokuments[$i] ?? '')
+                    'Peserta Kegiatan' => normalize_points_input($pbt_pesertas[$i] ?? ''),
+                    'Hambatan & Kendala' => normalize_points_input($pbt_dokuments[$i] ?? '')
                 ];
             }
         }
@@ -3287,15 +3279,15 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
             
             // For multipoint inputs (tujuan, peserta, evaluasi)
             const tujuanHidden = div.querySelector('.pt-tujuan-hidden');
-            const tujuanArr = Array.isArray(ptData['Tujuan']) ? ptData['Tujuan'] : (ptData['Tujuan'] ? [ptData['Tujuan']] : []);
+            const tujuanArr = normalizePointValues(ptData['Tujuan']);
             tujuanHidden.value = JSON.stringify(tujuanArr);
             
             const pesertaHidden = div.querySelector('.pt-peserta-hidden');
-            const pesertaArr = Array.isArray(ptData['Peserta Kegiatan']) ? ptData['Peserta Kegiatan'] : (ptData['Peserta Kegiatan'] ? [ptData['Peserta Kegiatan']] : []);
+            const pesertaArr = normalizePointValues(ptData['Peserta Kegiatan']);
             pesertaHidden.value = JSON.stringify(pesertaArr);
             
             const evaluasiHidden = div.querySelector('.pt-evaluasi-hidden');
-            const evaluasiArr = Array.isArray(ptData['Evaluasi']) ? ptData['Evaluasi'] : (ptData['Evaluasi'] ? [ptData['Evaluasi']] : (ptData['Evaluasi & Saran'] ? [ptData['Evaluasi & Saran']] : []));
+            const evaluasiArr = normalizePointValues(ptData['Evaluasi'] || ptData['Evaluasi & Saran']);
             evaluasiHidden.value = JSON.stringify(evaluasiArr);
             
             // Budget
@@ -3538,15 +3530,15 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
             div.querySelector('input[name="pbt_tema[]"]').value = pbtData['Tema Kegiatan'] || '';
             // Tujuan multipoint
             const pbtTujuanData = pbtData['Tujuan Kegiatan'] || '';
-            const pbtTujuanArr = Array.isArray(pbtTujuanData) ? pbtTujuanData : (pbtTujuanData ? [pbtTujuanData] : []);
+            const pbtTujuanArr = normalizePointValues(pbtTujuanData);
             div.querySelector('.pbt-tujuan-hidden').value = JSON.stringify(pbtTujuanArr);
             // Peserta multipoint
             const pbtPesertaData = pbtData['Peserta Kegiatan'] || pbtData['Peserta Rencana'] || '';
-            const pbtPesertaArr = Array.isArray(pbtPesertaData) ? pbtPesertaData : (pbtPesertaData ? [pbtPesertaData] : []);
+            const pbtPesertaArr = normalizePointValues(pbtPesertaData);
             div.querySelector('.pbt-peserta-hidden').value = JSON.stringify(pbtPesertaArr);
             // Kendala multipoint
             const pbtKendalaData = pbtData['Hambatan & Kendala'] || pbtData['Dokumentasi'] || '';
-            const pbtKendalaArr = Array.isArray(pbtKendalaData) ? pbtKendalaData : (pbtKendalaData ? [pbtKendalaData] : []);
+            const pbtKendalaArr = normalizePointValues(pbtKendalaData);
             div.querySelector('.pbt-kendala-hidden').value = JSON.stringify(pbtKendalaArr);
             // Tanggal
             const pbtTanggal = pbtData['Tanggal Kegiatan'] || pbtData['Target Tanggal Rencana'] || '';
@@ -4624,6 +4616,42 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
 
     // --- COMPONENT CARD MULTI-POIN ---
 
+    function normalizePointValues(value) {
+        const points = [];
+        const visit = (item, depth = 0) => {
+            if (depth > 8 || item === null || item === undefined) return;
+            if (Array.isArray(item)) {
+                item.forEach((value) => visit(value, depth + 1));
+                return;
+            }
+            if (typeof item !== 'string') {
+                if (typeof item === 'number' || typeof item === 'boolean') points.push(String(item));
+                return;
+            }
+
+            let text = item.trim();
+            if (!text) return;
+            if (depth < 8 && (text[0] === '[' || text[0] === '"')) {
+                try {
+                    const decoded = JSON.parse(text);
+                    if (Array.isArray(decoded) || (typeof decoded === 'string' && decoded !== text)) {
+                        visit(decoded, depth + 1);
+                        return;
+                    }
+                } catch (error) {
+                    // Treat non-JSON text as a regular point.
+                }
+            }
+
+            text.split(/\r\n|\r|\n/).forEach((line) => {
+                const point = line.trim();
+                if (point) points.push(point);
+            });
+        };
+        visit(value);
+        return points;
+    }
+
     function initializeAllMultipoints() {
         document.querySelectorAll('.multipoint-wrapper').forEach(function(wrapper) {
             if (wrapper.dataset.initialized === 'true') return;
@@ -4633,14 +4661,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
             const container = wrapper.querySelector('.multipoint-list-container');
             const placeholder = container.dataset.placeholder || '';
             
-            let data = [];
-            try {
-                if (hiddenInput.value) {
-                    data = JSON.parse(hiddenInput.value);
-                }
-            } catch(e) {
-                console.error('Failed to parse multipoint JSON', e);
-            }
+            const data = normalizePointValues(hiddenInput.value);
             
             // Clear container
             container.innerHTML = '';

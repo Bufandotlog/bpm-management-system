@@ -87,17 +87,26 @@ if (!function_exists('parsePoints')) {
             }
             return $points;
         }
-        if (!is_scalar($val) || trim((string)$val) === '') return [];
+        if (!is_scalar($val)) return [];
 
         $text = trim((string)$val);
-        if ($text[0] === '[') {
+        if ($text === '' || $text === '—' || $text === '-') return [];
+        for ($depth = 0; $depth < 8; $depth++) {
+            if ($text[0] !== '[' && $text[0] !== '"') break;
             $decoded = json_decode($text, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                return parsePoints($decoded);
-            }
+            if (json_last_error() !== JSON_ERROR_NONE) break;
+            if (is_array($decoded)) return parsePoints($decoded);
+            if (!is_string($decoded) || $decoded === $text) break;
+            $text = trim($decoded);
+            if ($text === '') return [];
         }
 
-        return array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $text))));
+        $points = [];
+        foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
+            $line = trim($line);
+            if ($line !== '') $points[] = $line;
+        }
+        return $points;
     }
 }
 
@@ -847,9 +856,20 @@ if (!function_exists('cleanPointPrefix')) {
                                 <td><?php echo htmlspecialchars($pk['Anggaran'] ?? '—'); ?></td>
                             </tr>
                             <tr>
-                                <td class="col-label">i.&nbsp;&nbsp;Dokumentasi</td>
+                                <td class="col-label">i.&nbsp;&nbsp;Hambatan &amp; Kendala</td>
                                 <td class="col-colon">:</td>
-                                <td><?php echo htmlspecialchars($pk['Dokumentasi'] ?? '—'); ?></td>
+                                <td>
+                                    <?php
+                                    $kendala = parsePoints($pk['Hambatan & Kendala'] ?? $pk['Dokumentasi'] ?? '');
+                                    if (count($kendala) === 1) {
+                                        echo htmlspecialchars($kendala[0]);
+                                    } else {
+                                        foreach ($kendala as $k_idx => $k_val) {
+                                            echo '<div class="list-item-justify"><span class="item-no">' . ($k_idx + 1) . '.</span><span class="item-text">' . htmlspecialchars(cleanPointPrefix($k_val)) . '</span></div>';
+                                        }
+                                    }
+                                    ?>
+                                </td>
                             </tr>
                         </table>
                     </div>

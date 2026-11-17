@@ -310,11 +310,13 @@ def set_table_indent(table, indent_cm):
             tblPr.remove(existing_ind)
         tblPr.append(tblInd)
 
-def parse_points(val):
+def parse_points(val, depth=0):
+    if depth > 8:
+        return []
     if isinstance(val, list):
         items = []
         for item in val:
-            items.extend(parse_points(item))
+            items.extend(parse_points(item, depth + 1))
         return items
 
     if val is None or not isinstance(val, (str, int, float)):
@@ -323,13 +325,15 @@ def parse_points(val):
     if not val_str or val_str in ["—", "-"]:
         return []
 
-    if val_str.startswith('['):
+    if val_str.startswith(('[', '"')):
         try:
             decoded = json.loads(val_str)
         except json.JSONDecodeError:
             decoded = None
         if isinstance(decoded, list):
-            return parse_points(decoded)
+            return parse_points(decoded, depth + 1)
+        if isinstance(decoded, str) and decoded != val_str:
+            return parse_points(decoded, depth + 1)
 
     lines = [line.strip() for line in re.split(r'\r\n|\r|\n', val_str) if line.strip()]
     items = []
@@ -1478,7 +1482,7 @@ def generate_lpj(output_path, config_data):
             ("Penanggung Jawab", pk.get("Penanggung Jawab", "—")),
             ("Peserta Kegiatan", pk.get("Peserta Kegiatan", "—")),
             ("Anggaran", pk.get("Anggaran", "—")),
-            ("Dokumentasi", pk.get("Dokumentasi", "—"))
+            ("Hambatan & Kendala", pk.get("Hambatan & Kendala", pk.get("Dokumentasi", "—")))
         ]
         render_table_rows(table, fields, indent_cm=INDENT_PROKER, bold_label=False, prefix_alpha=True)
             
@@ -2332,7 +2336,7 @@ def consolidate_lpj(output_path, file_list):
                 ("Penanggung Jawab", pk.get("Penanggung Jawab", "—")),
                 ("Peserta Kegiatan", pk.get("Peserta Kegiatan", "—")),
                 ("Anggaran", pk.get("Anggaran", "—")),
-                ("Dokumentasi", pk.get("Dokumentasi", "—"))
+                ("Hambatan & Kendala", pk.get("Hambatan & Kendala", pk.get("Dokumentasi", "—")))
             ]
             render_table_rows(table, fields)
             
