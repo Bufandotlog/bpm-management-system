@@ -17,6 +17,27 @@ $success = '';
 $search = trim($_GET['search'] ?? '');
 $params = [$periode_id];
 $types = "i";
+$sort_berita_acara = static function (array $items): array {
+    usort($items, static function (array $a, array $b): int {
+        preg_match('/^\s*(\d+)/', (string)($a['nomor_berita'] ?? ''), $a_sequence);
+        preg_match('/^\s*(\d+)/', (string)($b['nomor_berita'] ?? ''), $b_sequence);
+
+        $sequence_order = (int)($b_sequence[1] ?? 0) <=> (int)($a_sequence[1] ?? 0);
+        if ($sequence_order !== 0) {
+            return $sequence_order;
+        }
+
+        $number_order = strnatcasecmp(
+            (string)($b['nomor_berita'] ?? ''),
+            (string)($a['nomor_berita'] ?? '')
+        );
+        return $number_order !== 0
+            ? $number_order
+            : ((int)($b['id'] ?? 0) <=> (int)($a['id'] ?? 0));
+    });
+
+    return $items;
+};
 $sql_query = "SELECT * FROM arsip_berita_acara WHERE periode_id = ?";
 
 if ($search !== '') {
@@ -27,7 +48,7 @@ if ($search !== '') {
 }
 
 $sql_query .= " ORDER BY id DESC";
-$list_berita_acara = dbFetchAll($sql_query, $params, $types);
+$list_berita_acara = $sort_berita_acara(dbFetchAll($sql_query, $params, $types));
 
 // Handle Export Excel (Must be done before header.php is loaded to prevent HTML pollution)
 if (isset($_GET['export']) && $_GET['export'] === 'excel') {
@@ -88,7 +109,7 @@ if (isset($_GET['hapus']) && is_numeric($_GET['hapus'])) {
             $success = "Arsip berita acara beserta seluruh file fotonya berhasil dihapus.";
             
             // Refresh list
-            $list_berita_acara = dbFetchAll($sql_query, $params, $types);
+            $list_berita_acara = $sort_berita_acara(dbFetchAll($sql_query, $params, $types));
         } else {
             $error = "Data tidak ditemukan atau akses ditolak.";
         }
