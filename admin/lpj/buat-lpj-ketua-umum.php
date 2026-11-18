@@ -26,13 +26,21 @@ $savedMembership = is_array($savedMembership) ? $savedMembership : [];
 $membership = [];
 $bphStructures = dbFetchAll('SELECT id, nama, posisi, jabatan, urutan FROM struktur_bph WHERE periode_id = ? ORDER BY urutan ASC, id ASC', [$periode_id], 'i');
 foreach ($bphStructures as $structure) {
-    $position = strtolower((string)$structure['posisi']);
+    $position = strtolower(trim((string)$structure['posisi']));
     $group = 'Badan Pengurus Harian';
-    $jabatan = (string)($structure['jabatan'] ?: $structure['nama']);
-    $row = ['nama' => (string)$structure['nama'], 'jabatan' => $jabatan, 'nim' => '', 'kelas' => '', 'gender' => '', 'group' => $group, 'source' => 'bph:'.$structure['id']];
-    $key = 'bph:' . (int)$structure['id'];
-    if (isset($savedMembership[$key])) $row = array_merge($row, $savedMembership[$key]);
-    $membership[$key] = $row;
+
+    // struktur_bph for Sekretaris Umum and Bendahara Umum is a header/office record,
+    // while real people are stored in anggota_bph. Including the header here creates
+    // placeholder rows such as "Sekretaris Umum" and "Bendahara Umum".
+    $placeholderPositions = ['sekretaris_umum', 'bendahara_umum'];
+    if (!in_array($position, $placeholderPositions, true)) {
+        $jabatan = (string)($structure['jabatan'] ?: $structure['nama']);
+        $row = ['nama' => (string)$structure['nama'], 'jabatan' => $jabatan, 'nim' => '', 'kelas' => '', 'gender' => '', 'group' => $group, 'source' => 'bph:'.$structure['id']];
+        $key = 'bph:' . (int)$structure['id'];
+        if (isset($savedMembership[$key])) $row = array_merge($row, $savedMembership[$key]);
+        $membership[$key] = $row;
+    }
+
     $members = dbFetchAll('SELECT id, nama, jabatan, urutan FROM anggota_bph WHERE bph_id = ? AND periode_id = ? ORDER BY urutan ASC, id ASC', [(int)$structure['id'], $periode_id], 'ii');
     foreach ($members as $member) {
         $key = 'bph_member:' . (int)$member['id'];
