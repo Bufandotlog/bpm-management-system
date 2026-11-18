@@ -2823,12 +2823,119 @@ def consolidate_lpj_data(output_path, configs):
                 os.remove(image_path)
         shutil.rmtree(temp_dir, ignore_errors=True)
 
+def generate_chairperson_lpj(output_path, config_data):
+    try:
+        doc = docx.Document()
+        section = doc.sections[0]
+        section.page_width = Cm(21)
+        section.page_height = Cm(29.7)
+        section.top_margin = Cm(2)
+        section.bottom_margin = Cm(2)
+        section.left_margin = Cm(2.5)
+        section.right_margin = Cm(2)
+
+        normal = doc.styles["Normal"]
+        normal.font.name = "Times New Roman"
+        normal.font.size = Pt(11)
+        normal.paragraph_format.line_spacing = 1.15
+
+        cover = config_data.get("cover", {})
+        triwulan = str(cover.get("triwulan", "I")).upper()
+        period_title = "MUBESMA" if triwulan == "MUBESMA" else f"TRIWULAN {triwulan}"
+        title = doc.add_paragraph()
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title.add_run("LAPORAN PERTANGGUNGJAWABAN " + period_title).bold = True
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.add_run("Ketua Umum BPM").bold = True
+
+        def heading(text):
+            p = doc.add_paragraph()
+            r = p.add_run(text)
+            r.bold = True
+            r.font.size = Pt(12)
+            return p
+
+        def add_text(text):
+            p = doc.add_paragraph(str(text or ""))
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+        heading("A. PENDAHULUAN")
+        add_text(config_data.get("keadaan_objektif", ""))
+
+        heading("B. SUSUNAN KEPENGURUSAN")
+        table = doc.add_table(rows=1, cols=6)
+        table.style = "Table Grid"
+        headers = ["No.", "Nama", "NIM", "Kelas", "L/P", "Jabatan"]
+        for i, value in enumerate(headers):
+            table.rows[0].cells[i].text = value
+        current_group = None
+        number = 1
+        membership = config_data.get("keanggotaan", {})
+        if isinstance(membership, list):
+            membership = {str(i): row for i, row in enumerate(membership)}
+        for row in membership.values():
+            if not isinstance(row, dict):
+                continue
+            group = str(row.get("group", ""))
+            if group != current_group:
+                current_group = group
+                row_cells = table.add_row().cells
+                merged = row_cells[0].merge(row_cells[-1])
+                merged.text = group.upper()
+            cells = table.add_row().cells
+            values = [str(number), str(row.get("nama", "")), str(row.get("nim", "")), str(row.get("kelas", "")), str(row.get("gender", "")), str(row.get("jabatan", ""))]
+            for i, value in enumerate(values):
+                cells[i].text = value
+            number += 1
+
+        heading("C. PENCAPAIAN VISI DAN MISI")
+        add_text("Visi: " + str(config_data.get("visi", "")))
+        for i, mission in enumerate(config_data.get("misi", []), start=1):
+            add_text(f"Misi {i}: {mission}")
+        matrix = doc.add_table(rows=1, cols=4)
+        matrix.style = "Table Grid"
+        for i, value in enumerate(["Misi", "Indikator Pencapaian", "Implementasi", "Hasil/Capaian"]):
+            matrix.rows[0].cells[i].text = value
+        for row in config_data.get("pencapaian_visi_misi", []):
+            cells = matrix.add_row().cells
+            values = [str(row.get("misi", "")), str(row.get("indikator", "")), str(row.get("implementasi", "")), str(row.get("hasil", ""))]
+            for i, value in enumerate(values):
+                cells[i].text = value
+
+        heading("D. REALISASI PROGRAM KERJA")
+        for komisi, data in config_data.get("realisasi_program_kerja", {}).items():
+            heading(str(komisi).upper())
+            matrix = doc.add_table(rows=1, cols=6)
+            matrix.style = "Table Grid"
+            headers = ["No.", "Waktu Pelaksanaan", "Nama Kegiatan", "Tempat", "Peserta", "Keterangan"]
+            for i, value in enumerate(headers):
+                matrix.rows[0].cells[i].text = value
+            number = 1
+            executed = data.get("terlaksana", []) if isinstance(data, dict) else []
+            pending = data.get("belum", []) if isinstance(data, dict) else []
+            for item in list(executed) + list(pending):
+                cells = matrix.add_row().cells
+                values = [str(number), str(item.get("waktu", "") if item in executed else "—"), str(item.get("nama", "")), str(item.get("tempat", "") if item in executed else "—"), str(item.get("peserta", "") if item in executed else "—"), str(item.get("keterangan", ""))]
+                for i, value in enumerate(values):
+                    cells[i].text = value
+                number += 1
+
+        heading("E. PENUTUP")
+        add_text(config_data.get("penutup", ""))
+        doc.save(output_path)
+        return True
+    except Exception as exc:
+        print(str(exc))
+        return False
+
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage:")
         print("  python3 scratch/bpm_lpj_manager.py validate <file_path>")
         print("  python3 scratch/bpm_lpj_manager.py generate <output_path> <input_json_path>")
         print("  python3 scratch/bpm_lpj_manager.py generate-secretary <output_path> <input_json_path>")
+        print("  python3 scratch/bpm_lpj_manager.py generate-chairperson <output_path> <input_json_path>")
         print("  python3 scratch/bpm_lpj_manager.py consolidate <output_path> <file1> <file2> ...")
         print("  python3 scratch/bpm_lpj_manager.py consolidate-data <output_path> <input_json_path>")
         sys.exit(1)
@@ -2886,6 +2993,17 @@ if __name__ == "__main__":
         else:
             print("Failed to generate secretariat LPJ.")
             
+    elif action == "generate-chairperson":
+        out_path = sys.argv[2]
+        json_path = sys.argv[3]
+        with open(json_path, 'r', encoding='utf-8') as input_file:
+            cdata = json.load(input_file)
+        success = generate_chairperson_lpj(out_path, cdata)
+        if success:
+            print(f"Chairperson LPJ successfully generated at: {out_path}")
+        else:
+            print("Failed to generate chairperson LPJ.")
+
     elif action == "consolidate":
         out_path = sys.argv[2]
         files = sys.argv[3:]

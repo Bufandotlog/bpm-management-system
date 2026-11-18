@@ -1376,6 +1376,17 @@ function requireSekretaris() {
     }
 }
 
+function isKetuaUmum(): bool {
+    $role = normalizeAppRole($_SESSION['admin_role'] ?? '');
+    return in_array($role, ['superadmin', 'admin'], true) || !empty($_SESSION['admin_can_access_all']);
+}
+
+function requireKetuaUmum(): void {
+    if (!isKetuaUmum()) {
+        redirect('admin/core/dashboard.php', 'Akses ditolak: Hanya Ketua Umum atau Superadmin yang diizinkan mengelola LPJ Ketua Umum.', 'error');
+    }
+}
+
 function isHukumAccess(): bool {
     $role = normalizeAppRole($_SESSION['admin_role'] ?? '');
     return in_array($role, ['superadmin', 'admin', 'komisi_i'], true) || !empty($_SESSION['admin_can_access_all']);
