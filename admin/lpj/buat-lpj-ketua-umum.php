@@ -78,6 +78,17 @@ $fetchRekap = static function(int $periode_id, string $triwulan): array {
         $params, $types
     );
     $rekap = [];
+    $formatPeserta = static function ($peserta): string {
+        if (!is_array($peserta)) {
+            return is_scalar($peserta) ? trim((string)$peserta) : '';
+        }
+
+        $peserta = array_map(
+            static fn($item): string => is_scalar($item) ? trim((string)$item) : '',
+            $peserta
+        );
+        return implode(', ', array_filter($peserta, static fn($item): bool => $item !== ''));
+    };
     foreach ($rows as $row) {
         $komisi = (string)$row['komisi'];
         if (!isset($rekap[$komisi])) $rekap[$komisi] = ['terlaksana' => [], 'belum' => []];
@@ -87,7 +98,7 @@ $fetchRekap = static function(int $periode_id, string $triwulan): array {
                 'waktu' => (string)($item['Tanggal Kegiatan'] ?? $item['Waktu Pelaksanaan'] ?? $item['tanggal'] ?? ''),
                 'nama' => (string)($item['Nama Kegiatan'] ?? $item['Nama Program Kerja'] ?? ''),
                 'tempat' => (string)($item['Tempat Kegiatan'] ?? $item['Tempat'] ?? ''),
-                'peserta' => (string)($item['Peserta Kegiatan'] ?? $item['Peserta'] ?? ''),
+                'peserta' => $formatPeserta($item['Peserta Kegiatan'] ?? $item['Peserta'] ?? ''),
                 'keterangan' => 'Terlaksana Dengan Baik',
                 'triwulan' => (string)$row['triwulan'],
             ];
