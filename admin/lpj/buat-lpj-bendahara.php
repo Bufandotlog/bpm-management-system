@@ -1,5 +1,5 @@
 <?php
-$page_css = 'arsip-surat';
+$page_css = 'lpj-bendahara';
 require_once __DIR__ . '/../core/header.php';
 requireBendahara();
 
@@ -353,29 +353,86 @@ $renderRows = static function (array $rows, array $fields, string $prefix): void
     <?php endforeach;
 };
 ?>
-<div class="page-header"><h1><i class="fas fa-coins"></i> LPJ Bendahara <?php echo htmlspecialchars($triwulan); ?></h1><a class="btn-secondary" href="arsip-lpj-bendahara.php">Arsip LPJ Bendahara</a></div>
+<div class="page-header treasurer-page-header"><div><h1><i class="fas fa-coins"></i> <?php echo $lpj ? 'Edit' : 'Buat'; ?> LPJ Bendahara</h1><p>Triwulan <?php echo htmlspecialchars($triwulan); ?> · Laporan keuangan Badan Pengurus Harian</p></div><a class="btn-secondary" href="arsip-lpj-bendahara.php"><i class="fas fa-archive"></i> Arsip LPJ</a></div>
 <?php if ($error !== ''): ?><div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
-<form method="POST" id="treasurerLpjForm">
+<div class="step-progress" id="treasurerStepProgress" aria-label="Tahapan pengisian LPJ">
+    <button type="button" class="step active" data-step="1"><span class="step-num">1</span><span class="step-text">Informasi Dasar</span></button>
+    <button type="button" class="step" data-step="2"><span class="step-num">2</span><span class="step-text">Keanggotaan</span></button>
+    <button type="button" class="step" data-step="3"><span class="step-num">3</span><span class="step-text">Penggunaan Dana</span></button>
+    <button type="button" class="step" data-step="4"><span class="step-num">4</span><span class="step-text">Rekapitulasi Kas</span></button>
+</div>
+<form method="POST" id="treasurerLpjForm" class="treasurer-form">
     <?php echo csrfField(); ?>
-    <section class="admin-card">
-        <div class="form-row-grid"><label>Jenis LPJ<select name="triwulan" <?php echo $lpj ? 'disabled' : ''; ?> required><?php foreach ($validTriwulan as $period): ?><option value="<?php echo $period; ?>" <?php echo $triwulan === $period ? 'selected' : ''; ?>><?php echo $period === 'MUBESMA' ? 'MUBESMA' : 'Triwulan ' . $period; ?></option><?php endforeach; ?></select><?php if ($lpj): ?><input type="hidden" name="triwulan" value="<?php echo htmlspecialchars($triwulan); ?>"><?php endif; ?></label></div>
-        <label>Keadaan objektif<textarea name="keadaan_objektif" rows="5"><?php echo htmlspecialchars($keadaanObjektif); ?></textarea></label>
+    <section class="wizard-panel active" data-step="1">
+        <div class="treasurer-card">
+            <div class="section-heading"><span class="section-icon"><i class="fas fa-clipboard-list"></i></span><div><h2>Informasi Dasar</h2><p>Lengkapi periode laporan dan gambaran kondisi keuangan bendahara.</p></div></div>
+            <div class="form-grid">
+                <label class="treasurer-field">Jenis LPJ<select name="triwulan" <?php echo $lpj ? 'disabled' : ''; ?> required><?php foreach ($validTriwulan as $period): ?><option value="<?php echo $period; ?>" <?php echo $triwulan === $period ? 'selected' : ''; ?>><?php echo $period === 'MUBESMA' ? 'MUBESMA' : 'Triwulan ' . $period; ?></option><?php endforeach; ?></select><?php if ($lpj): ?><input type="hidden" name="triwulan" value="<?php echo htmlspecialchars($triwulan); ?>"><?php endif; ?></label>
+            </div>
+            <label class="treasurer-field">Keadaan Objektif Bendahara<textarea name="keadaan_objektif" rows="6" placeholder="Jelaskan keadaan dan pengelolaan keuangan selama periode ini..."><?php echo htmlspecialchars($keadaanObjektif); ?></textarea></label>
+            <label class="treasurer-field">Penutup<textarea name="penutup" rows="5" placeholder="Tuliskan penutup laporan..."><?php echo htmlspecialchars($penutup); ?></textarea></label>
+        </div>
     </section>
-    <section class="admin-card"><h2>Keanggotaan Bendahara</h2><div class="table-responsive"><table class="admin-table"><thead><tr><th>Nama</th><th>Jabatan</th><th></th></tr></thead><tbody id="membershipRows"><?php foreach ($keanggotaan as $member): ?><tr><td><input type="text" name="anggota_nama[]" value="<?php echo htmlspecialchars((string)($member['nama'] ?? '')); ?>"></td><td><input type="text" name="anggota_jabatan[]" value="<?php echo htmlspecialchars((string)($member['jabatan'] ?? '')); ?>"></td><td><button type="button" class="btn-secondary" onclick="this.closest('tr').remove()">Hapus</button></td></tr><?php endforeach; ?></tbody></table></div><button type="button" class="btn-secondary" onclick="addMembershipRow()">Tambah Anggota</button></section>
-    <section class="admin-card"><h2>Penggunaan Dana</h2><p>Kegiatan dari LPJ komisi dimuat otomatis dan diurutkan menurut tanggal. Anda tetap dapat menambah atau mengoreksi kegiatan manual.</p><div class="table-responsive"><table class="admin-table"><thead><tr><th>Tanggal</th><th>Kunci Kegiatan</th><th>Nama Kegiatan</th><th>Sumber Dana</th><th>Uraian</th><th>Jumlah</th><th>Keterangan</th><th></th></tr></thead><tbody id="usageRows">
+    <section class="wizard-panel" data-step="2">
+        <div class="treasurer-card">
+            <div class="section-heading"><span class="section-icon"><i class="fas fa-users"></i></span><div><h2>Keanggotaan Bendahara</h2><p>Data anggota terisi dari database kepengurusan dan dapat disesuaikan.</p></div></div>
+            <div class="table-responsive"><table class="admin-table"><thead><tr><th>Nama</th><th>Jabatan</th><th class="action-column"></th></tr></thead><tbody id="membershipRows"><?php foreach ($keanggotaan as $member): ?><tr><td><input type="text" name="anggota_nama[]" value="<?php echo htmlspecialchars((string)($member['nama'] ?? '')); ?>" placeholder="Nama anggota"></td><td><input type="text" name="anggota_jabatan[]" value="<?php echo htmlspecialchars((string)($member['jabatan'] ?? '')); ?>" placeholder="Jabatan"></td><td><button type="button" class="btn-row-delete" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt"></i><span>Hapus</span></button></td></tr><?php endforeach; ?></tbody></table></div>
+            <button type="button" class="btn-add-row" onclick="addMembershipRow()"><i class="fas fa-plus"></i> Tambah Anggota</button>
+        </div>
+    </section>
+    <section class="wizard-panel" data-step="3">
+        <div class="treasurer-card">
+            <div class="section-heading"><span class="section-icon"><i class="fas fa-money-bill-wave"></i></span><div><h2>Laporan Penggunaan Dana</h2><p>Kegiatan beranggaran dari LPJ komisi ditampilkan otomatis berdasarkan tanggal. Anda juga dapat menambahkan laporan manual.</p></div></div>
+            <div class="table-responsive"><table class="admin-table"><thead><tr><th>Tanggal</th><th>Kunci Kegiatan</th><th>Nama Kegiatan</th><th>Sumber Dana</th><th>Uraian</th><th>Jumlah</th><th>Keterangan</th><th class="action-column"></th></tr></thead><tbody id="usageRows">
         <?php $renderRows($penggunaan, ['tanggal' => 'Tanggal', 'source_activity_key' => 'Kunci Kegiatan', 'nama_kegiatan' => 'Nama Kegiatan', 'sumber_dana' => 'Sumber Dana', 'uraian' => 'Uraian', 'jumlah' => 'Jumlah', 'keterangan' => 'Keterangan'], 'penggunaan'); ?>
-    </tbody></table></div><button type="button" class="btn-secondary" onclick="addFinancialRow('usageRows','penggunaan',['tanggal','source_activity_key','nama_kegiatan','sumber_dana','uraian','jumlah','keterangan'])">Tambah Penggunaan Dana</button></section>
-    <section class="admin-card"><h2>Transaksi Dana</h2><div class="table-responsive"><table class="admin-table"><thead><tr><th>Tanggal</th><th>Kunci Kegiatan</th><th>Jenis</th><th>Sumber Dana</th><th>Uraian</th><th>Jumlah</th><th></th></tr></thead><tbody id="transactionRows">
+    </tbody></table></div><button type="button" class="btn-add-row" onclick="addFinancialRow('usageRows','penggunaan',['tanggal','source_activity_key','nama_kegiatan','sumber_dana','uraian','jumlah','keterangan'])"><i class="fas fa-plus"></i> Tambah Penggunaan Dana</button>
+        </div>
+        <div class="treasurer-card">
+            <div class="section-heading"><span class="section-icon"><i class="fas fa-exchange-alt"></i></span><div><h2>Rincian Transaksi</h2><p>Catat aliran dana masuk dan keluar untuk tiap kegiatan.</p></div></div>
+            <div class="table-responsive"><table class="admin-table"><thead><tr><th>Tanggal</th><th>Kunci Kegiatan</th><th>Jenis</th><th>Sumber Dana</th><th>Uraian</th><th>Jumlah</th><th class="action-column"></th></tr></thead><tbody id="transactionRows">
         <?php $renderRows($transaksi, ['tanggal' => 'Tanggal', 'source_activity_key' => 'Kunci Kegiatan', 'jenis' => 'Jenis', 'sumber_dana' => 'Sumber Dana', 'uraian' => 'Uraian', 'jumlah' => 'Jumlah'], 'transaksi'); ?>
-    </tbody></table></div><button type="button" class="btn-secondary" onclick="addFinancialRow('transactionRows','transaksi',['tanggal','source_activity_key','jenis','sumber_dana','uraian','jumlah'])">Tambah Transaksi</button></section>
-    <section class="admin-card"><h2>Rekap Kas</h2><div class="table-responsive"><table class="admin-table"><thead><tr><th>Tanggal</th><th>Saldo Awal</th><th>Pemasukan</th><th>Pengeluaran</th><th>Saldo Akhir</th><th>Keterangan</th><th></th></tr></thead><tbody id="cashRows">
-        <?php $renderRows($rekapKas, ['tanggal' => 'Tanggal', 'saldo_awal' => 'Saldo Awal', 'total_pemasukan' => 'Pemasukan', 'total_pengeluaran' => 'Pengeluaran', 'saldo_akhir' => 'Saldo Akhir', 'keterangan' => 'Keterangan'], 'rekap'); ?>
-    </tbody></table></div><button type="button" class="btn-secondary" onclick="addFinancialRow('cashRows','rekap',['tanggal','saldo_awal','total_pemasukan','total_pengeluaran','saldo_akhir','keterangan'])">Tambah Rekap Kas</button></section>
-    <section class="admin-card"><label>Penutup<textarea name="penutup" rows="4"><?php echo htmlspecialchars($penutup); ?></textarea></label>
-        <div class="form-actions"><button class="btn-secondary" name="status" value="draft">Simpan Draft &amp; Generate DOCX</button><button class="btn-primary" name="status" value="submitted">Submit &amp; Generate DOCX</button></div>
+    </tbody></table></div><button type="button" class="btn-add-row" onclick="addFinancialRow('transactionRows','transaksi',['tanggal','source_activity_key','jenis','sumber_dana','uraian','jumlah'])"><i class="fas fa-plus"></i> Tambah Transaksi</button>
+        </div>
     </section>
+    <section class="wizard-panel" data-step="4">
+        <div class="treasurer-card">
+            <div class="section-heading"><span class="section-icon"><i class="fas fa-cash-register"></i></span><div><h2>Rekapitulasi Kas</h2><p>Isi rekap kas BPM secara manual. Saldo akhir harus sesuai saldo awal ditambah pemasukan dikurangi pengeluaran.</p></div></div>
+            <div class="table-responsive"><table class="admin-table"><thead><tr><th>Tanggal</th><th>Saldo Awal</th><th>Pemasukan</th><th>Pengeluaran</th><th>Saldo Akhir</th><th>Keterangan</th><th class="action-column"></th></tr></thead><tbody id="cashRows">
+        <?php $renderRows($rekapKas, ['tanggal' => 'Tanggal', 'saldo_awal' => 'Saldo Awal', 'total_pemasukan' => 'Pemasukan', 'total_pengeluaran' => 'Pengeluaran', 'saldo_akhir' => 'Saldo Akhir', 'keterangan' => 'Keterangan'], 'rekap'); ?>
+            </tbody></table></div><button type="button" class="btn-add-row" onclick="addFinancialRow('cashRows','rekap',['tanggal','saldo_awal','total_pemasukan','total_pengeluaran','saldo_akhir','keterangan'])"><i class="fas fa-plus"></i> Tambah Baris Kas</button>
+        </div>
+        <div class="form-actions treasurer-actions"><button class="btn-secondary" name="status" value="draft"><i class="fas fa-save"></i> Simpan Draft</button><button class="btn-primary" name="status" value="submitted"><i class="fas fa-paper-plane"></i> Submit LPJ</button></div>
+    </section>
+    <div class="wizard-navigation"><button type="button" class="btn-secondary" id="previousStep"><i class="fas fa-arrow-left"></i> Sebelumnya</button><span id="stepCounter">Langkah 1 dari 4</span><button type="button" class="btn-primary" id="nextStep">Selanjutnya <i class="fas fa-arrow-right"></i></button></div>
 </form>
 <script>
+(() => {
+    const progress = document.getElementById('treasurerStepProgress');
+    const panels = Array.from(document.querySelectorAll('.treasurer-form .wizard-panel'));
+    const steps = Array.from(progress.querySelectorAll('.step'));
+    const previous = document.getElementById('previousStep');
+    const next = document.getElementById('nextStep');
+    const counter = document.getElementById('stepCounter');
+    let activeStep = 1;
+    const showStep = (step) => {
+        activeStep = Math.min(Math.max(step, 1), panels.length);
+        panels.forEach((panel) => panel.classList.toggle('active', Number(panel.dataset.step) === activeStep));
+        steps.forEach((button) => {
+            const number = Number(button.dataset.step);
+            button.classList.toggle('active', number === activeStep);
+            button.classList.toggle('completed', number < activeStep);
+            button.setAttribute('aria-current', number === activeStep ? 'step' : 'false');
+        });
+        previous.disabled = activeStep === 1;
+        next.hidden = activeStep === panels.length;
+        counter.textContent = `Langkah ${activeStep} dari ${panels.length}`;
+    };
+    previous.addEventListener('click', () => showStep(activeStep - 1));
+    next.addEventListener('click', () => showStep(activeStep + 1));
+    steps.forEach((button) => button.addEventListener('click', () => showStep(Number(button.dataset.step))));
+    showStep(activeStep);
+})();
+
 function addMembershipRow() {
     const body = document.getElementById('membershipRows');
     const row = document.createElement('tr');

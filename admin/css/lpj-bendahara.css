@@ -1,0 +1,438 @@
+.treasurer-page-header,
+.treasurer-form,
+#treasurerStepProgress,
+.treasurer-form ~ .alert {
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.treasurer-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.treasurer-page-header h1 {
+    margin: 0;
+}
+
+.treasurer-page-header p {
+    margin: 6px 0 0;
+    color: #9aa8ba;
+    font-size: 0.9rem;
+}
+
+#treasurerStepProgress {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin-bottom: 20px;
+    padding: 8px;
+    background: #0f1217;
+    border: 1px solid #2a3545;
+    border-radius: 12px;
+}
+
+#treasurerStepProgress .step {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-width: max-content;
+    padding: 12px 14px;
+    color: #8995a5;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    font: inherit;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+#treasurerStepProgress .step:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+#treasurerStepProgress .step.active {
+    color: #8bb9f0;
+    border-bottom-color: #4a90e2;
+    font-weight: 700;
+}
+
+#treasurerStepProgress .step.completed {
+    color: #9fc5f4;
+}
+
+.step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #35445b;
+    border-radius: 50%;
+    background: #171d27;
+    font-size: 0.82rem;
+}
+
+#treasurerStepProgress .step.active .step-num,
+#treasurerStepProgress .step.completed .step-num {
+    color: #fff;
+    border-color: #4a90e2;
+    background: #2868ad;
+}
+
+.treasurer-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.wizard-panel {
+    display: none;
+}
+
+.wizard-panel.active {
+    display: block;
+    animation: treasurer-panel-in 0.18s ease-out;
+}
+
+@keyframes treasurer-panel-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.treasurer-card {
+    margin-bottom: 16px;
+    padding: 22px;
+    background: #0f131a;
+    border: 1px solid #2a3545;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.treasurer-card:last-child {
+    margin-bottom: 0;
+}
+
+.section-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    margin-bottom: 20px;
+}
+
+.section-heading h2 {
+    margin: 0;
+    color: #f5f7fa;
+    font-size: 1.12rem;
+}
+
+.section-heading p {
+    margin: 4px 0 0;
+    color: #9aa8ba;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.section-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    color: #8bb9f0;
+    background: rgba(74, 144, 226, 0.13);
+    border: 1px solid rgba(74, 144, 226, 0.25);
+    border-radius: 10px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.treasurer-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 18px;
+    color: #d6deea;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.treasurer-field:last-child {
+    margin-bottom: 0;
+}
+
+.treasurer-field input,
+.treasurer-field select,
+.treasurer-field textarea,
+.treasurer-form .admin-table input,
+.treasurer-form .admin-table select {
+    width: 100%;
+    min-height: 40px;
+    padding: 9px 11px;
+    color: #f1f5f9;
+    background: #090d13;
+    border: 1px solid #35445b;
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 400;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.treasurer-field textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.treasurer-field input:focus,
+.treasurer-field select:focus,
+.treasurer-field textarea:focus,
+.treasurer-form .admin-table input:focus,
+.treasurer-form .admin-table select:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #2a3545;
+    border-radius: 9px;
+}
+
+.treasurer-form .admin-table {
+    width: 100%;
+    min-width: 850px;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.treasurer-form .admin-table th {
+    padding: 12px;
+    color: #c9d6e5;
+    background: #171e29;
+    border-bottom: 1px solid #35445b;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.045em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.treasurer-form .admin-table td {
+    padding: 9px;
+    background: #0f131a;
+    border-bottom: 1px solid #252f3d;
+    vertical-align: middle;
+}
+
+.treasurer-form .admin-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.treasurer-form .admin-table td input,
+.treasurer-form .admin-table td select {
+    min-width: 100px;
+    min-height: 37px;
+    padding: 7px 9px;
+    font-size: 0.83rem;
+}
+
+.treasurer-form .admin-table td input[type="date"] {
+    color-scheme: dark;
+}
+
+.treasurer-form .admin-table td input[type="number"] {
+    min-width: 120px;
+    text-align: right;
+}
+
+.treasurer-form .admin-table .action-column,
+.treasurer-form .admin-table td:last-child {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.btn-add-row,
+.btn-row-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    margin-top: 13px;
+    padding: 8px 13px;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.btn-add-row {
+    color: #a9cdf8;
+    background: rgba(74, 144, 226, 0.1);
+    border: 1px solid rgba(74, 144, 226, 0.38);
+}
+
+.btn-add-row:hover {
+    background: rgba(74, 144, 226, 0.2);
+    border-color: #4a90e2;
+}
+
+.btn-row-delete {
+    min-height: 34px;
+    margin: 0;
+    padding: 6px 10px;
+    color: #ff9a9a;
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.btn-row-delete:hover {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: #dc3545;
+}
+
+.wizard-navigation,
+.treasurer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.wizard-navigation {
+    padding: 15px 18px;
+    background: #0f1217;
+    border: 1px solid #2a3545;
+    border-radius: 10px;
+}
+
+.wizard-navigation > span {
+    color: #9aa8ba;
+    font-size: 0.84rem;
+}
+
+.wizard-navigation button,
+.treasurer-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 9px 15px;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.wizard-navigation button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.wizard-navigation button[hidden] {
+    display: none;
+}
+
+.treasurer-actions {
+    justify-content: flex-end;
+    margin-top: 18px;
+}
+
+.treasurer-actions .btn-primary {
+    color: #fff;
+    background: #2874c6;
+    border: 1px solid #3986d7;
+}
+
+.treasurer-actions .btn-primary:hover {
+    background: #3488df;
+}
+
+@media (max-width: 760px) {
+    .treasurer-page-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .treasurer-page-header .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #treasurerStepProgress {
+        gap: 2px;
+        padding: 6px;
+    }
+
+    #treasurerStepProgress .step {
+        min-width: 0;
+        flex: 0 0 auto;
+        padding: 8px;
+    }
+
+    #treasurerStepProgress .step:not(.active) .step-text {
+        display: none;
+    }
+
+    #treasurerStepProgress .step.active {
+        flex: 1;
+        white-space: normal;
+    }
+
+    .treasurer-card {
+        padding: 16px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .wizard-navigation {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .wizard-navigation > span {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        text-align: center;
+    }
+
+    .wizard-navigation button {
+        width: 100%;
+        padding: 8px;
+        font-size: 0.78rem;
+    }
+
+    .treasurer-actions {
+        flex-direction: column-reverse;
+    }
+
+    .treasurer-actions button {
+        width: 100%;
+    }
+}
