@@ -584,7 +584,7 @@ $renderRows = static function (array $rows, array $fields, string $prefix): void
                     <article class="activity-card" data-activity-card data-index="<?php echo (int)$activityIndex; ?>">
                         <div class="activity-card-header">
                             <span class="activity-number">Kegiatan <?php echo (int)$activityIndex + 1; ?></span>
-                            <span class="activity-source-badge <?php echo ($activity['source_type'] ?? '') === 'komisi' ? 'is-commission' : 'is-manual'; ?>"><?php echo ($activity['source_type'] ?? '') === 'komisi' ? 'Dari Komisi' : 'Manual'; ?></span>
+                            <span class="activity-source-badge <?php echo ($activity['source_type'] ?? '') === 'komisi' ? 'is-commission' : 'is-manual'; ?>"><?php echo ($activity['source_type'] ?? '') === 'komisi' ? 'Dari ' . htmlspecialchars((string)($activity['keterangan'] ?? 'Komisi')) : 'Manual'; ?></span>
                             <button type="button" class="activity-toggle" aria-expanded="true" title="Minimalkan kegiatan"><i class="fas fa-chevron-up"></i></button>
                             <button type="button" class="btn-row-delete activity-remove" title="Hapus kegiatan"><i class="fas fa-trash-alt"></i><span>Hapus</span></button>
                         </div>
@@ -600,12 +600,12 @@ $renderRows = static function (array $rows, array $fields, string $prefix): void
                             </div>
                             <div class="table-responsive activity-budget-wrap">
                                 <table class="admin-table proker-budget-table activity-budget-table">
-                                    <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Uraian Transaksi</th><th>Debet (Pemasukan)</th><th>Kredit (Pengeluaran)</th><th>Saldo</th><th class="action-column">Aksi</th></tr></thead>
+                                    <thead><tr><th>Tanggal</th><th>Keterangan Transaksi</th><th>Uraian Transaksi</th><th>Debet (Pemasukan)</th><th>Kredit (Pengeluaran)</th><th>Saldo</th><th class="action-column">Aksi</th></tr></thead>
                                     <tbody class="activity-transactions">
                                         <?php foreach ($activityTransactions as $transactionIndex => $transaction): ?>
                                             <tr class="activity-transaction-row">
                                                 <td><input type="date" name="penggunaan[<?php echo (int)$activityIndex; ?>][transaksi][tanggal][]" value="<?php echo htmlspecialchars(substr((string)($transaction['tanggal'] ?? ''), 0, 10)); ?>"></td>
-                                                <td><input type="text" name="penggunaan[<?php echo (int)$activityIndex; ?>][transaksi][keterangan][]" value="<?php echo htmlspecialchars((string)($transaction['keterangan'] ?? '')); ?>" placeholder="Keterangan"></td>
+                                                <td><input type="text" name="penggunaan[<?php echo (int)$activityIndex; ?>][transaksi][keterangan][]" value="<?php echo htmlspecialchars((string)($transaction['keterangan'] ?? '')); ?>" placeholder="Catatan transaksi"></td>
                                                 <td><input type="text" name="penggunaan[<?php echo (int)$activityIndex; ?>][transaksi][uraian][]" value="<?php echo htmlspecialchars((string)($transaction['uraian'] ?? '')); ?>" placeholder="Uraian transaksi"></td>
                                                 <td><input type="number" min="0" step="1" class="budget-debet" name="penggunaan[<?php echo (int)$activityIndex; ?>][transaksi][debet][]" value="<?php echo htmlspecialchars(($transaction['debet'] ?? null) === null ? '' : (string)$transaction['debet']); ?>" placeholder="0"></td>
                                                 <td><input type="number" min="0" step="1" class="budget-kredit" name="penggunaan[<?php echo (int)$activityIndex; ?>][transaksi][kredit][]" value="<?php echo htmlspecialchars(($transaction['kredit'] ?? null) === null ? '' : (string)$transaction['kredit']); ?>" placeholder="0"></td>
@@ -688,7 +688,7 @@ function addActivityTransaction(card, values = {}) {
     row.className = 'activity-transaction-row';
     const fields = [
         ['tanggal', 'date', values.tanggal || '', ''],
-        ['keterangan', 'text', values.keterangan || '', 'Keterangan'],
+        ['keterangan', 'text', values.keterangan || '', 'Catatan transaksi'],
         ['uraian', 'text', values.uraian || '', 'Uraian transaksi'],
         ['debet', 'number', values.debet ?? '', '0'],
         ['kredit', 'number', values.kredit ?? '', '0']
@@ -749,7 +749,7 @@ function addActivityCard() {
             </div>
             <div class="table-responsive activity-budget-wrap">
                 <table class="admin-table proker-budget-table activity-budget-table">
-                    <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Uraian Transaksi</th><th>Debet (Pemasukan)</th><th>Kredit (Pengeluaran)</th><th>Saldo</th><th class="action-column">Aksi</th></tr></thead>
+                    <thead><tr><th>Tanggal</th><th>Keterangan Transaksi</th><th>Uraian Transaksi</th><th>Debet (Pemasukan)</th><th>Kredit (Pengeluaran)</th><th>Saldo</th><th class="action-column">Aksi</th></tr></thead>
                     <tbody class="activity-transactions"></tbody>
                     <tfoot><tr><th colspan="5">TOTAL PENGELUARAN</th><th class="activity-total-expense">Rp 0</th><th></th></tr></tfoot>
                 </table>
