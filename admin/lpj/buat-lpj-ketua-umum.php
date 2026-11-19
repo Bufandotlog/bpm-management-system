@@ -87,7 +87,7 @@ $fetchRekap = static function(int $periode_id, string $triwulan): array {
                 'waktu' => (string)($item['Tanggal Kegiatan'] ?? $item['Waktu Pelaksanaan'] ?? $item['tanggal'] ?? ''),
                 'nama' => (string)($item['Nama Kegiatan'] ?? $item['Nama Program Kerja'] ?? ''),
                 'tempat' => (string)($item['Tempat Kegiatan'] ?? $item['Tempat'] ?? ''),
-                'peserta' => (string)($item['Peserta'] ?? ''),
+                'peserta' => (string)($item['Peserta Kegiatan'] ?? $item['Peserta'] ?? ''),
                 'keterangan' => 'Terlaksana Dengan Baik',
                 'triwulan' => (string)$row['triwulan'],
             ];

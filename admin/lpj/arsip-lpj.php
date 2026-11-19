@@ -41,10 +41,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
             array_map('intval', (array)($_POST['selected_secretariat_lpj'] ?? [])),
             static fn($id) => $id > 0
         )));
-        if (empty($selected_ids) && empty($selected_secretariat_ids)) {
+        $selected_chairperson_ids = array_values(array_unique(array_filter(
+            array_map('intval', (array)($_POST['selected_chairperson_lpj'] ?? [])),
+            static fn($id) => $id > 0
+        )));
+        if (empty($selected_ids) && empty($selected_secretariat_ids) && empty($selected_chairperson_ids)) {
             $error = "Pilih minimal satu LPJ untuk dikonsolidasikan.";
         } else {
             $lpjs = [];
+            $chairperson_lpjs = [];
+            if ($selected_chairperson_ids) {
+                $placeholders = implode(',', array_fill(0, count($selected_chairperson_ids), '?'));
+                $types = str_repeat('i', count($selected_chairperson_ids) + 1);
+                $query_params = array_merge([$periode_id], $selected_chairperson_ids);
+                $chairperson_lpjs = dbFetchAll(
+                    "SELECT c.*, p.tahun_mulai, p.tahun_selesai
+                     FROM lpj_ketua_umum c
+                     JOIN periode_kepengurusan p ON c.periode_id = p.id
+                     WHERE c.periode_id = ? AND c.id IN ($placeholders)
+                       AND c.status = 'submitted'",
+                    $query_params,
+                    $types
+                );
+            }
             if ($selected_ids) {
                 $placeholders = implode(',', array_fill(0, count($selected_ids), '?'));
                 $types = str_repeat('i', count($selected_ids) + 1);
@@ -97,15 +116,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                     $secretariat_auto_included = true;
                 }
             }
+            if (!$selected_chairperson_ids && ($selected_ids || $selected_secretariat_ids)) {
+                $commissionTriwulan = array_unique(array_map(
+                    static fn($lpj) => strtoupper(trim($lpj['triwulan'])),
+                    array_merge($lpjs, $secretariat_lpjs)
+                ));
+                if (count($commissionTriwulan) === 1) {
+                    $chairperson_lpjs = dbFetchAll(
+                        "SELECT c.*, p.tahun_mulai, p.tahun_selesai
+                         FROM lpj_ketua_umum c
+                         JOIN periode_kepengurusan p ON c.periode_id = p.id
+                         WHERE c.periode_id = ? AND c.triwulan = ? AND c.status = 'submitted'
+                         ORDER BY c.id ASC",
+                        [$periode_id, reset($commissionTriwulan)],
+                        "is"
+                    );
+                }
+            }
             if (
                 count($lpjs) !== count($selected_ids)
                 || (!$secretariat_auto_included && count($secretariat_lpjs) !== count($selected_secretariat_ids))
+                || ($selected_chairperson_ids && count($chairperson_lpjs) !== count($selected_chairperson_ids))
             ) {
                 $error = "Sebagian LPJ tidak ditemukan, belum diserahkan, atau bukan milik periode aktif.";
             } else {
                 $selected_triwulan = array_unique(array_map(
                     static fn($lpj) => strtoupper(trim($lpj['triwulan'])),
-                    array_merge($lpjs, $secretariat_lpjs)
+                    array_merge($lpjs, $secretariat_lpjs, $chairperson_lpjs)
                 ));
                 if (count($selected_triwulan) !== 1) {
                     $error = "Konsolidasi hanya dapat dilakukan untuk LPJ dengan jenis yang sama (Triwulan I, Triwulan II, atau MUBESMA).";
@@ -116,45 +153,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                     $misi = !empty($visi_misi_row['misi'])
                         ? (json_decode($visi_misi_row['misi'], true) ?: [])
                         : [];
-                    $periode_source = $lpjs[0] ?? $secretariat_lpjs[0];
+                    $periode_source = $chairperson_lpjs[0] ?? $secretariat_lpjs[0] ?? $lpjs[0];
                     $periode_text = $periode_source['tahun_mulai'] . '-' . $periode_source['tahun_selesai'];
                     $configs = [];
-                    foreach ($secretariat_lpjs as $secretariat_lpj) {
-                        $secretariatMembers = json_decode($secretariat_lpj['keanggotaan'] ?? '', true);
-                        $secretariatLetters = json_decode($secretariat_lpj['surat_arsip'] ?? '', true);
-                        if (!is_array($secretariatMembers)) {
-                            $error = 'Data keanggotaan LPJ Sekretariat tidak valid.';
-                            break;
+                    $decodeJson = static function ($value, $default = []) {
+                        if ($value === null || $value === '') {
+                            return $default;
                         }
-                        if (!is_array($secretariatLetters)) {
-                            $error = 'Snapshot arsip surat LPJ Sekretariat tidak valid.';
-                            break;
+                        $decoded = json_decode($value, true);
+                        if (json_last_error() !== JSON_ERROR_NONE) {
+                            throw new RuntimeException("Data LPJ tersimpan tidak valid: " . json_last_error_msg());
                         }
-                        $configs[] = [
-                            'document_type' => 'secretariat',
-                            'cover' => [
-                                'triwulan' => strtoupper(trim($secretariat_lpj['triwulan'])),
-                                'kementerian' => 'Sekretariat Umum',
-                                'periode' => $periode_text,
-                            ],
-                            'keadaan_objektif' => $secretariat_lpj['keadaan_objektif'] ?? '',
-                            'keanggotaan' => $secretariatMembers,
-                            'surat' => $secretariatLetters,
-                            'penutup' => $secretariat_lpj['penutup'] ?? '',
-                        ];
-                    }
+                        return $decoded === null ? $default : $decoded;
+                    };
                     try {
+                        foreach ($chairperson_lpjs as $chairperson_lpj) {
+                            $configs[] = [
+                                'document_type' => 'chairperson',
+                                'cover' => [
+                                    'triwulan' => strtoupper(trim($chairperson_lpj['triwulan'])),
+                                    'kementerian' => 'Ketua Umum',
+                                    'periode' => $periode_text,
+                                ],
+                                'keadaan_objektif' => $chairperson_lpj['keadaan_objektif'] ?? '',
+                                'keanggotaan' => $decodeJson($chairperson_lpj['keanggotaan'] ?? ''),
+                                'visi' => $chairperson_lpj['visi'] ?? $visi,
+                                'misi' => $decodeJson($chairperson_lpj['misi'] ?? '', $misi),
+                                'pencapaian_visi_misi' => $decodeJson($chairperson_lpj['pencapaian_visi_misi'] ?? ''),
+                                'realisasi_program_kerja' => $decodeJson($chairperson_lpj['realisasi_program_kerja'] ?? ''),
+                                'penutup' => $chairperson_lpj['penutup'] ?? '',
+                            ];
+                        }
+                        foreach ($secretariat_lpjs as $secretariat_lpj) {
+                            $secretariatMembers = json_decode($secretariat_lpj['keanggotaan'] ?? '', true);
+                            $secretariatLetters = json_decode($secretariat_lpj['surat_arsip'] ?? '', true);
+                            if (!is_array($secretariatMembers)) {
+                                $error = 'Data keanggotaan LPJ Sekretariat tidak valid.';
+                                break;
+                            }
+                            if (!is_array($secretariatLetters)) {
+                                $error = 'Snapshot arsip surat LPJ Sekretariat tidak valid.';
+                                break;
+                            }
+                            $configs[] = [
+                                'document_type' => 'secretariat',
+                                'cover' => [
+                                    'triwulan' => strtoupper(trim($secretariat_lpj['triwulan'])),
+                                    'kementerian' => 'Sekretariat Umum',
+                                    'periode' => $periode_text,
+                                ],
+                                'keadaan_objektif' => $secretariat_lpj['keadaan_objektif'] ?? '',
+                                'keanggotaan' => $secretariatMembers,
+                                'surat' => $secretariatLetters,
+                                'penutup' => $secretariat_lpj['penutup'] ?? '',
+                            ];
+                        }
                         foreach ($error === '' ? $lpjs : [] as $lpj) {
-                            $decodeJson = static function ($value, $default = []) {
-                                if ($value === null || $value === '') {
-                                    return $default;
-                                }
-                                $decoded = json_decode($value, true);
-                                if (json_last_error() !== JSON_ERROR_NONE) {
-                                    throw new RuntimeException("Data LPJ tersimpan tidak valid: " . json_last_error_msg());
-                                }
-                                return $decoded === null ? $default : $decoded;
-                            };
                             $configs[] = [
                                 'cover' => [
                                     'triwulan' => strtoupper(trim($lpj['triwulan'])),
@@ -325,6 +379,23 @@ $secretariat_list = dbFetchAll(
     $secretariat_types
 );
 
+$chairperson_parts = ["c.periode_id = ?"];
+$chairperson_params = [$periode_id];
+$chairperson_types = "i";
+if ($filter_triwulan !== '') {
+    $chairperson_parts[] = "c.triwulan = ?";
+    $chairperson_params[] = $filter_triwulan;
+    $chairperson_types .= "s";
+}
+$chairperson_list = dbFetchAll(
+    "SELECT c.id, c.triwulan, c.status, c.file_path, c.updated_at
+     FROM lpj_ketua_umum c
+     WHERE " . implode(' AND ', $chairperson_parts) . "
+     ORDER BY FIELD(c.triwulan, 'I', 'II', 'MUBESMA'), c.updated_at DESC",
+    $chairperson_params,
+    $chairperson_types
+);
+
 // Kelompokkan triwulan berdasarkan filter atau tampilkan semua default
 $groups_to_display = [];
 if (!empty($filter_triwulan)) {
@@ -338,6 +409,11 @@ if (!empty($filter_triwulan)) {
         }
     }
     foreach ($secretariat_list as $lpj) {
+        if (!in_array($lpj['triwulan'], $groups_to_display)) {
+            $groups_to_display[] = $lpj['triwulan'];
+        }
+    }
+    foreach ($chairperson_list as $lpj) {
         if (!in_array($lpj['triwulan'], $groups_to_display)) {
             $groups_to_display[] = $lpj['triwulan'];
         }
@@ -643,6 +719,7 @@ if (!empty($filter_triwulan)) {
         <button type="submit" form="consolidateForm" class="btn-primary" style="background: #28a745;"><i class="fas fa-compress-arrows-alt"></i> Konsolidasi LPJ Terpilih</button>
         <a href="buat-lpj.php" class="btn-primary"><i class="fas fa-plus"></i> Buat LPJ Baru</a>
         <a href="buat-lpj-sekretariat.php" class="btn-primary" style="background:#8e44ad;"><i class="fas fa-file-signature"></i> Buat LPJ Sekretariat</a>
+        <a href="arsip-lpj-ketua-umum.php" class="btn-primary" style="background:#357abd;"><i class="fas fa-user-tie"></i> LPJ Ketua Umum</a>
     </div>
 </div>
 
@@ -684,10 +761,10 @@ if (!empty($filter_triwulan)) {
     <?php echo csrfField(); ?>
     <input type="hidden" name="action_consolidate" value="1">
     <p style="color: #9aa8ba; font-size: 0.85rem; margin: 0 0 18px;">
-        Pilih LPJ dari satu jenis triwulan yang sama. LPJ Sekretariat submitted untuk triwulan pilihan otomatis ikut saat memilih LPJ komisi, selalu di urutan pertama; LPJ Komisi diurutkan sesuai master.
+        Pilih LPJ dari satu jenis triwulan yang sama. LPJ Ketua Umum submitted untuk triwulan terpilih otomatis disertakan sebagai pembuka. LPJ Sekretariat submitted juga otomatis disertakan saat memilih LPJ Komisi.
     </p>
 
-    <?php if (empty($lpj_list) && empty($secretariat_list)): ?>
+    <?php if (empty($lpj_list) && empty($secretariat_list) && empty($chairperson_list)): ?>
         <div style="text-align: center; padding: 40px; background: #0f1217; border: 1px solid #2a3545; border-radius: 12px; margin-bottom: 30px;">
             <i class="fas fa-file-excel" style="font-size: 3rem; color: #666; margin-bottom: 15px;"></i>
             <p style="color: #888;">Belum ada dokumen LPJ yang sesuai dengan filter.</p>
@@ -698,9 +775,11 @@ if (!empty($filter_triwulan)) {
         // Group the LPJ items
         $grouped_lpj = [];
         $grouped_secretariat = [];
+        $grouped_chairperson = [];
         foreach ($groups_to_display as $g) {
             $grouped_lpj[$g] = [];
             $grouped_secretariat[$g] = [];
+            $grouped_chairperson[$g] = [];
         }
         foreach ($lpj_list as $lpj) {
             $tw = $lpj['triwulan'];
@@ -708,6 +787,9 @@ if (!empty($filter_triwulan)) {
         }
         foreach ($secretariat_list as $lpj) {
             $grouped_secretariat[$lpj['triwulan']][] = $lpj;
+        }
+        foreach ($chairperson_list as $lpj) {
+            $grouped_chairperson[$lpj['triwulan']][] = $lpj;
         }
         
         foreach ($groups_to_display as $group_key):
@@ -731,7 +813,8 @@ if (!empty($filter_triwulan)) {
             
             // Skip empty groups if we have filter active
             $secretariat_items = $grouped_secretariat[$group_key] ?? [];
-            if (empty($group_items) && empty($secretariat_items) && (!empty($filter_triwulan) || $filter_kementerian > 0)) {
+            $chairperson_items = $grouped_chairperson[$group_key] ?? [];
+            if (empty($group_items) && empty($secretariat_items) && empty($chairperson_items) && (!empty($filter_triwulan) || $filter_kementerian > 0)) {
                 continue;
             }
         ?>
@@ -740,11 +823,11 @@ if (!empty($filter_triwulan)) {
                     <div class="lpj-group-title">
                         <i class="<?php echo $group_icon; ?>"></i>
                         <h2><?php echo $group_name; ?></h2>
-                        <span class="lpj-group-count"><?php echo count($group_items) + count($secretariat_items); ?> Dokumen</span>
+                        <span class="lpj-group-count"><?php echo count($group_items) + count($secretariat_items) + count($chairperson_items); ?> Dokumen</span>
                     </div>
                 </div>
                 
-                <?php if (empty($group_items) && empty($secretariat_items)): ?>
+                <?php if (empty($group_items) && empty($secretariat_items) && empty($chairperson_items)): ?>
                     <div class="empty-group-placeholder">
                         <i class="far fa-folder-open"></i>
                         <p>Belum ada LPJ kementerian yang dibuat untuk periode ini.</p>
@@ -752,6 +835,45 @@ if (!empty($filter_triwulan)) {
                     </div>
                 <?php else: ?>
                     <div class="lpj-grid">
+                        <?php foreach ($chairperson_items as $chairperson_lpj):
+                            $is_draft = $chairperson_lpj['status'] === 'draft';
+                        ?>
+                            <div class="lpj-card <?php echo $is_draft ? 'lpj-draft' : ''; ?>">
+                                <div class="lpj-card-header">
+                                    <div class="logo-container" style="display:grid;place-items:center;background:rgba(74,144,226,.16);">
+                                        <i class="fas fa-user-tie" style="font-size:1.5rem;color:#8BB9F0;"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Ketua Umum</h3>
+                                        <span class="status-badge <?php echo $is_draft ? 'status-draft' : 'status-submitted'; ?>">
+                                            <?php echo $is_draft ? 'Draft' : 'Submitted'; ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="lpj-card-body">
+                                    <div class="info-row"><span>Triwulan:</span><span class="info-value"><?php echo htmlspecialchars($group_key); ?></span></div>
+                                    <div class="info-row"><span>Diperbarui:</span><span class="info-value"><?php echo formatTanggal($chairperson_lpj['updated_at'], true); ?></span></div>
+                                </div>
+                                <div class="lpj-card-actions">
+                                    <div class="actions-top">
+                                        <?php if (!$is_draft): ?>
+                                            <label class="lpj-checkbox-label">
+                                                <input type="checkbox" name="selected_chairperson_lpj[]" value="<?php echo (int)$chairperson_lpj['id']; ?>">
+                                                <span>Pilih untuk Konsolidasi</span>
+                                            </label>
+                                        <?php else: ?>
+                                            <span style="font-size:.8rem;color:#ffc107;font-style:italic;"><i class="fas fa-exclamation-triangle"></i> Selesaikan draft untuk konsolidasi</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="actions-buttons">
+                                        <a href="buat-lpj-ketua-umum.php?triwulan=<?php echo urlencode($group_key); ?>" class="btn-edit"><i class="fas fa-edit"></i> Edit</a>
+                                        <?php if (!empty($chairperson_lpj['file_path'])): ?>
+                                            <a href="<?php echo htmlspecialchars(uploadUrl($chairperson_lpj['file_path'])); ?>" class="btn-buat" style="background:#4A90E2;" download><i class="fas fa-download"></i> Docx</a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                         <?php foreach ($secretariat_items as $secretariat_lpj):
                             $is_draft = $secretariat_lpj['status'] === 'draft';
                         ?>

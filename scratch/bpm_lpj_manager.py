@@ -2745,6 +2745,8 @@ def consolidate_lpj_data(output_path, configs):
             source_path = os.path.join(temp_dir, f"BPM_LPJ_{index}.docx")
             if config.get("document_type") == "secretariat":
                 generated = generate_secretariat_lpj(source_path, config)
+            elif config.get("document_type") == "chairperson":
+                generated = generate_chairperson_lpj(source_path, config)
             else:
                 generated = generate_lpj(source_path, config)
             if not generated:
@@ -2766,11 +2768,12 @@ def consolidate_lpj_data(output_path, configs):
         format_run(toc_title.add_run("DAFTAR ISI"), size_pt=14, bold=True)
 
         for index, config in enumerate(configs, 1):
-            name = (
-                "SEKRETARIAT UMUM"
-                if config.get("document_type") == "secretariat"
-                else format_kementerian_title(config.get("cover", {}).get("kementerian", ""))
-            )
+            if config.get("document_type") == "chairperson":
+                name = "KETUA UMUM"
+            elif config.get("document_type") == "secretariat":
+                name = "SEKRETARIAT UMUM"
+            else:
+                name = format_kementerian_title(config.get("cover", {}).get("kementerian", ""))
             paragraph = master_doc.add_paragraph()
             paragraph.paragraph_format.line_spacing = 1.5
             paragraph.paragraph_format.tab_stops.add_tab_stop(
@@ -2806,7 +2809,7 @@ def consolidate_lpj_data(output_path, configs):
         add_bookmark(summary_title, "lpj_budget_summary", len(configs) + 1)
         budget_configs = [
             config for config in configs
-            if config.get("document_type") != "secretariat"
+            if config.get("document_type") not in {"secretariat", "chairperson"}
         ]
         add_consolidated_budget_summary(master_doc, budget_configs, triwulan, len(configs))
         add_document_footer(master_doc, triwulan)
