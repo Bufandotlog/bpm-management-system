@@ -581,6 +581,44 @@
     }
 }
 
+@media (min-width: 761px) and (max-width: 1000px) {
+    .treasurer-form .activity-budget-table {
+        min-width: 760px;
+        table-layout: fixed;
+    }
+
+    .treasurer-form .activity-budget-table th,
+    .treasurer-form .activity-budget-table td {
+        padding: 5px 4px;
+        font-size: 0.68rem;
+    }
+
+    .treasurer-form .activity-budget-table th:nth-child(1) { width: 95px; }
+    .treasurer-form .activity-budget-table th:nth-child(2) { width: 125px; }
+    .treasurer-form .activity-budget-table th:nth-child(3) { width: 125px; }
+    .treasurer-form .activity-budget-table th:nth-child(4),
+    .treasurer-form .activity-budget-table th:nth-child(5) { width: 100px; }
+    .treasurer-form .activity-budget-table th:nth-child(6) { width: 95px; }
+    .treasurer-form .activity-budget-table th:nth-child(7) { width: 42px; }
+
+    .treasurer-form .activity-budget-table td input {
+        min-width: 0;
+        min-height: 34px;
+        padding: 5px 4px;
+        font-size: 0.72rem;
+    }
+
+    .treasurer-form .activity-budget-table td input[type="number"] {
+        min-width: 0;
+    }
+
+    .treasurer-form .activity-budget-table .activity-balance,
+    .treasurer-form .activity-budget-table .activity-total-expense {
+        min-width: 0;
+        font-size: 0.68rem;
+    }
+}
+
 @media (max-width: 480px) {
     .wizard-navigation {
         display: grid;
