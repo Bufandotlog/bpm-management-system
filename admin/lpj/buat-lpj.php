@@ -1184,6 +1184,12 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         transition: border-color 0.3s, box-shadow 0.3s;
     }
+    @media (min-width: 769px) {
+        .dynamic-row.pt-row {
+            width: calc(100% + 200px);
+            margin-left: -100px;
+        }
+    }
     .dynamic-row .btn-remove-row {
         position: absolute;
         top: 15px;
