@@ -219,8 +219,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($requestedId === 0 || $lpj !== nul
             $penggunaan = $parseRows('penggunaan', ['tanggal', 'source_activity_key', 'nama_kegiatan', 'sumber_dana', 'uraian', 'jumlah', 'keterangan'], ['jumlah']);
             $transaksi = $parseRows('transaksi', ['tanggal', 'source_activity_key', 'jenis', 'sumber_dana', 'uraian', 'jumlah'], ['jumlah']);
             $rekapKas = $parseRows('rekap', ['tanggal', 'saldo_awal', 'total_pemasukan', 'total_pengeluaran', 'saldo_akhir', 'keterangan'], ['saldo_awal', 'total_pemasukan', 'total_pengeluaran', 'saldo_akhir']);
-            if ($status === 'submitted' && ($keadaanObjektif === '' || $penutup === '' || !$keanggotaan || !$transaksi || !$rekapKas)) {
-                $error = 'LPJ yang diserahkan wajib memiliki keadaan objektif, penutup, minimal satu transaksi, dan minimal satu rekap kas.';
+            if ($status === 'submitted' && ($keadaanObjektif === '' || $penutup === '' || !$keanggotaan || !$transaksi)) {
+                $error = 'LPJ yang diserahkan wajib memiliki keadaan objektif, penutup, keanggotaan, dan minimal satu transaksi.';
             }
             foreach ($transaksi as $row) {
                 if (!in_array($row['jenis'], ['', 'pemasukan', 'pengeluaran'], true)) {
