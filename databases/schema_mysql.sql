@@ -554,6 +554,8 @@ CREATE TABLE `lpj_bendahara` (
 CREATE TABLE `lpj_bendahara_penggunaan_dana` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `lpj_bendahara_id` int(11) NOT NULL,
+  `source_type` enum('komisi','manual') NOT NULL DEFAULT 'manual',
+  `source_lpj_id` int(11) DEFAULT NULL,
   `tanggal` date DEFAULT NULL,
   `source_activity_key` varchar(100) DEFAULT NULL,
   `nama_kegiatan` varchar(255) DEFAULT NULL,
@@ -563,20 +565,27 @@ CREATE TABLE `lpj_bendahara_penggunaan_dana` (
   `keterangan` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_lpj_bendahara_penggunaan_date` (`lpj_bendahara_id`,`tanggal`,`id`),
+  KEY `idx_lpj_bendahara_penggunaan_source` (`lpj_bendahara_id`,`source_type`,`source_lpj_id`),
   CONSTRAINT `fk_lpj_bendahara_penggunaan_lpj` FOREIGN KEY (`lpj_bendahara_id`) REFERENCES `lpj_bendahara` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 CREATE TABLE `lpj_bendahara_transaksi_dana` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `lpj_bendahara_id` int(11) NOT NULL,
+  `penggunaan_dana_id` int(11) DEFAULT NULL,
   `tanggal` date DEFAULT NULL,
+  `keterangan` text DEFAULT NULL,
   `source_activity_key` varchar(100) DEFAULT NULL,
   `jenis` enum('pemasukan','pengeluaran') DEFAULT NULL,
   `sumber_dana` varchar(255) DEFAULT NULL,
   `uraian` text DEFAULT NULL,
   `jumlah` decimal(15,2) DEFAULT NULL,
+  `debet` decimal(15,2) DEFAULT NULL,
+  `kredit` decimal(15,2) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_lpj_bendahara_transaksi_date` (`lpj_bendahara_id`,`tanggal`,`id`),
-  CONSTRAINT `fk_lpj_bendahara_transaksi_lpj` FOREIGN KEY (`lpj_bendahara_id`) REFERENCES `lpj_bendahara` (`id`) ON DELETE CASCADE
+  KEY `idx_lpj_bendahara_transaksi_penggunaan` (`penggunaan_dana_id`),
+  CONSTRAINT `fk_lpj_bendahara_transaksi_lpj` FOREIGN KEY (`lpj_bendahara_id`) REFERENCES `lpj_bendahara` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_lpj_bendahara_transaksi_penggunaan` FOREIGN KEY (`penggunaan_dana_id`) REFERENCES `lpj_bendahara_penggunaan_dana` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 CREATE TABLE `lpj_bendahara_rekap_kas` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

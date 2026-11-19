@@ -24,8 +24,27 @@ class TreasurerGeneratorSmokeTest(unittest.TestCase):
             "periode": {"nama": "2026/2027", "tahun_mulai": 2026, "tahun_selesai": 2027},
             "keadaan_objektif": "Kas periode berjalan tertib.",
             "keanggotaan": [{"nama": "Budi", "jabatan": "Bendahara Umum"}],
-            "penggunaan_dana": [{"tanggal": "2026-01-03", "source_activity_key": "KGT-01", "nama_kegiatan": "Konsumsi", "sumber_dana": "Kas", "uraian": "Konsumsi", "jumlah": 125000}],
-            "transaksi_dana": [{"tanggal": "2026-01-03", "source_activity_key": "KGT-01", "jenis": "pengeluaran", "sumber_dana": "Kas", "uraian": "Konsumsi", "jumlah": 125000}],
+            "penggunaan_dana": [
+                {
+                    "tanggal": "2026-01-03",
+                    "source_activity_key": "KGT-01",
+                    "nama_kegiatan": "Konsumsi",
+                    "sumber_dana": "Kas BPM",
+                    "transaksi": [
+                        {"tanggal": "2026-01-03", "keterangan": "Penerimaan", "uraian": "Dana awal", "debet": 500000, "kredit": 0},
+                        {"tanggal": "2026-01-04", "keterangan": "Pembelian", "uraian": "Konsumsi panitia", "debet": 0, "kredit": 125000},
+                    ],
+                },
+                {
+                    "tanggal": "2026-01-05",
+                    "source_type": "manual",
+                    "nama_kegiatan": "Pengeluaran Manual",
+                    "sumber_dana": "Kas",
+                    "transaksi": [
+                        {"tanggal": "2026-01-05", "keterangan": "Pembelian", "uraian": "Perlengkapan", "debet": 0, "kredit": 20000},
+                    ],
+                },
+            ],
             "rekap_kas": [{"tanggal": "2026-01-03", "saldo_awal": 200000, "total_pemasukan": 0, "total_pengeluaran": 125000, "saldo_akhir": 75000}],
             "penutup": "Demikian laporan ini.",
         }
@@ -41,12 +60,25 @@ class TreasurerGeneratorSmokeTest(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertTrue(output_path.is_file())
-            text = "\n".join(paragraph.text for paragraph in Document(output_path).paragraphs)
+            document = Document(output_path)
+            text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+            table_text = "\n".join(
+                cell.text
+                for table in document.tables
+                for row in table.rows
+                for cell in row.cells
+            )
             self.assertIn("BENDAHARA UMUM BPM", text)
             self.assertIn("KEADAAN OBJEKTIF BENDAHARA", text)
             self.assertIn("KEANGGOTAAN", text)
             self.assertIn("LAPORAN PENGGUNAAN DANA", text)
+            self.assertIn("Konsumsi", text)
+            self.assertIn("Pengeluaran Manual", text)
             self.assertIn("REKAPITULASI KAS", text)
+            self.assertGreaterEqual(table_text.count("TOTAL PENGELUARAN"), 2)
+            self.assertIn("Konsumsi panitia", table_text)
+            self.assertIn("125.000", table_text)
+            self.assertIn("375.000", table_text)
 
     def test_consolidation_orders_treasurer_before_commissions(self):
         input_configs = [

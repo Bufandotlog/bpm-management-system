@@ -257,20 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                                 ],
                                 'keadaan_objektif' => $bendahara_lpj['keadaan_objektif'] ?? '',
                                 'keanggotaan' => $decodeJson($bendahara_lpj['keanggotaan'] ?? ''),
-                                'penggunaan_dana' => dbFetchAll(
-                                    'SELECT tanggal, source_activity_key, nama_kegiatan, sumber_dana, uraian, jumlah, keterangan
-                                     FROM lpj_bendahara_penggunaan_dana
-                                     WHERE lpj_bendahara_id = ? ORDER BY tanggal IS NULL ASC, tanggal ASC, id ASC',
-                                    [(int)$bendahara_lpj['id']],
-                                    'i'
-                                ),
-                                'transaksi_dana' => dbFetchAll(
-                                    'SELECT tanggal, source_activity_key, jenis, sumber_dana, uraian, jumlah
-                                     FROM lpj_bendahara_transaksi_dana
-                                     WHERE lpj_bendahara_id = ? ORDER BY tanggal IS NULL ASC, tanggal ASC, id ASC',
-                                    [(int)$bendahara_lpj['id']],
-                                    'i'
-                                ),
+                                'penggunaan_dana' => [],
                                 'rekap_kas' => dbFetchAll(
                                     'SELECT tanggal, saldo_awal, total_pemasukan, total_pengeluaran, saldo_akhir, keterangan
                                      FROM lpj_bendahara_rekap_kas
@@ -280,6 +267,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                                 ),
                                 'penutup' => $bendahara_lpj['penutup'] ?? '',
                             ];
+                            $treasurerConfigIndex = array_key_last($configs);
+                            $configs[$treasurerConfigIndex]['penggunaan_dana'] = dbFetchAll(
+                                'SELECT id, source_type, source_lpj_id, source_activity_key, tanggal, nama_kegiatan, sumber_dana, keterangan
+                                 FROM lpj_bendahara_penggunaan_dana
+                                 WHERE lpj_bendahara_id = ?
+                                 ORDER BY tanggal IS NULL ASC, tanggal ASC, id ASC',
+                                [(int)$bendahara_lpj['id']],
+                                'i'
+                            );
+                            foreach ($configs[$treasurerConfigIndex]['penggunaan_dana'] as &$usage) {
+                                $usage['transaksi'] = dbFetchAll(
+                                    'SELECT tanggal, keterangan, uraian, debet, kredit
+                                     FROM lpj_bendahara_transaksi_dana
+                                     WHERE lpj_bendahara_id = ? AND penggunaan_dana_id = ?
+                                     ORDER BY tanggal IS NULL ASC, tanggal ASC, id ASC',
+                                    [(int)$bendahara_lpj['id'], (int)$usage['id']],
+                                    'ii'
+                                );
+                            }
+                            unset($usage);
+
+                            $usageIndexesByKey = [];
+                            $ambiguousUsageKeys = [];
+                            foreach ($configs[$treasurerConfigIndex]['penggunaan_dana'] as $usageIndex => $usage) {
+                                $usageKey = (string)($usage['source_activity_key'] ?? '');
+                                if ($usageKey !== '') {
+                                    if (isset($usageIndexesByKey[$usageKey])) {
+                                        unset($usageIndexesByKey[$usageKey]);
+                                        $ambiguousUsageKeys[$usageKey] = true;
+                                    } elseif (!isset($ambiguousUsageKeys[$usageKey])) {
+                                        $usageIndexesByKey[$usageKey] = $usageIndex;
+                                    }
+                                }
+                            }
+                            $legacyTransactions = dbFetchAll(
+                                'SELECT id, tanggal, source_activity_key, jenis, sumber_dana, uraian, jumlah, keterangan, debet, kredit
+                                 FROM lpj_bendahara_transaksi_dana
+                                 WHERE lpj_bendahara_id = ? AND penggunaan_dana_id IS NULL
+                                 ORDER BY tanggal IS NULL ASC, tanggal ASC, id ASC',
+                                [(int)$bendahara_lpj['id']],
+                                'i'
+                            );
+                            foreach ($legacyTransactions as $transaction) {
+                                $sourceKey = trim((string)($transaction['source_activity_key'] ?? ''));
+                                $usageKey = $sourceKey !== ''
+                                    ? $sourceKey
+                                    : 'legacy-' . (int)$transaction['id'];
+                                if ($sourceKey !== '' && isset($ambiguousUsageKeys[$sourceKey])) {
+                                    $usageKey .= '-transaction-' . (int)$transaction['id'];
+                                }
+                                if (!isset($usageIndexesByKey[$usageKey])) {
+                                    $configs[$treasurerConfigIndex]['penggunaan_dana'][] = [
+                                        'id' => null,
+                                        'source_type' => 'manual',
+                                        'source_lpj_id' => null,
+                                        'source_activity_key' => $usageKey,
+                                        'tanggal' => $transaction['tanggal'] ?? null,
+                                        'nama_kegiatan' => trim((string)($transaction['uraian'] ?? '')) ?: 'Kegiatan (transaksi lama)',
+                                        'sumber_dana' => $transaction['sumber_dana'] ?? '',
+                                        'keterangan' => '',
+                                        'transaksi' => [],
+                                    ];
+                                    $usageIndexesByKey[$usageKey] = array_key_last($configs[$treasurerConfigIndex]['penggunaan_dana']);
+                                }
+                                $usageIndex = $usageIndexesByKey[$usageKey];
+                                $configs[$treasurerConfigIndex]['penggunaan_dana'][$usageIndex]['transaksi'][] = [
+                                    'tanggal' => $transaction['tanggal'],
+                                    'keterangan' => $transaction['keterangan'] ?? '',
+                                    'uraian' => $transaction['uraian'] ?? '',
+                                    'debet' => (float)($transaction['debet'] ?? (($transaction['jenis'] ?? '') === 'pemasukan' ? $transaction['jumlah'] : 0)),
+                                    'kredit' => (float)($transaction['kredit'] ?? (($transaction['jenis'] ?? '') === 'pengeluaran' ? $transaction['jumlah'] : 0)),
+                                ];
+                            }
                         }
                         foreach ($error === '' ? $lpjs : [] as $lpj) {
                             $configs[] = [

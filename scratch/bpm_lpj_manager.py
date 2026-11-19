@@ -2923,46 +2923,93 @@ def generate_treasurer_lpj(output_path, config_data):
     add_table("B. KEANGGOTAAN", ["No.", "Nama", "Jabatan"], membership_rows)
 
     heading("C. LAPORAN PENGGUNAAN DANA")
-    usage_by_key = {}
-    usage_order = []
-    for row in sorted(config_data.get("penggunaan_dana", []), key=lambda item: (not bool(item.get("tanggal")), str(item.get("tanggal", "")), str(item.get("source_activity_key", "")))):
-        key = str(row.get("source_activity_key", ""))
-        if key not in usage_by_key:
-            usage_by_key[key] = row
-            usage_order.append(key)
-
-    transactions = config_data.get("transaksi_dana", [])
-    if not usage_order:
+    usage_rows = sorted(
+        config_data.get("penggunaan_dana", []),
+        key=lambda item: (
+            not bool(item.get("tanggal")),
+            str(item.get("tanggal", "")),
+            str(item.get("nama_kegiatan", "")),
+        ),
+    )
+    if not usage_rows:
         text_block("Tidak ada laporan penggunaan dana.")
-    for key in usage_order:
-        usage = usage_by_key[key]
-        usage_heading = doc.add_paragraph()
-        usage_heading.paragraph_format.keep_with_next = True
-        usage_heading.paragraph_format.left_indent = Cm(0.4)
-        format_run(usage_heading.add_run(str(usage.get("nama_kegiatan") or usage.get("uraian") or "Kegiatan")), size_pt=11, bold=True)
+    for activity_index, usage in enumerate(usage_rows, start=1):
+        activity_title = doc.add_paragraph()
+        activity_title.paragraph_format.space_before = Pt(10)
+        activity_title.paragraph_format.space_after = Pt(3)
+        activity_title.paragraph_format.keep_with_next = True
+        format_run(
+            activity_title.add_run(
+                f"{activity_index}. Nama Kegiatan: {usage.get('nama_kegiatan') or 'Kegiatan'}"
+            ),
+            size_pt=11,
+            bold=True,
+        )
         metadata = doc.add_paragraph()
-        metadata.paragraph_format.left_indent = Cm(0.4)
-        format_run(metadata.add_run(f"Tanggal: {usage.get('tanggal') or '-'}    Sumber Dana: {usage.get('sumber_dana') or '-'}"), size_pt=10)
-        grouped_transactions = [row for row in transactions if str(row.get("source_activity_key", "")) == key]
-        grouped_transactions.sort(key=lambda item: (not bool(item.get("tanggal")), str(item.get("tanggal", ""))))
+        metadata.paragraph_format.left_indent = Cm(0.45)
+        metadata.paragraph_format.space_after = Pt(7)
+        format_run(
+            metadata.add_run(
+                f"Hari/Tanggal: {usage.get('tanggal') or '—'}    "
+                f"Sumber Dana: {usage.get('sumber_dana') or '—'}"
+            ),
+            size_pt=10,
+        )
+
         table = doc.add_table(rows=1, cols=6)
         table.style = "Table Grid"
-        headers = ["Tanggal", "Uraian", "Keterangan", "Debet", "Kredit", "Saldo"]
+        headers = ["Tanggal", "Uraian", "Ket", "Debet", "Kredit", "Saldo"]
+        for column, value in enumerate(headers):
+            cell = table.rows[0].cells[column]
+            cell.text = value
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            set_cell_shading(cell, "D9E5F2")
+            for run in cell.paragraphs[0].runs:
+                format_run(run, size_pt=10, bold=True)
+
+        transactions = usage.get("transaksi", [])
+        transactions = sorted(
+            transactions if isinstance(transactions, list) else [],
+            key=lambda item: (not bool(item.get("tanggal")), str(item.get("tanggal", ""))),
+        )
         running_balance = 0.0
-        for index, value in enumerate(headers):
-            table.rows[0].cells[index].text = value
-            table.rows[0].cells[index].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-            set_cell_shading(table.rows[0].cells[index], "D9E5F2")
-        for row in grouped_transactions:
+        total_expense = 0.0
+        if not transactions:
+            empty_cells = table.add_row().cells
+            empty_cells[0].merge(empty_cells[-1])
+            empty_cells[0].text = "Tidak ada transaksi anggaran."
+            empty_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for transaction in transactions:
             cells = table.add_row().cells
-            amount = float(row.get("jumlah") or 0)
-            jenis = str(row.get("jenis", ""))
-            debet = amount if jenis == "pemasukan" else 0.0
-            kredit = amount if jenis == "pengeluaran" else 0.0
+            debet = float(transaction.get("debet") or 0)
+            kredit = float(transaction.get("kredit") or 0)
             running_balance += debet - kredit
-            values = [row.get("tanggal", ""), row.get("uraian", ""), row.get("keterangan", ""), money(debet) if debet else "", money(kredit) if kredit else "", money(running_balance)]
-            for index, value in enumerate(values):
-                cells[index].text = str(value if value not in (None, "") else "—")
+            total_expense += kredit
+            values = [
+                transaction.get("tanggal", ""),
+                transaction.get("uraian", ""),
+                transaction.get("keterangan", ""),
+                format_currency(debet) if debet else "",
+                format_currency(kredit) if kredit else "",
+                format_currency(running_balance),
+            ]
+            for column, value in enumerate(values):
+                cells[column].text = str(value if value not in (None, "") else "—")
+                set_cell_margins(cells[column], top=70, bottom=70, left=80, right=80)
+                for paragraph in cells[column].paragraphs:
+                    paragraph.paragraph_format.space_after = Pt(0)
+                    for run in paragraph.runs:
+                        format_run(run, size_pt=10)
+
+        total_cells = table.add_row().cells
+        total_label = total_cells[0].merge(total_cells[4])
+        total_label.text = "TOTAL PENGELUARAN"
+        total_label.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        total_cells[5].text = format_currency(total_expense) if total_expense else "—"
+        for cell in (total_label, total_cells[5]):
+            set_cell_margins(cell, top=90, bottom=90, left=100, right=100)
+            for run in cell.paragraphs[0].runs:
+                format_run(run, size_pt=10, bold=True)
 
     cash_rows = []
     for index, row in enumerate(config_data.get("rekap_kas", []), 1):

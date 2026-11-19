@@ -154,6 +154,160 @@
     border-radius: 10px;
 }
 
+.activity-card {
+    margin-bottom: 14px;
+    overflow: hidden;
+    background: #0b1017;
+    border: 1px solid #35445b;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+}
+
+.activity-card-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 8px 12px;
+    background: #171e29;
+    border-bottom: 1px solid #2a3545;
+}
+
+.activity-number {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    color: #fff;
+    background: #2868ad;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.activity-source-badge {
+    padding: 4px 9px;
+    border: 1px solid #35445b;
+    border-radius: 20px;
+    color: #b6c2d0;
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
+.activity-source-badge.is-commission {
+    color: #a9cdf8;
+    background: rgba(74, 144, 226, 0.1);
+    border-color: rgba(74, 144, 226, 0.35);
+}
+
+.activity-source-badge.is-manual {
+    color: #8bd6b8;
+    background: rgba(49, 157, 111, 0.1);
+    border-color: rgba(49, 157, 111, 0.35);
+}
+
+.activity-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    color: #8bb9f0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.activity-toggle:hover {
+    background: rgba(74, 144, 226, 0.1);
+    border-color: #35445b;
+}
+
+.activity-remove {
+    flex-shrink: 0;
+}
+
+.activity-card-body {
+    padding: 16px;
+}
+
+.activity-card.is-collapsed .activity-card-body {
+    display: none;
+}
+
+.activity-card.is-collapsed .activity-card-header {
+    border-bottom: 0;
+}
+
+.activity-meta-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.8fr) minmax(0, 1fr);
+    gap: 14px;
+    margin-bottom: 4px;
+}
+
+.activity-meta-grid .treasurer-field {
+    min-width: 0;
+}
+
+.activity-budget-wrap {
+    margin-top: 4px;
+}
+
+.treasurer-form .activity-budget-table {
+    min-width: 980px;
+}
+
+.treasurer-form .activity-budget-table th {
+    padding: 10px 9px;
+    text-align: center;
+}
+
+.treasurer-form .activity-budget-table td {
+    padding: 7px;
+}
+
+.treasurer-form .activity-budget-table td input {
+    min-width: 95px;
+}
+
+.treasurer-form .activity-budget-table td input[type="number"] {
+    min-width: 115px;
+}
+
+.treasurer-form .activity-budget-table .activity-balance {
+    min-width: 115px;
+    color: #a9cdf8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.treasurer-form .activity-budget-table tfoot th {
+    color: #f4f7fb;
+    background: #202a38;
+    border-top: 2px solid #4a90e2;
+    font-weight: 800;
+}
+
+.treasurer-form .activity-budget-table tfoot th:first-child {
+    text-align: center;
+}
+
+.treasurer-form .activity-budget-table .activity-total-expense {
+    color: #a9cdf8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.activity-add-transaction {
+    margin-top: 10px;
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -407,6 +561,23 @@
 
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .activity-card-body {
+        padding: 12px;
+    }
+
+    .activity-meta-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .activity-card-header {
+        flex-wrap: wrap;
+    }
+
+    .activity-remove {
+        padding: 6px 8px;
     }
 }
 
