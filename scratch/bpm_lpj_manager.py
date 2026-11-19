@@ -11,6 +11,7 @@ import json
 import zipfile
 import tempfile
 import shutil
+from datetime import datetime as DateTime
 from copy import deepcopy
 from io import BytesIO
 from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
@@ -30,6 +31,15 @@ def clean_currency(val):
 
 def format_currency(val):
     return f"Rp {val:,}".replace(",", ".")
+
+def format_treasurer_date(value):
+    date_text = str(value or "").strip()
+    for date_format in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            return DateTime.strptime(date_text, date_format).strftime("%d/%m/%Y")
+        except ValueError:
+            continue
+    return date_text
 
 def set_cell_margins(cell, top=100, bottom=100, left=150, right=150):
     tcPr = cell._tc.get_or_add_tcPr()
@@ -2950,7 +2960,7 @@ def generate_treasurer_lpj(output_path, config_data):
         metadata.paragraph_format.space_after = Pt(7)
         format_run(
             metadata.add_run(
-                f"Hari/Tanggal: {usage.get('tanggal') or '—'}    "
+                f"Hari/Tanggal: {format_treasurer_date(usage.get('tanggal')) or '—'}    "
                 f"Sumber Dana: {usage.get('sumber_dana') or '—'}"
             ),
             size_pt=10,
@@ -2958,7 +2968,7 @@ def generate_treasurer_lpj(output_path, config_data):
 
         table = doc.add_table(rows=1, cols=6)
         table.style = "Table Grid"
-        headers = ["Tanggal", "Uraian", "Ket", "Debet", "Kredit", "Saldo"]
+        headers = ["Tanggal", "Keterangan", "Uraian", "Debet", "Kredit", "Saldo"]
         for column, value in enumerate(headers):
             cell = table.rows[0].cells[column]
             cell.text = value
@@ -2986,9 +2996,9 @@ def generate_treasurer_lpj(output_path, config_data):
             running_balance += debet - kredit
             total_expense += kredit
             values = [
-                transaction.get("tanggal", ""),
-                transaction.get("uraian", ""),
+                format_treasurer_date(transaction.get("tanggal", "")),
                 transaction.get("keterangan", ""),
+                transaction.get("uraian", ""),
                 format_currency(debet) if debet else "",
                 format_currency(kredit) if kredit else "",
                 format_currency(running_balance),

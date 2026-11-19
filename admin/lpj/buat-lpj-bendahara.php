@@ -641,12 +641,14 @@ $renderRows = static function (array $rows, array $fields, string $prefix): void
     const progress = document.getElementById('treasurerStepProgress');
     const panels = Array.from(document.querySelectorAll('.treasurer-form .wizard-panel'));
     const steps = Array.from(progress.querySelectorAll('.step'));
+    const form = document.getElementById('treasurerLpjForm');
     const previous = document.getElementById('previousStep');
     const next = document.getElementById('nextStep');
     const counter = document.getElementById('stepCounter');
     let activeStep = 1;
     const showStep = (step) => {
         activeStep = Math.min(Math.max(step, 1), panels.length);
+        form.classList.toggle('has-wide-budget', activeStep === 3);
         panels.forEach((panel) => panel.classList.toggle('active', Number(panel.dataset.step) === activeStep));
         steps.forEach((button) => {
             const number = Number(button.dataset.step);

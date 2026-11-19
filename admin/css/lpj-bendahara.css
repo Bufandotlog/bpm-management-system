@@ -94,6 +94,10 @@
     gap: 16px;
 }
 
+.treasurer-form.has-wide-budget {
+    max-width: 1400px;
+}
+
 .wizard-panel {
     display: none;
 }

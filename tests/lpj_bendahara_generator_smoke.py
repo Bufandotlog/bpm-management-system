@@ -18,6 +18,10 @@ SPEC.loader.exec_module(MANAGER)
 
 
 class TreasurerGeneratorSmokeTest(unittest.TestCase):
+    def test_formats_anggaran_dates_as_day_month_year(self):
+        self.assertEqual(MANAGER.format_treasurer_date("2026-11-13"), "13/11/2026")
+        self.assertEqual(MANAGER.format_treasurer_date("13-11-2026"), "13/11/2026")
+
     def test_command_generates_financial_sections(self):
         config = {
             "cover": {"triwulan": "I", "kementerian": "Bendahara Umum"},
@@ -79,6 +83,17 @@ class TreasurerGeneratorSmokeTest(unittest.TestCase):
             self.assertIn("Konsumsi panitia", table_text)
             self.assertIn("125.000", table_text)
             self.assertIn("375.000", table_text)
+            usage_table = next(
+                table
+                for table in document.tables
+                if [cell.text for cell in table.rows[0].cells]
+                == ["Tanggal", "Keterangan", "Uraian", "Debet", "Kredit", "Saldo"]
+            )
+            self.assertEqual(
+                [cell.text for cell in usage_table.rows[1].cells[:3]],
+                ["03/01/2026", "Penerimaan", "Dana awal"],
+            )
+            self.assertIn("04/01/2026", [cell.text for cell in usage_table.rows[2].cells])
 
     def test_consolidation_orders_treasurer_before_commissions(self):
         input_configs = [
