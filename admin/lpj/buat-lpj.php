@@ -450,6 +450,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pt_pjs = $_POST['pt_pj'] ?? [];
         $pt_pesertas = $_POST['pt_peserta'] ?? [];
         $pt_evaluasis = $_POST['pt_evaluasi'] ?? [];
+        $pt_source_activity_keys = $_POST['pt_source_activity_key'] ?? [];
+        $pt_sumber_danas = $_POST['pt_sumber_dana'] ?? [];
         
         $pt_no_budgets = $_POST['pt_no_budget'] ?? [];
         $pt_anggarans_json = $_POST['pt_anggaran'] ?? [];
@@ -683,6 +685,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'anggaran' => $anggaran_txs,
                     'dokumentasi' => $dokumentasi_list,
                     'nota_belanja' => $nota_belanja_list,
+                    'source_activity_key' => sanitizeText($pt_source_activity_keys[$i] ?? '', 100),
+                    'sumber_dana' => sanitizeText($pt_sumber_danas[$i] ?? '', 255),
                     'berita_acara_id' => $ba_id_val
                 ];
             }
@@ -1989,6 +1993,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                         </div>
                         <div class="proker-body">
                         <input type="hidden" name="pt_ba_id[]" class="pt-ba-id-hidden" value="<?php echo (int)($pt['berita_acara_id'] ?? 0); ?>">
+                         <div class="form-row-grid"><div class="floating-group"><input type="text" name="pt_source_activity_key[]" class="floating-input" value="<?php echo htmlspecialchars($pt['source_activity_key'] ?? ''); ?>" placeholder="Kunci kegiatan sumber"><label class="floating-label">Kunci Kegiatan Sumber (opsional)</label></div></div>
                         <div class="form-row-grid">
                             <div class="floating-group">
                                 <input type="text" name="pt_name[]" class="floating-input" value="<?php echo htmlspecialchars($pt['Nama Program Kerja'] ?? ''); ?>" required placeholder="Nama Program Kerja">
@@ -2069,6 +2074,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
                         <hr style="border: 0; border-top: 1px solid #2a3545; margin: 20px 0;">
                         <div class="proker-sub-section">
                             <h4 style="color: #8BB9F0; margin-bottom: 10px;"><i class="fas fa-wallet"></i> Realisasi Anggaran Proker</h4>
+                            <div class="form-group"><label>Sumber Dana</label><input type="text" name="pt_sumber_dana[]" class="form-control pt-sumber-dana" value="<?php echo htmlspecialchars($pt['sumber_dana'] ?? ''); ?>" placeholder="Contoh: Kas BPM, iuran, sponsor"></div>
                             
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <label class="checkbox-container" style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #ccc;">
@@ -3170,6 +3176,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
             </div>
             <div class="proker-body">
             <input type="hidden" name="pt_ba_id[]" class="pt-ba-id-hidden" value="0">
+             <div class="form-row-grid"><div class="floating-group"><input type="text" name="pt_source_activity_key[]" class="floating-input" placeholder="Kunci kegiatan sumber"><label class="floating-label">Kunci Kegiatan Sumber (opsional)</label></div></div>
             <div class="form-row-grid">
                 <div class="floating-group">
                     <input type="text" name="pt_name[]" class="floating-input" required placeholder="Nama Program Kerja">
@@ -3250,7 +3257,7 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
             <hr style="border: 0; border-top: 1px solid #2a3545; margin: 20px 0;">
             <div class="proker-sub-section">
                 <h4 style="color: #8BB9F0; margin-bottom: 10px;"><i class="fas fa-wallet"></i> Realisasi Anggaran Proker</h4>
-                
+                <div class="form-group"><label>Sumber Dana</label><input type="text" name="pt_sumber_dana[]" class="form-control pt-sumber-dana" placeholder="Contoh: Kas BPM, iuran, sponsor"></div>
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label class="checkbox-container" style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #ccc;">
                          <input type="checkbox" class="pt-no-budget-check" checked onchange="toggleProkerBudget(this)">
@@ -3338,6 +3345,8 @@ $selected_triwulan = $edit_data['triwulan'] ?? (sanitizeText($_GET['triwulan'] ?
             div.querySelector('input[name="pt_sifat[]"]').value = ptData['Sifat'] || 'Internal';
             div.querySelector('input[name="pt_tema[]"]').value = ptData['Tema Kegiatan'] || '';
             div.querySelector('input[name="pt_pj[]"]').value = ptData['Penanggung Jawab'] || '';
+            div.querySelector('input[name="pt_source_activity_key[]"]').value = ptData['source_activity_key'] || '';
+            div.querySelector('input[name="pt_sumber_dana[]"]').value = ptData['sumber_dana'] || '';
             
             // For multipoint inputs (tujuan, peserta, evaluasi)
             const tujuanHidden = div.querySelector('.pt-tujuan-hidden');

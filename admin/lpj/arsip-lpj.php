@@ -45,11 +45,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
             array_map('intval', (array)($_POST['selected_chairperson_lpj'] ?? [])),
             static fn($id) => $id > 0
         )));
-        if (empty($selected_ids) && empty($selected_secretariat_ids) && empty($selected_chairperson_ids)) {
+        $selected_bendahara_ids = array_values(array_unique(array_filter(
+            array_map('intval', (array)($_POST['selected_bendahara_lpj'] ?? [])),
+            static fn($id) => $id > 0
+        )));
+        if (empty($selected_ids) && empty($selected_secretariat_ids) && empty($selected_chairperson_ids) && empty($selected_bendahara_ids)) {
             $error = "Pilih minimal satu LPJ untuk dikonsolidasikan.";
         } else {
             $lpjs = [];
             $chairperson_lpjs = [];
+            $bendahara_lpjs = [];
+            $bendahara_auto_included = false;
             if ($selected_chairperson_ids) {
                 $placeholders = implode(',', array_fill(0, count($selected_chairperson_ids), '?'));
                 $types = str_repeat('i', count($selected_chairperson_ids) + 1);
@@ -60,6 +66,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                      JOIN periode_kepengurusan p ON c.periode_id = p.id
                      WHERE c.periode_id = ? AND c.id IN ($placeholders)
                        AND c.status = 'submitted'",
+                    $query_params,
+                    $types
+                );
+            }
+            if ($selected_bendahara_ids) {
+                $placeholders = implode(',', array_fill(0, count($selected_bendahara_ids), '?'));
+                $types = str_repeat('i', count($selected_bendahara_ids) + 1);
+                $query_params = array_merge([$periode_id], $selected_bendahara_ids);
+                $bendahara_lpjs = dbFetchAll(
+                    "SELECT b.*, p.tahun_mulai, p.tahun_selesai
+                     FROM lpj_bendahara b
+                     JOIN periode_kepengurusan p ON b.periode_id = p.id
+                     WHERE b.periode_id = ? AND b.id IN ($placeholders)
+                       AND b.status = 'submitted'",
                     $query_params,
                     $types
                 );
@@ -133,16 +153,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                     );
                 }
             }
+            if (!$selected_bendahara_ids && ($selected_ids || $selected_secretariat_ids || $selected_chairperson_ids)) {
+                $treasurerTriwulan = array_unique(array_map(
+                    static fn($lpj) => strtoupper(trim($lpj['triwulan'])),
+                    array_merge($lpjs, $secretariat_lpjs)
+                ));
+                if (count($treasurerTriwulan) === 1) {
+                    $bendahara_lpjs = dbFetchAll(
+                        "SELECT b.*, p.tahun_mulai, p.tahun_selesai
+                         FROM lpj_bendahara b
+                         JOIN periode_kepengurusan p ON b.periode_id = p.id
+                         WHERE b.periode_id = ? AND b.triwulan = ? AND b.status = 'submitted'
+                         ORDER BY b.id ASC",
+                        [$periode_id, reset($treasurerTriwulan)],
+                        'is'
+                    );
+                    $bendahara_auto_included = true;
+                }
+            }
             if (
                 count($lpjs) !== count($selected_ids)
                 || (!$secretariat_auto_included && count($secretariat_lpjs) !== count($selected_secretariat_ids))
                 || ($selected_chairperson_ids && count($chairperson_lpjs) !== count($selected_chairperson_ids))
+                || (!$bendahara_auto_included && count($bendahara_lpjs) !== count($selected_bendahara_ids))
             ) {
                 $error = "Sebagian LPJ tidak ditemukan, belum diserahkan, atau bukan milik periode aktif.";
             } else {
                 $selected_triwulan = array_unique(array_map(
                     static fn($lpj) => strtoupper(trim($lpj['triwulan'])),
-                    array_merge($lpjs, $secretariat_lpjs, $chairperson_lpjs)
+                    array_merge($lpjs, $secretariat_lpjs, $chairperson_lpjs, $bendahara_lpjs)
                 ));
                 if (count($selected_triwulan) !== 1) {
                     $error = "Konsolidasi hanya dapat dilakukan untuk LPJ dengan jenis yang sama (Triwulan I, Triwulan II, atau MUBESMA).";
@@ -153,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                     $misi = !empty($visi_misi_row['misi'])
                         ? (json_decode($visi_misi_row['misi'], true) ?: [])
                         : [];
-                    $periode_source = $chairperson_lpjs[0] ?? $secretariat_lpjs[0] ?? $lpjs[0];
+                    $periode_source = $chairperson_lpjs[0] ?? $secretariat_lpjs[0] ?? $bendahara_lpjs[0] ?? $lpjs[0];
                     $periode_text = $periode_source['tahun_mulai'] . '-' . $periode_source['tahun_selesai'];
                     $configs = [];
                     $decodeJson = static function ($value, $default = []) {
@@ -206,6 +245,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_consolidate'])
                                 'keanggotaan' => $secretariatMembers,
                                 'surat' => $secretariatLetters,
                                 'penutup' => $secretariat_lpj['penutup'] ?? '',
+                            ];
+                        }
+                        foreach ($bendahara_lpjs as $bendahara_lpj) {
+                            $configs[] = [
+                                'document_type' => 'treasurer',
+                                'cover' => [
+                                    'triwulan' => strtoupper(trim($bendahara_lpj['triwulan'])),
+                                    'kementerian' => 'Bendahara Umum',
+                                    'periode' => $periode_text,
+                                ],
+                                'keadaan_objektif' => $bendahara_lpj['keadaan_objektif'] ?? '',
+                                'keanggotaan' => $decodeJson($bendahara_lpj['keanggotaan'] ?? ''),
+                                'penggunaan_dana' => dbFetchAll(
+                                    'SELECT tanggal, source_activity_key, nama_kegiatan, sumber_dana, uraian, jumlah, keterangan
+                                     FROM lpj_bendahara_penggunaan_dana
+                                     WHERE lpj_bendahara_id = ? ORDER BY tanggal IS NULL ASC, tanggal ASC, id ASC',
+                                    [(int)$bendahara_lpj['id']],
+                                    'i'
+                                ),
+                                'transaksi_dana' => dbFetchAll(
+                                    'SELECT tanggal, source_activity_key, jenis, sumber_dana, uraian, jumlah
+                                     FROM lpj_bendahara_transaksi_dana
+                                     WHERE lpj_bendahara_id = ? ORDER BY tanggal IS NULL ASC, tanggal ASC, id ASC',
+                                    [(int)$bendahara_lpj['id']],
+                                    'i'
+                                ),
+                                'rekap_kas' => dbFetchAll(
+                                    'SELECT tanggal, saldo_awal, total_pemasukan, total_pengeluaran, saldo_akhir, keterangan
+                                     FROM lpj_bendahara_rekap_kas
+                                     WHERE lpj_bendahara_id = ? ORDER BY tanggal IS NULL ASC, tanggal ASC, id ASC',
+                                    [(int)$bendahara_lpj['id']],
+                                    'i'
+                                ),
+                                'penutup' => $bendahara_lpj['penutup'] ?? '',
                             ];
                         }
                         foreach ($error === '' ? $lpjs : [] as $lpj) {
@@ -396,6 +469,23 @@ $chairperson_list = dbFetchAll(
     $chairperson_types
 );
 
+$bendahara_parts = ["b.periode_id = ?"];
+$bendahara_params = [$periode_id];
+$bendahara_types = "i";
+if ($filter_triwulan !== '') {
+    $bendahara_parts[] = "b.triwulan = ?";
+    $bendahara_params[] = $filter_triwulan;
+    $bendahara_types .= "s";
+}
+$bendahara_list = dbFetchAll(
+    "SELECT b.id, b.triwulan, b.status, b.file_path, b.updated_at
+     FROM lpj_bendahara b
+     WHERE " . implode(' AND ', $bendahara_parts) . "
+     ORDER BY FIELD(b.triwulan, 'I', 'II', 'MUBESMA'), b.updated_at DESC, b.id DESC",
+    $bendahara_params,
+    $bendahara_types
+);
+
 // Kelompokkan triwulan berdasarkan filter atau tampilkan semua default
 $groups_to_display = [];
 if (!empty($filter_triwulan)) {
@@ -414,6 +504,11 @@ if (!empty($filter_triwulan)) {
         }
     }
     foreach ($chairperson_list as $lpj) {
+        if (!in_array($lpj['triwulan'], $groups_to_display)) {
+            $groups_to_display[] = $lpj['triwulan'];
+        }
+    }
+    foreach ($bendahara_list as $lpj) {
         if (!in_array($lpj['triwulan'], $groups_to_display)) {
             $groups_to_display[] = $lpj['triwulan'];
         }
@@ -720,6 +815,9 @@ if (!empty($filter_triwulan)) {
         <a href="buat-lpj.php" class="btn-primary"><i class="fas fa-plus"></i> Buat LPJ Baru</a>
         <a href="buat-lpj-sekretariat.php" class="btn-primary" style="background:#8e44ad;"><i class="fas fa-file-signature"></i> Buat LPJ Sekretariat</a>
         <a href="arsip-lpj-ketua-umum.php" class="btn-primary" style="background:#357abd;"><i class="fas fa-user-tie"></i> LPJ Ketua Umum</a>
+        <?php if (isBendahara()): ?>
+        <a href="arsip-lpj-bendahara.php" class="btn-primary" style="background:#168a70;"><i class="fas fa-coins"></i> LPJ Bendahara</a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -764,7 +862,7 @@ if (!empty($filter_triwulan)) {
         Pilih LPJ dari satu jenis triwulan yang sama. LPJ Ketua Umum submitted untuk triwulan terpilih otomatis disertakan sebagai pembuka. LPJ Sekretariat submitted juga otomatis disertakan saat memilih LPJ Komisi.
     </p>
 
-    <?php if (empty($lpj_list) && empty($secretariat_list) && empty($chairperson_list)): ?>
+    <?php if (empty($lpj_list) && empty($secretariat_list) && empty($chairperson_list) && empty($bendahara_list)): ?>
         <div style="text-align: center; padding: 40px; background: #0f1217; border: 1px solid #2a3545; border-radius: 12px; margin-bottom: 30px;">
             <i class="fas fa-file-excel" style="font-size: 3rem; color: #666; margin-bottom: 15px;"></i>
             <p style="color: #888;">Belum ada dokumen LPJ yang sesuai dengan filter.</p>
@@ -776,10 +874,12 @@ if (!empty($filter_triwulan)) {
         $grouped_lpj = [];
         $grouped_secretariat = [];
         $grouped_chairperson = [];
+        $grouped_bendahara = [];
         foreach ($groups_to_display as $g) {
             $grouped_lpj[$g] = [];
             $grouped_secretariat[$g] = [];
             $grouped_chairperson[$g] = [];
+            $grouped_bendahara[$g] = [];
         }
         foreach ($lpj_list as $lpj) {
             $tw = $lpj['triwulan'];
@@ -790,6 +890,9 @@ if (!empty($filter_triwulan)) {
         }
         foreach ($chairperson_list as $lpj) {
             $grouped_chairperson[$lpj['triwulan']][] = $lpj;
+        }
+        foreach ($bendahara_list as $lpj) {
+            $grouped_bendahara[$lpj['triwulan']][] = $lpj;
         }
         
         foreach ($groups_to_display as $group_key):
@@ -814,7 +917,8 @@ if (!empty($filter_triwulan)) {
             // Skip empty groups if we have filter active
             $secretariat_items = $grouped_secretariat[$group_key] ?? [];
             $chairperson_items = $grouped_chairperson[$group_key] ?? [];
-            if (empty($group_items) && empty($secretariat_items) && empty($chairperson_items) && (!empty($filter_triwulan) || $filter_kementerian > 0)) {
+            $bendahara_items = $grouped_bendahara[$group_key] ?? [];
+            if (empty($group_items) && empty($secretariat_items) && empty($chairperson_items) && empty($bendahara_items) && (!empty($filter_triwulan) || $filter_kementerian > 0)) {
                 continue;
             }
         ?>
@@ -823,11 +927,11 @@ if (!empty($filter_triwulan)) {
                     <div class="lpj-group-title">
                         <i class="<?php echo $group_icon; ?>"></i>
                         <h2><?php echo $group_name; ?></h2>
-                        <span class="lpj-group-count"><?php echo count($group_items) + count($secretariat_items) + count($chairperson_items); ?> Dokumen</span>
+                        <span class="lpj-group-count"><?php echo count($group_items) + count($secretariat_items) + count($chairperson_items) + count($bendahara_items); ?> Dokumen</span>
                     </div>
                 </div>
                 
-                <?php if (empty($group_items) && empty($secretariat_items) && empty($chairperson_items)): ?>
+                <?php if (empty($group_items) && empty($secretariat_items) && empty($chairperson_items) && empty($bendahara_items)): ?>
                     <div class="empty-group-placeholder">
                         <i class="far fa-folder-open"></i>
                         <p>Belum ada LPJ kementerian yang dibuat untuk periode ini.</p>
@@ -908,6 +1012,45 @@ if (!empty($filter_triwulan)) {
                                         <a href="buat-lpj-sekretariat.php?triwulan=<?php echo urlencode($group_key); ?>" class="btn-edit"><i class="fas fa-edit"></i> Edit</a>
                                         <?php if (!empty($secretariat_lpj['file_path'])): ?>
                                             <a href="<?php echo htmlspecialchars(uploadUrl($secretariat_lpj['file_path'])); ?>" class="btn-buat" style="background:#4A90E2;" download><i class="fas fa-download"></i> Docx</a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php foreach ($bendahara_items as $bendahara_lpj):
+                            $is_draft = $bendahara_lpj['status'] === 'draft';
+                        ?>
+                            <div class="lpj-card <?php echo $is_draft ? 'lpj-draft' : ''; ?>">
+                                <div class="lpj-card-header">
+                                    <div class="logo-container" style="display:grid;place-items:center;background:rgba(22,138,112,.16);">
+                                        <i class="fas fa-coins" style="font-size:1.5rem;color:#52c6a3;"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Bendahara Umum</h3>
+                                        <span class="status-badge <?php echo $is_draft ? 'status-draft' : 'status-submitted'; ?>">
+                                            <?php echo $is_draft ? 'Draft' : 'Submitted'; ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="lpj-card-body">
+                                    <div class="info-row"><span>Triwulan:</span><span class="info-value"><?php echo htmlspecialchars($group_key); ?></span></div>
+                                    <div class="info-row"><span>Diperbarui:</span><span class="info-value"><?php echo formatTanggal($bendahara_lpj['updated_at'], true); ?></span></div>
+                                </div>
+                                <div class="lpj-card-actions">
+                                    <div class="actions-top">
+                                        <?php if (!$is_draft): ?>
+                                            <label class="lpj-checkbox-label">
+                                                <input type="checkbox" name="selected_bendahara_lpj[]" value="<?php echo (int)$bendahara_lpj['id']; ?>">
+                                                <span>Pilih untuk Konsolidasi</span>
+                                            </label>
+                                        <?php else: ?>
+                                            <span style="font-size:.8rem;color:#ffc107;font-style:italic;"><i class="fas fa-exclamation-triangle"></i> Selesaikan draft untuk konsolidasi</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="actions-buttons">
+                                        <a href="buat-lpj-bendahara.php?id=<?php echo (int)$bendahara_lpj['id']; ?>" class="btn-edit"><i class="fas fa-edit"></i> Edit</a>
+                                        <?php if (!empty($bendahara_lpj['file_path'])): ?>
+                                            <a href="<?php echo htmlspecialchars(uploadUrl($bendahara_lpj['file_path'])); ?>" class="btn-buat" style="background:#4A90E2;" download><i class="fas fa-download"></i> Docx</a>
                                         <?php endif; ?>
                                     </div>
                                 </div>

@@ -1387,6 +1387,35 @@ function requireKetuaUmum(): void {
     }
 }
 
+function isBendahara(): bool {
+    $role = normalizeAppRole($_SESSION['admin_role'] ?? '');
+    if (in_array($role, ['superadmin', 'admin', 'bendahara', 'bendahara_umum'], true)
+        || !empty($_SESSION['admin_can_access_all'])) {
+        return true;
+    }
+
+    $userId = (int)($_SESSION['admin_id'] ?? 0);
+    $periodeId = (int)getUserPeriode();
+    if ($userId <= 0 || $periodeId <= 0) {
+        return false;
+    }
+
+    return dbFetchOne(
+        "SELECT ab.id FROM anggota_bph ab
+         JOIN struktur_bph sb ON sb.id = ab.bph_id
+         WHERE ab.user_id = ? AND ab.periode_id = ? AND sb.posisi = 'bendahara_umum'
+         LIMIT 1",
+        [$userId, $periodeId],
+        'ii'
+    ) !== null;
+}
+
+function requireBendahara(): void {
+    if (!isBendahara()) {
+        redirect('admin/core/dashboard.php', 'Akses ditolak: LPJ Bendahara hanya dapat dikelola Bendahara Umum atau administrator.', 'error');
+    }
+}
+
 function isHukumAccess(): bool {
     $role = normalizeAppRole($_SESSION['admin_role'] ?? '');
     return in_array($role, ['superadmin', 'admin', 'komisi_i'], true) || !empty($_SESSION['admin_can_access_all']);

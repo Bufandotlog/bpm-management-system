@@ -2712,6 +2712,11 @@ def consolidate_lpj_data(output_path, configs):
     if not isinstance(configs, list) or not configs:
         raise ValueError("Tidak ada data LPJ yang dapat dikonsolidasikan.")
 
+    document_order = {"chairperson": 0, "secretariat": 1, "treasurer": 2}
+    configs = sorted(
+        configs,
+        key=lambda config: document_order.get(config.get("document_type"), 3),
+    )
     triwulan_values = {
         str(config.get("cover", {}).get("triwulan", "")).strip().upper()
         for config in configs
@@ -2745,6 +2750,8 @@ def consolidate_lpj_data(output_path, configs):
             source_path = os.path.join(temp_dir, f"BPM_LPJ_{index}.docx")
             if config.get("document_type") == "secretariat":
                 generated = generate_secretariat_lpj(source_path, config)
+            elif config.get("document_type") == "treasurer":
+                generated = generate_treasurer_lpj(source_path, config)
             elif config.get("document_type") == "chairperson":
                 generated = generate_chairperson_lpj(source_path, config)
             else:
@@ -2772,6 +2779,8 @@ def consolidate_lpj_data(output_path, configs):
                 name = "KETUA UMUM"
             elif config.get("document_type") == "secretariat":
                 name = "SEKRETARIAT UMUM"
+            elif config.get("document_type") == "treasurer":
+                name = "BENDAHARA UMUM"
             else:
                 name = format_kementerian_title(config.get("cover", {}).get("kementerian", ""))
             paragraph = master_doc.add_paragraph()
@@ -2809,7 +2818,7 @@ def consolidate_lpj_data(output_path, configs):
         add_bookmark(summary_title, "lpj_budget_summary", len(configs) + 1)
         budget_configs = [
             config for config in configs
-            if config.get("document_type") not in {"secretariat", "chairperson"}
+            if config.get("document_type") not in {"secretariat", "chairperson", "treasurer"}
         ]
         add_consolidated_budget_summary(master_doc, budget_configs, triwulan, len(configs))
         add_document_footer(master_doc, triwulan)
@@ -2825,6 +2834,145 @@ def consolidate_lpj_data(output_path, configs):
             if os.path.isfile(image_path):
                 os.remove(image_path)
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+def generate_treasurer_lpj(output_path, config_data):
+    doc = docx.Document()
+    section = doc.sections[0]
+    section.page_width = Cm(21)
+    section.page_height = Cm(29.7)
+    section.top_margin = Cm(2.5)
+    section.bottom_margin = Cm(2.5)
+    section.left_margin = Cm(2.5)
+    section.right_margin = Cm(2.5)
+    normal = doc.styles["Normal"]
+    normal.font.name = "Times New Roman"
+    normal.font.size = Pt(11)
+    normal.paragraph_format.line_spacing = 1.15
+
+    cover = config_data.get("cover", {})
+    triwulan = str(cover.get("triwulan", "I")).upper()
+    period_title = "MUBESMA" if triwulan == "MUBESMA" else f"TRIWULAN {triwulan}"
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.paragraph_format.space_after = Pt(4)
+    format_run(title.add_run(f"LAPORAN PERTANGGUNGJAWABAN {period_title}\nBENDAHARA UMUM BPM"), size_pt=12, bold=True)
+    periode = config_data.get("periode", {})
+    years = f"{periode.get('tahun_mulai', '')}/{periode.get('tahun_selesai', '')}".strip("/")
+    subtitle = doc.add_paragraph()
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    format_run(subtitle.add_run("BPM INSTBUNAS MAJALENGKA " + (years or periode.get("nama", ""))), size_pt=11, bold=True)
+
+    def heading(text):
+        paragraph = doc.add_paragraph()
+        paragraph.paragraph_format.space_before = Pt(12)
+        paragraph.paragraph_format.space_after = Pt(6)
+        paragraph.paragraph_format.keep_with_next = True
+        format_run(paragraph.add_run(text), size_pt=12, bold=True)
+
+    def text_block(text):
+        for line in str(text or "").splitlines() or [""]:
+            paragraph = doc.add_paragraph()
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            paragraph.paragraph_format.line_spacing = 1.15
+            paragraph.paragraph_format.space_after = Pt(5)
+            format_run(paragraph.add_run(line.strip()), size_pt=11)
+
+    def add_table(title_text, headers, rows):
+        heading(title_text)
+        table = doc.add_table(rows=1, cols=len(headers))
+        table.style = "Table Grid"
+        for index, value in enumerate(headers):
+            cell = table.rows[0].cells[index]
+            cell.text = value
+            set_cell_shading(cell, "D9E5F2")
+            set_cell_margins(cell, top=80, bottom=80, left=90, right=90)
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for run in cell.paragraphs[0].runs:
+                format_run(run, size_pt=10, bold=True)
+        if not rows:
+            cells = table.add_row().cells
+            cells[0].merge(cells[-1])
+            cells[0].text = "Tidak ada data."
+            cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for row in rows:
+            cells = table.add_row().cells
+            for index, value in enumerate(row):
+                cells[index].text = str(value if value not in (None, "") else "—")
+                set_cell_margins(cells[index], top=70, bottom=70, left=80, right=80)
+                for paragraph in cells[index].paragraphs:
+                    paragraph.paragraph_format.space_after = Pt(0)
+                    for run in paragraph.runs:
+                        format_run(run, size_pt=10)
+
+    def money(value):
+        try:
+            return format_currency(float(value or 0))
+        except (TypeError, ValueError):
+            return format_currency(0)
+
+    heading("A. KEADAAN OBJEKTIF BENDAHARA")
+    text_block(config_data.get("keadaan_objektif", ""))
+
+    membership = config_data.get("keanggotaan", [])
+    if isinstance(membership, dict):
+        membership = list(membership.values())
+    membership_rows = []
+    for index, row in enumerate(membership if isinstance(membership, list) else [], 1):
+        if isinstance(row, dict):
+            membership_rows.append([index, row.get("nama", ""), row.get("jabatan", "")])
+    add_table("B. KEANGGOTAAN", ["No.", "Nama", "Jabatan"], membership_rows)
+
+    heading("C. LAPORAN PENGGUNAAN DANA")
+    usage_by_key = {}
+    usage_order = []
+    for row in sorted(config_data.get("penggunaan_dana", []), key=lambda item: (not bool(item.get("tanggal")), str(item.get("tanggal", "")), str(item.get("source_activity_key", "")))):
+        key = str(row.get("source_activity_key", ""))
+        if key not in usage_by_key:
+            usage_by_key[key] = row
+            usage_order.append(key)
+
+    transactions = config_data.get("transaksi_dana", [])
+    if not usage_order:
+        text_block("Tidak ada laporan penggunaan dana.")
+    for key in usage_order:
+        usage = usage_by_key[key]
+        usage_heading = doc.add_paragraph()
+        usage_heading.paragraph_format.keep_with_next = True
+        usage_heading.paragraph_format.left_indent = Cm(0.4)
+        format_run(usage_heading.add_run(str(usage.get("nama_kegiatan") or usage.get("uraian") or "Kegiatan")), size_pt=11, bold=True)
+        metadata = doc.add_paragraph()
+        metadata.paragraph_format.left_indent = Cm(0.4)
+        format_run(metadata.add_run(f"Tanggal: {usage.get('tanggal') or '-'}    Sumber Dana: {usage.get('sumber_dana') or '-'}"), size_pt=10)
+        grouped_transactions = [row for row in transactions if str(row.get("source_activity_key", "")) == key]
+        grouped_transactions.sort(key=lambda item: (not bool(item.get("tanggal")), str(item.get("tanggal", ""))))
+        table = doc.add_table(rows=1, cols=6)
+        table.style = "Table Grid"
+        headers = ["Tanggal", "Uraian", "Keterangan", "Debet", "Kredit", "Saldo"]
+        running_balance = 0.0
+        for index, value in enumerate(headers):
+            table.rows[0].cells[index].text = value
+            table.rows[0].cells[index].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            set_cell_shading(table.rows[0].cells[index], "D9E5F2")
+        for row in grouped_transactions:
+            cells = table.add_row().cells
+            amount = float(row.get("jumlah") or 0)
+            jenis = str(row.get("jenis", ""))
+            debet = amount if jenis == "pemasukan" else 0.0
+            kredit = amount if jenis == "pengeluaran" else 0.0
+            running_balance += debet - kredit
+            values = [row.get("tanggal", ""), row.get("uraian", ""), row.get("keterangan", ""), money(debet) if debet else "", money(kredit) if kredit else "", money(running_balance)]
+            for index, value in enumerate(values):
+                cells[index].text = str(value if value not in (None, "") else "—")
+
+    cash_rows = []
+    for index, row in enumerate(config_data.get("rekap_kas", []), 1):
+        cash_rows.append([index, row.get("tanggal"), money(row.get("saldo_awal")), money(row.get("total_pemasukan")), money(row.get("total_pengeluaran")), money(row.get("saldo_akhir")), row.get("keterangan")])
+    add_table("D. REKAPITULASI KAS", ["No.", "Tanggal", "Saldo Awal", "Pemasukan", "Pengeluaran", "Saldo Akhir", "Keterangan"], cash_rows)
+    heading("E. PENUTUP")
+    text_block(config_data.get("penutup", ""))
+    add_document_footer(doc, triwulan)
+    doc.save(output_path)
+    return True
 
 def generate_chairperson_lpj(output_path, config_data):
     try:
@@ -2939,6 +3087,7 @@ if __name__ == "__main__":
         print("  python3 scratch/bpm_lpj_manager.py generate <output_path> <input_json_path>")
         print("  python3 scratch/bpm_lpj_manager.py generate-secretary <output_path> <input_json_path>")
         print("  python3 scratch/bpm_lpj_manager.py generate-chairperson <output_path> <input_json_path>")
+        print("  python3 scratch/bpm_lpj_manager.py generate-treasurer <output_path> <input_json_path>")
         print("  python3 scratch/bpm_lpj_manager.py consolidate <output_path> <file1> <file2> ...")
         print("  python3 scratch/bpm_lpj_manager.py consolidate-data <output_path> <input_json_path>")
         sys.exit(1)
@@ -2995,6 +3144,17 @@ if __name__ == "__main__":
             print(f"Secretariat LPJ successfully generated at: {out_path}")
         else:
             print("Failed to generate secretariat LPJ.")
+
+    elif action == "generate-treasurer":
+        out_path = sys.argv[2]
+        json_path = sys.argv[3]
+        with open(json_path, 'r', encoding='utf-8') as input_file:
+            cdata = json.load(input_file)
+        success = generate_treasurer_lpj(out_path, cdata)
+        if success:
+            print(f"Treasurer LPJ successfully generated at: {out_path}")
+        else:
+            print("Failed to generate treasurer LPJ.")
             
     elif action == "generate-chairperson":
         out_path = sys.argv[2]

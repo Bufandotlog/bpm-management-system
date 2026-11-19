@@ -713,7 +713,8 @@ if (isset($page_css)) {
         $lpj_pages = [
             'arsip-lpj.php', 'buat-lpj.php', 'pengaturan-lpj.php',
             'buat-lpj-sekretariat.php', 'arsip-lpj-sekretariat.php',
-            'buat-lpj-ketua-umum.php', 'arsip-lpj-ketua-umum.php'
+            'buat-lpj-ketua-umum.php', 'arsip-lpj-ketua-umum.php',
+            'buat-lpj-bendahara.php', 'arsip-lpj-bendahara.php'
         ];
         $is_lpj_active = in_array($current_page, $lpj_pages);
         
@@ -953,7 +954,7 @@ if (isset($page_css)) {
             <?php endif; ?>
 
             <!-- LPJ (Dropdown) -->
-            <?php if ($isSekretaris || $isSuperadmin || $admin_role === 'admin'): ?>
+            <?php if ($isSekretaris || $isSuperadmin || $admin_role === 'admin' || isBendahara()): ?>
             <div class="sidebar-dropdown <?php echo $is_lpj_active ? 'active open' : ''; ?>">
                 <button type="button" class="sidebar-dropdown-toggle" onclick="toggleSidebarDropdown(this)">
                     <i class="fas fa-file-invoice-dollar"></i>
@@ -961,6 +962,7 @@ if (isset($page_css)) {
                     <i class="fas fa-chevron-right chevron-icon"></i>
                 </button>
                 <div class="sidebar-dropdown-menu">
+                    <?php if ($isSekretaris || $isSuperadmin || $admin_role === 'admin'): ?>
                     <a href="<?php echo baseUrl('admin/lpj/arsip-lpj.php'); ?>" class="<?php echo $current_page === 'arsip-lpj.php' ? 'active' : ''; ?>">
                         <i class="fas fa-archive"></i><span>Arsip LPJ</span>
                     </a>
@@ -970,14 +972,22 @@ if (isset($page_css)) {
                     <a href="<?php echo baseUrl('admin/lpj/arsip-lpj-sekretariat.php'); ?>" class="<?php echo $current_page === 'arsip-lpj-sekretariat.php' ? 'active' : ''; ?>">
                         <i class="fas fa-folder-open"></i><span>LPJ Sekretariat</span>
                     </a>
+                    <?php endif; ?>
                     <?php if (isKetuaUmum()): ?>
                     <a href="<?php echo baseUrl('admin/lpj/arsip-lpj-ketua-umum.php'); ?>" class="<?php echo in_array($current_page, ['arsip-lpj-ketua-umum.php', 'buat-lpj-ketua-umum.php'], true) ? 'active' : ''; ?>">
                         <i class="fas fa-user-tie"></i><span>LPJ Ketua Umum</span>
                     </a>
                     <?php endif; ?>
+                    <?php if (isBendahara()): ?>
+                    <a href="<?php echo baseUrl('admin/lpj/arsip-lpj-bendahara.php'); ?>" class="<?php echo in_array($current_page, ['arsip-lpj-bendahara.php', 'buat-lpj-bendahara.php'], true) ? 'active' : ''; ?>">
+                        <i class="fas fa-coins"></i><span>LPJ Bendahara</span>
+                    </a>
+                    <?php endif; ?>
+                    <?php if ($isSekretaris || $isSuperadmin || $admin_role === 'admin'): ?>
                     <a href="<?php echo baseUrl('admin/lpj/pengaturan-lpj.php'); ?>" class="<?php echo $current_page === 'pengaturan-lpj.php' ? 'active' : ''; ?>">
                         <i class="fas fa-sliders-h"></i><span>Pengaturan LPJ</span>
                     </a>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endif; ?>

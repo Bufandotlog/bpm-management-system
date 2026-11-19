@@ -536,6 +536,61 @@ CREATE TABLE `lpj_ketua_umum` (
   UNIQUE KEY `uq_lpj_ketua_umum_periode_triwulan` (`periode_id`,`triwulan`),
   CONSTRAINT `fk_lpj_ketua_umum_periode` FOREIGN KEY (`periode_id`) REFERENCES `periode_kepengurusan` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+CREATE TABLE `lpj_bendahara` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `periode_id` int(11) NOT NULL,
+  `triwulan` varchar(50) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'draft',
+  `keadaan_objektif` text DEFAULT NULL,
+  `keanggotaan` longtext DEFAULT NULL,
+  `penutup` text DEFAULT NULL,
+  `file_path` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_lpj_bendahara_periode_triwulan` (`periode_id`,`triwulan`),
+  CONSTRAINT `fk_lpj_bendahara_periode` FOREIGN KEY (`periode_id`) REFERENCES `periode_kepengurusan` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+CREATE TABLE `lpj_bendahara_penggunaan_dana` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `lpj_bendahara_id` int(11) NOT NULL,
+  `tanggal` date DEFAULT NULL,
+  `source_activity_key` varchar(100) DEFAULT NULL,
+  `nama_kegiatan` varchar(255) DEFAULT NULL,
+  `sumber_dana` varchar(255) DEFAULT NULL,
+  `uraian` text DEFAULT NULL,
+  `jumlah` decimal(15,2) DEFAULT NULL,
+  `keterangan` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_lpj_bendahara_penggunaan_date` (`lpj_bendahara_id`,`tanggal`,`id`),
+  CONSTRAINT `fk_lpj_bendahara_penggunaan_lpj` FOREIGN KEY (`lpj_bendahara_id`) REFERENCES `lpj_bendahara` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+CREATE TABLE `lpj_bendahara_transaksi_dana` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `lpj_bendahara_id` int(11) NOT NULL,
+  `tanggal` date DEFAULT NULL,
+  `source_activity_key` varchar(100) DEFAULT NULL,
+  `jenis` enum('pemasukan','pengeluaran') DEFAULT NULL,
+  `sumber_dana` varchar(255) DEFAULT NULL,
+  `uraian` text DEFAULT NULL,
+  `jumlah` decimal(15,2) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_lpj_bendahara_transaksi_date` (`lpj_bendahara_id`,`tanggal`,`id`),
+  CONSTRAINT `fk_lpj_bendahara_transaksi_lpj` FOREIGN KEY (`lpj_bendahara_id`) REFERENCES `lpj_bendahara` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+CREATE TABLE `lpj_bendahara_rekap_kas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `lpj_bendahara_id` int(11) NOT NULL,
+  `tanggal` date DEFAULT NULL,
+  `saldo_awal` decimal(15,2) DEFAULT NULL,
+  `total_pemasukan` decimal(15,2) DEFAULT NULL,
+  `total_pengeluaran` decimal(15,2) DEFAULT NULL,
+  `saldo_akhir` decimal(15,2) DEFAULT NULL,
+  `keterangan` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_lpj_bendahara_rekap_date` (`lpj_bendahara_id`,`tanggal`,`id`),
+  CONSTRAINT `fk_lpj_bendahara_rekap_lpj` FOREIGN KEY (`lpj_bendahara_id`) REFERENCES `lpj_bendahara` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 CREATE TABLE `visi_misi` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `visi` text NOT NULL,
